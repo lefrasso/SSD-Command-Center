@@ -1,5 +1,10 @@
 # SSD Delivery Console (Compass) — Domain Specifications
 
+> ⚠️ **Superseded.** This `docs/domains/` set (prototype-thinking / backlog seeds) has been superseded by
+> the production specification set in [`../../specs/`](../../specs/README.md), which is the authoritative
+> source of truth (PRD + functional + technical/architecture + roadmap). This folder is retained for
+> history and may be removed once the `specs/` set is accepted.
+
 This folder documents every **domain** in the Compass prototype so the team can implement the
 real product. Each domain is a self-contained specification: purpose, data model, features,
 user stories, business rules, AI behaviour, integrations, KPIs, and a **backlog** section.
