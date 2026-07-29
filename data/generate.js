@@ -35,7 +35,7 @@ function isoTime(offsetDays) { const d = new Date(NOW); d.setDate(d.getDate() + 
 const daysAgo = (n) => isoDay(-n);
 const daysAhead = (n) => isoDay(n);
 
-function gov(source, who = 'l.frasso') {
+function gov(source, who = 'a.navarro') {
   return {
     sourceOfTruth: source, updatedAt: daysAgo(int(1, 18)),
     audit: [
@@ -50,22 +50,22 @@ const LAST = ['Rossi','Kaur','Novak','García','Müller','Silva','Haddad','Chen'
 const CUSTOMERS = ['Northwind Traders','Contoso','Fabrikam','Adventure Works','Tailwind Traders','Wingtip Toys','Proseware','Litware','Fourth Coffee','Graphic Design Institute','Alpine Ski House','Coho Vineyard','Lucerne Publishing',"Margie's Travel",'Trey Research','VanArsdel','WideWorld Importers','Blue Yonder','Woodgrove Bank','Relecloud'];
 const CSAMS = ['Julia Meyer','Tom Baker','Sara Lind','Marcus Webb','Elif Demir','Paulo Neto','Hannah Ross','Ken Adachi','Bea Fontana','Ivan Petrov'];
 const SDMS = ['Priya Nair','Kenji Watanabe','Laura Bianchi','Mohammed Ali','Grace Park','Tomás Herrera'];
-const POD_LEADS = ['Leandro Frasso','Amara Blake','Viktor Petrov','Rosa Mendes','Daniel Kim','Chiara Romano','Felix Wagner','Nadia Hassan','Oscar Lund','Meera Shah'];
+const POD_LEADS = ['Alex Navarro','Amara Blake','Viktor Petrov','Rosa Mendes','Daniel Kim','Chiara Romano','Felix Wagner','Nadia Hassan','Oscar Lund','Meera Shah'];
 const SKILLS = ['Azure Migrate','Landing Zones','FinOps','Security Copilot','Sentinel','Fabric','Power BI','Copilot Studio','AKS','App Modernization','Data Governance','ESA Assessment','Well-Architected','Networking','Identity','Backup & ASR','Cost Optimization','AI Foundry','RAG Patterns','Prompt Engineering'];
 const REGIONS = ['Iberia','UKI','DACH','Nordics','France','Italy','North America','LATAM','India','ANZ'];
-// Real SSD leadership org (provided by the team). Regions roll up to time zones.
+// SSD leadership org — fictional vanity names for the prototype. Regions roll up to time zones.
 export const TZ_MAP = {
-  Americas: { lead: 'Athena Sapir', regions: ['North America', 'LATAM'] },
-  EMEA: { lead: 'Leandro Frasso', regions: ['Iberia', 'UKI', 'DACH', 'Nordics', 'France', 'Italy'] },
-  ASIA: { lead: 'Michael Best', regions: ['India', 'ANZ'] },
+  Americas: { lead: 'Morgan Reyes', regions: ['North America', 'LATAM'] },
+  EMEA: { lead: 'Alex Navarro', regions: ['Iberia', 'UKI', 'DACH', 'Nordics', 'France', 'Italy'] },
+  ASIA: { lead: 'Kai Lin', regions: ['India', 'ANZ'] },
 };
 export const LEADERSHIP = {
-  wwLead: 'James Miller',
-  businessManager: 'Sandra Banuchi Vargas',
+  wwLead: 'Jordan Pierce',
+  businessManager: 'Robin Ellis',
   timeZones: [
-    { tz: 'Americas', lead: 'Athena Sapir' },
-    { tz: 'EMEA', lead: 'Leandro Frasso' },
-    { tz: 'ASIA', lead: 'Michael Best' },
+    { tz: 'Americas', lead: 'Morgan Reyes' },
+    { tz: 'EMEA', lead: 'Alex Navarro' },
+    { tz: 'ASIA', lead: 'Kai Lin' },
   ],
 };
 export function tzForRegion(region) {

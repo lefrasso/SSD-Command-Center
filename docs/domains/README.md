@@ -132,13 +132,13 @@ flowchart TD
 
 | Role | Name (mock) |
 |---|---|
-| Worldwide Lead | James Miller |
-| Business Manager | Sandra Banuchi Vargas |
-| Americas TZ Lead | Athena Sapir |
-| EMEA TZ Lead | Leandro Frasso |
-| ASIA TZ Lead | Michael Best |
+| Worldwide Lead | Jordan Pierce |
+| Business Manager | Robin Ellis |
+| Americas TZ Lead | Morgan Reyes |
+| EMEA TZ Lead | Alex Navarro |
+| ASIA TZ Lead | Kai Lin |
 
 **TZ → regions:** Americas = North America, LATAM · EMEA = Iberia, UKI, DACH, Nordics, France,
 Italy · ASIA = India, ANZ.
 
-> These names are used for realism in the prototype; treat them as configuration, not code.
+> These are **fictional vanity names** used for realism in the prototype; treat them as configuration, not code.

@@ -100,7 +100,7 @@ function openIntake() {
       const eng = d.engagements.find((e) => e.id === engId);
       const csa = eng && d.csas.find((c) => c.id === eng.assignedTo);
       const pod = csa && d.pods.find((p) => p.id === csa.podId);
-      addEscalation({ engagementId: engId, severity: dr.querySelector('#i-sev').value, summary: dr.querySelector('#i-notes').value || 'New delivery concern', ownerName: pod ? pod.leadName : 'Leandro Frasso', sdmName: 'Priya Nair' });
+      addEscalation({ engagementId: engId, severity: dr.querySelector('#i-sev').value, summary: dr.querySelector('#i-notes').value || 'New delivery concern', ownerName: pod ? pod.leadName : 'Alex Navarro', sdmName: 'Priya Nair' });
       closeDrawer();
     });
   });

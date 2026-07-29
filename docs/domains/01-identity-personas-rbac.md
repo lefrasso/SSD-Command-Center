@@ -33,11 +33,11 @@ Five personas (`scripts/roles.js → PERSONAS`, `ROLE_ORDER`):
 
 | Role key | Persona (mock) | Title | Scope |
 |---|---|---|---|
-| `pod-lead` | Leandro Frasso | Sr CSA Manager · EMEA TZ Lead | Runs PODs, dispatches, coaches, owns escalations, PIPs & MBRs. |
+| `pod-lead` | Alex Navarro | Sr CSA Manager · EMEA TZ Lead | Runs PODs, dispatches, coaches, owns escalations, PIPs & MBRs. |
 | `partner-csa` | Marco Rossi | Partner CSA · Avanade | Sees assigned engagements, dispatch, messages and own scorecards. |
 | `sdm` | Priya Nair | Service Delivery Manager | Co-owns escalations and action items; monitors partner health. |
 | `dpsm` | Sofia Marét | Delivery Partner Service Manager | Sourcing, headcount, onboarding/offboarding and capacity. |
-| `business-lt` | James Miller | SSD Worldwide Lead | Portfolio dashboards, CPE & delivery trends, sentiment, roll-ups. |
+| `business-lt` | Jordan Pierce | SSD Worldwide Lead | Portfolio dashboards, CPE & delivery trends, sentiment, roll-ups. |
 
 ### Permission matrix
 
