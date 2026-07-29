@@ -8,6 +8,11 @@ import { esc, clearCharts, closeDrawer } from './components.js';
 import { icon } from './icons.js';
 import { renderHome } from './views/home.js';
 import { renderSsdIq } from './views/ssdiq.js';
+import { renderCapabilities } from './views/capabilities.js';
+import { renderAgentic } from './views/agentic.js';
+import { renderCapacity } from './views/capacity.js';
+import { renderPartners } from './views/partners.js';
+import { renderEnablement } from './views/enablement.js';
 import { renderPods } from './views/pods.js';
 import { renderLifecycle } from './views/lifecycle.js';
 import { renderEngagements } from './views/engagements.js';
@@ -111,6 +116,11 @@ function renderView() {
     case 'reporting': renderReporting(view); break;
     case 'sentiment': renderSentiment(view); break;
     case 'ssdiq': renderSsdIq(view, params.get('q') || ''); break;
+    case 'capabilities': renderCapabilities(view); break;
+    case 'agentic': renderAgentic(view); break;
+    case 'capacity': renderCapacity(view); break;
+    case 'delivery-partners': renderPartners(view); break;
+    case 'enablement': renderEnablement(view); break;
     default: renderPlaceholder(view, mod);
   }
   document.getElementById('content').scrollTop = 0;
