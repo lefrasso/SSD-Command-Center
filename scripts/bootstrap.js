@@ -11,6 +11,7 @@ import { renderSsdIq } from './views/ssdiq.js';
 import { renderPods } from './views/pods.js';
 import { renderLifecycle } from './views/lifecycle.js';
 import { renderEngagements } from './views/engagements.js';
+import { renderReportsPending } from './views/reportspending.js';
 import { renderMessages } from './views/messages.js';
 import { renderQuality } from './views/quality.js';
 import { renderEscalations } from './views/escalations.js';
@@ -102,6 +103,7 @@ function renderView() {
     case 'pods': renderPods(view); break;
     case 'lifecycle': renderLifecycle(view); break;
     case 'engagements': renderEngagements(view); break;
+    case 'reports-pending': renderReportsPending(view); break;
     case 'messages': renderMessages(view); break;
     case 'quality': renderQuality(view); break;
     case 'escalations': renderEscalations(view); break;

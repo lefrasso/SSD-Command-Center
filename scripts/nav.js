@@ -10,6 +10,8 @@ export const MODULES = [
     description: 'Sourcing → onboarding → active → offboarding.', ai: 'Onboarding readiness score and offboarding-risk flags.' },
   { id: 'engagements', path: '/engagements', label: 'Engagements & Dispatch', icon: 'send', roles: ALL, built: false,
     description: 'Proactive Dispatch and engagement delivery.', ai: 'Best-fit CSA recommendation and outreach drafts.' },
+  { id: 'reports-pending', path: '/reports-pending', label: 'Reports Pending', icon: 'clock', roles: ALL, built: true,
+    description: 'Overdue delivery reports and T-3W proactive engagement tracking.', ai: 'Pending-report aging and proactive (T-3W) compliance insights.' },
   { id: 'messages', path: '/messages', label: 'Messages Console', icon: 'chat', roles: ['pod-lead', 'partner-csa', 'sdm'], built: false,
     description: 'Threaded communication with Partner CSAs.', ai: 'Suggested replies, tone check and thread sentiment.' },
   { id: 'quality', path: '/quality', label: 'Quality & CPE', icon: 'star', roles: ['pod-lead', 'partner-csa', 'sdm', 'business-lt'], built: false,

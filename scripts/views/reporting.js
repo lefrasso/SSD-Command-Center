@@ -1,6 +1,6 @@
 // Reporting & AI — Executive View + MBR generator + ask-your-data.
-import { store, computeKpis } from '../store.js';
-import { pageHeader, kpiCard, aiChip, esc, badge, clearCharts, bar, donut, line, COLORS, scoreColor, utilColor } from '../components.js';
+import { store, computeKpis, hoursSince } from '../store.js';
+import { pageHeader, kpiCard, aiChip, esc, badge, clearCharts, bar, donut, line, meter, COLORS, scoreColor, utilColor } from '../components.js';
 import { icon } from '../icons.js';
 import { mbrNarrative, askData, execSummary } from '../ai.js';
 import { TRACKS, TZ_MAP } from '../../data/generate.js';
@@ -11,9 +11,14 @@ let selPartner = null;
 let selPeriod = '2026-07';
 let mbrOut = '';
 let askOut = '';
+let groupBy = 'tz';
+let fTz = 'All';
+let fTrack = 'All';
+let fPartner = 'All';
+let fStatus = 'All';
 
 export function renderReporting(container) {
-  const tabs = [['exec', 'Executive View'], ['mbr', 'MBR & Ask-your-data']];
+  const tabs = [['exec', 'Executive View'], ['territory', 'Territory Ops'], ['mbr', 'MBR & Ask-your-data']];
   container.innerHTML = `
     ${pageHeader({ title: 'Reporting & AI', description: 'Executive Success Programs insights, AI-assisted MBRs, and ask-your-data over SSD IQ.' })}
     <div class="tabs">${tabs.map(([k, l]) => `<div class="tab ${tab === k ? 'active' : ''}" data-tab="${k}">${l}</div>`).join('')}</div>
@@ -21,6 +26,7 @@ export function renderReporting(container) {
   container.querySelectorAll('[data-tab]').forEach((el) => el.addEventListener('click', () => { tab = el.getAttribute('data-tab'); renderReporting(container); }));
   const tc = container.querySelector('#tabc');
   if (tab === 'exec') renderExec(tc);
+  else if (tab === 'territory') renderTerritory(tc);
   else renderMbr(tc);
 }
 
@@ -79,6 +85,123 @@ function renderExec(tc) {
   bar(tc.querySelector('#e-tz'), { labels: tzs, values: delByTz, color: '#f7a600', label: 'Deliveries' });
   bar(tc.querySelector('#e-partner'), { labels: d.partners.map((p) => p.name), values: delByPartner, color: COLORS.brand, label: 'Deliveries' });
   donut(tc.querySelector('#e-sev'), { labels: ['Sev 1', 'Sev 2', 'Sev 3', 'Sev 4'], values: sev, colors: [COLORS.sev1, COLORS.sev2, COLORS.sev3, COLORS.sev4] });
+}
+
+// ---- Territory Ops (operational; inclusive of Time Zones and US OUs) ----
+function metaOf(e) {
+  const d = store.data;
+  const c = e.assignedTo ? d.csas.find((x) => x.id === e.assignedTo) : null;
+  const pod = c ? d.pods.find((p) => p.id === c.podId) : null;
+  return { tz: pod ? pod.tz : 'Unassigned', region: pod ? pod.region : 'Unassigned', partnerId: c ? c.partnerId : null, partner: c ? ((d.partners.find((p) => p.id === c.partnerId) || {}).name || 'Unassigned') : 'Unassigned' };
+}
+function renderTerritory(tc) {
+  clearCharts();
+  const d = store.data;
+  const tzs = Object.keys(TZ_MAP);
+  const regions = [...new Set(d.pods.map((p) => p.region))].sort();
+  const statuses = ['new', 'assigned', 'in-delivery', 'complete'];
+  const partnerName = (id) => (d.partners.find((p) => p.id === id) || {}).name;
+
+  const engs = d.engagements.filter((e) => { const m = metaOf(e); return (fTz === 'All' || m.tz === fTz) && (fTrack === 'All' || e.track === fTrack) && (fPartner === 'All' || m.partnerId === fPartner) && (fStatus === 'All' || e.status === fStatus); });
+  const groupOf = (e) => { const m = metaOf(e); return groupBy === 'tz' ? m.tz : groupBy === 'region' ? m.region : groupBy === 'partner' ? m.partner : e.track; };
+  const groupNames = groupBy === 'tz' ? tzs : groupBy === 'region' ? regions : groupBy === 'partner' ? d.partners.map((p) => p.name) : TRACKS;
+  const csasIn = (g) => d.csas.filter((c) => { if (c.lifecycle !== 'active') return false; const pod = d.pods.find((p) => p.id === c.podId); if (!pod) return false; if (groupBy === 'tz') return pod.tz === g; if (groupBy === 'region') return pod.region === g; if (groupBy === 'partner') return partnerName(c.partnerId) === g; return c.tracks.includes(g); });
+
+  const rows = groupNames.map((g) => {
+    const ge = engs.filter((e) => groupOf(e) === g);
+    const dels = d.deliveries.filter((dl) => ge.some((e) => e.id === dl.engagementId));
+    const onTime = dels.filter((dl) => { const e = ge.find((x) => x.id === dl.engagementId); return e && dl.completedDate <= e.dueDate; }).length;
+    const escs = d.escalations.filter((x) => ge.some((e) => e.id === x.engagementId));
+    const cpeItems = d.cpe.filter((c) => ge.some((e) => e.id === c.engagementId));
+    const csas = csasIn(g);
+    return {
+      g, count: ge.length,
+      active: ge.filter((e) => e.status === 'assigned' || e.status === 'in-delivery').length,
+      atRisk: ge.filter((e) => e.atRisk).length,
+      onTimePct: dels.length ? Math.round((onTime / dels.length) * 100) : null,
+      openEsc: escs.filter((x) => x.status !== 'resolved').length,
+      slaBreach: escs.filter((x) => x.status !== 'resolved' && hoursSince(x.opened) > x.slaHours).length,
+      csas: csas.length,
+      util: csas.length ? Math.round(csas.reduce((s, c) => s + c.utilization, 0) / csas.length) : 0,
+      avgCpe: cpeItems.length ? Math.round((cpeItems.reduce((s, c) => s + c.score, 0) / cpeItems.length) * 10) / 10 : 0,
+    };
+  }).filter((r) => r.count > 0 || r.csas > 0);
+
+  const delsF = d.deliveries.filter((dl) => engs.some((e) => e.id === dl.engagementId));
+  const escsF = d.escalations.filter((x) => engs.some((e) => e.id === x.engagementId));
+  const csasF = d.csas.filter((c) => { if (c.lifecycle !== 'active') return false; const pod = d.pods.find((p) => p.id === c.podId); if (!pod) return false; if (fTz !== 'All' && pod.tz !== fTz) return false; if (fPartner !== 'All' && c.partnerId !== fPartner) return false; if (fTrack !== 'All' && !c.tracks.includes(fTrack)) return false; return true; });
+  const cpeF = d.cpe.filter((c) => engs.some((e) => e.id === c.engagementId));
+  const T = {
+    active: engs.filter((e) => e.status === 'assigned' || e.status === 'in-delivery').length,
+    atRisk: engs.filter((e) => e.atRisk).length,
+    openEsc: escsF.filter((x) => x.status !== 'resolved').length,
+    sla: escsF.filter((x) => x.status !== 'resolved' && hoursSince(x.opened) > x.slaHours).length,
+    onTime: delsF.length ? Math.round((delsF.filter((dl) => { const e = engs.find((x) => x.id === dl.engagementId); return e && dl.completedDate <= e.dueDate; }).length / delsF.length) * 100) : 0,
+    util: csasF.length ? Math.round(csasF.reduce((s, c) => s + c.utilization, 0) / csasF.length) : 0,
+    cpe: cpeF.length ? Math.round((cpeF.reduce((s, c) => s + c.score, 0) / cpeF.length) * 10) / 10 : 0,
+  };
+
+  const scope = [fTz !== 'All' ? fTz : null, fPartner !== 'All' ? partnerName(fPartner) : null, fTrack !== 'All' ? fTrack : null, fStatus !== 'All' ? fStatus : null].filter(Boolean).join(' · ') || 'all territories';
+  const worst = [...rows].sort((a, b) => b.slaBreach - a.slaBreach)[0];
+  const aiText = `Operational view — ${scope}: ${T.active} active engagements, ${T.atRisk} at risk, ${T.openEsc} open escalations (${T.sla} breaching SLA). On-time ${T.onTime}%, utilization ${T.util}%, CPE ${T.cpe}. ${T.sla > 0 && worst ? `Highest SLA pressure: ${worst.g} (${worst.slaBreach}).` : 'No SLA breaches in scope.'}`;
+
+  const GROUP_OPTS = [['tz', 'Time Zone'], ['region', 'Territory (Region / OU)'], ['partner', 'Partner'], ['track', 'Success Program']];
+  const opt = (v, sel, label) => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(label)}</option>`;
+  const groupLabel = GROUP_OPTS.find((x) => x[0] === groupBy)[1];
+
+  tc.innerHTML = `
+    <div class="muted mb8" style="font-size:12px">Territories roll up to Time Zones globally and to OUs in the US — pick any grouping and combine filters for an operational read.</div>
+    <div class="row wrap mb16" style="gap:8px;align-items:center">
+      <label class="row" style="gap:4px"><span class="muted" style="font-size:12px">Group by</span><select class="select" id="t-group">${GROUP_OPTS.map(([v, l]) => opt(v, groupBy, l)).join('')}</select></label>
+      <select class="select" id="t-tz">${['All', ...tzs].map((v) => opt(v, fTz, v === 'All' ? 'All time zones' : v)).join('')}</select>
+      <select class="select" id="t-track">${['All', ...TRACKS].map((v) => opt(v, fTrack, v === 'All' ? 'All programs' : v)).join('')}</select>
+      <select class="select" id="t-partner">${['All', ...d.partners.map((p) => p.id)].map((v) => opt(v, fPartner, v === 'All' ? 'All partners' : partnerName(v))).join('')}</select>
+      <select class="select" id="t-status">${['All', ...statuses].map((v) => opt(v, fStatus, v === 'All' ? 'All statuses' : v)).join('')}</select>
+      <button class="btn sm" id="t-reset">Reset</button>
+    </div>
+
+    <div class="kpi-grid">
+      ${kpiCard({ label: 'Active engagements', value: T.active, iconName: 'send' })}
+      ${kpiCard({ label: 'At-risk', value: T.atRisk, iconName: 'warning', tone: T.atRisk ? COLORS.warning : COLORS.neutral })}
+      ${kpiCard({ label: 'Open escalations', value: T.openEsc, iconName: 'warning', tone: T.sla ? COLORS.negative : COLORS.neutral, hint: `${T.sla} breaching SLA` })}
+      ${kpiCard({ label: 'On-time', value: T.onTime + '%', iconName: 'check', tone: T.onTime >= 90 ? COLORS.positive : COLORS.warning })}
+      ${kpiCard({ label: 'Utilization', value: T.util + '%', iconName: 'people', tone: utilColor(T.util) })}
+      ${kpiCard({ label: 'Avg CPE', value: T.cpe.toFixed(1), iconName: 'star', tone: scoreColor(T.cpe) })}
+    </div>
+
+    <div class="card pad mb16" style="border-left:4px solid var(--brand-primary)"><div class="row mb8">${icon('sparkle', 16)}<strong>Operational summary</strong>${aiChip()}</div><div>${esc(aiText)}</div></div>
+
+    <div class="section-title">By ${esc(groupLabel)}</div>
+    <div class="table-wrap mb16"><table class="grid"><thead><tr><th>${esc(groupLabel)}</th><th>Engagements</th><th>Active</th><th>At-risk</th><th>On-time</th><th>Open esc</th><th>SLA breach</th><th>CSAs</th><th>Utilization</th><th>CPE</th></tr></thead><tbody>
+      ${rows.map((r) => `<tr>
+        <td><strong>${esc(r.g)}</strong></td>
+        <td>${r.count}</td>
+        <td>${r.active}</td>
+        <td>${r.atRisk ? `<span style="color:${COLORS.warning}">${r.atRisk}</span>` : '0'}</td>
+        <td>${r.onTimePct == null ? '—' : r.onTimePct + '%'}</td>
+        <td>${r.openEsc}</td>
+        <td>${r.slaBreach ? `<span style="color:${COLORS.negative}">${r.slaBreach}</span>` : '0'}</td>
+        <td>${r.csas}</td>
+        <td><div class="row" style="gap:6px">${meter(r.util, utilColor(r.util))}<span>${r.util}%</span></div></td>
+        <td style="color:${scoreColor(r.avgCpe)}">${r.avgCpe ? r.avgCpe.toFixed(1) : '—'}</td>
+      </tr>`).join('') || '<tr><td colspan="10" class="muted" style="padding:16px">No data for this filter combination.</td></tr>'}
+    </tbody></table></div>
+
+    <div class="two-col">
+      <div class="card chart-card"><div class="chart-head"><strong>Active engagements by ${esc(groupLabel)}</strong></div><div class="chart-holder" style="height:220px"><canvas id="t-active"></canvas></div></div>
+      <div class="card chart-card"><div class="chart-head"><strong>Open escalations by ${esc(groupLabel)}</strong></div><div class="chart-holder" style="height:220px"><canvas id="t-esc"></canvas></div></div>
+    </div>`;
+
+  bar(tc.querySelector('#t-active'), { labels: rows.map((r) => r.g), values: rows.map((r) => r.active), color: COLORS.brand, label: 'Active' });
+  bar(tc.querySelector('#t-esc'), { labels: rows.map((r) => r.g), values: rows.map((r) => r.openEsc), color: COLORS.sev2, label: 'Open esc' });
+
+  const rerender = () => renderTerritory(tc);
+  tc.querySelector('#t-group').addEventListener('change', (e) => { groupBy = e.target.value; rerender(); });
+  tc.querySelector('#t-tz').addEventListener('change', (e) => { fTz = e.target.value; rerender(); });
+  tc.querySelector('#t-track').addEventListener('change', (e) => { fTrack = e.target.value; rerender(); });
+  tc.querySelector('#t-partner').addEventListener('change', (e) => { fPartner = e.target.value; rerender(); });
+  tc.querySelector('#t-status').addEventListener('change', (e) => { fStatus = e.target.value; rerender(); });
+  tc.querySelector('#t-reset').addEventListener('click', () => { fTz = 'All'; fTrack = 'All'; fPartner = 'All'; fStatus = 'All'; rerender(); });
 }
 
 // ---- MBR & Ask-your-data ----
