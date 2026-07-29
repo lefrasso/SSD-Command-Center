@@ -9,7 +9,8 @@ const PERIODS = ['2026-04', '2026-05', '2026-06', '2026-07'];
 let tab = 'exec';
 let selPartner = null;
 let selPeriod = '2026-07';
-let mbrOut = '';
+let mbrType = 'partner';
+let mbrShown = false;
 let askOut = '';
 let groupBy = 'tz';
 let fTz = 'All';
@@ -18,7 +19,7 @@ let fPartner = 'All';
 let fStatus = 'All';
 
 export function renderReporting(container) {
-  const tabs = [['exec', 'Executive View'], ['territory', 'Territory Ops'], ['mbr', 'MBR & Ask-your-data']];
+  const tabs = [['exec', 'Executive View'], ['territory', 'Territory Ops'], ['mbr', 'MBR Builder'], ['ask', 'Ask-your-data']];
   container.innerHTML = `
     ${pageHeader({ title: 'Reporting & AI', description: 'Executive Success Programs insights, AI-assisted MBRs, and ask-your-data over SSD IQ.' })}
     <div class="tabs">${tabs.map(([k, l]) => `<div class="tab ${tab === k ? 'active' : ''}" data-tab="${k}">${l}</div>`).join('')}</div>
@@ -27,7 +28,8 @@ export function renderReporting(container) {
   const tc = container.querySelector('#tabc');
   if (tab === 'exec') renderExec(tc);
   else if (tab === 'territory') renderTerritory(tc);
-  else renderMbr(tc);
+  else if (tab === 'mbr') renderMbrBuilder(tc);
+  else renderAsk(tc);
 }
 
 function tzOf(csaId) { const c = store.data.csas.find((x) => x.id === csaId); if (!c) return null; const p = store.data.pods.find((pp) => pp.id === c.podId); return p ? p.tz : null; }
@@ -204,43 +206,139 @@ function renderTerritory(tc) {
   tc.querySelector('#t-reset').addEventListener('click', () => { fTz = 'All'; fTrack = 'All'; fPartner = 'All'; fStatus = 'All'; rerender(); });
 }
 
-// ---- MBR & Ask-your-data ----
-function renderMbr(tc) {
+// ---- MBR Builder (Delivery Partner MBR + internal SSD Business MBR) ----
+function slide(n, title, body, chip) {
+  return `<div class="card pad mb16"><div class="row mb8" style="gap:8px;align-items:center"><span class="mbr-num">${n}</span><strong style="font-size:16px">${esc(title)}</strong>${chip || ''}</div>${body}</div>`;
+}
+
+function renderMbrBuilder(tc) {
   clearCharts();
   const d = store.data;
   if (!selPartner) selPartner = d.partners[0] && d.partners[0].id;
   const partnerOpts = d.partners.map((p) => `<option value="${p.id}" ${p.id === selPartner ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
   const periodOpts = PERIODS.map((p) => `<option value="${p}" ${p === selPeriod ? 'selected' : ''}>${p}</option>`).join('');
-  const deliveriesByPartner = d.partners.map((p) => { const ids = d.csas.filter((c) => c.partnerId === p.id).map((c) => c.id); return d.deliveries.filter((dl) => { const e = d.engagements.find((x) => x.id === dl.engagementId); return e && ids.includes(e.assignedTo); }).length; });
 
   tc.innerHTML = `
-    <div class="two-col">
-      <div class="card pad">
-        <div class="row mb8" style="gap:8px;flex-wrap:wrap"><strong>Delivery Partner MBR</strong>
-          <select class="select" id="mbr-partner">${partnerOpts}</select>
-          <select class="select" id="mbr-period">${periodOpts}</select>
-          <button class="btn primary sm" id="mbr-gen">${icon('sparkle', 14)} Generate</button>
-        </div>
-        <div id="mbr-out">${mbrOut || '<div class="muted">Select a partner and period, then generate a draft MBR narrative.</div>'}</div>
-      </div>
-      <div class="card pad">
-        <strong>Ask your data</strong>
-        <div class="input-wrap mt8" style="width:100%"><span class="in-ico">${icon('search', 18)}</span><input class="input" id="ask-in" style="width:100%" placeholder="e.g. CPE trend for Avanade"/></div>
-        <div class="row wrap mt8" style="gap:6px">
-          ${['CPE trend for Avanade', 'open escalations', 'utilization', 'on-time delivery'].map((q) => `<button class="btn sm" data-q="${esc(q)}">${esc(q)}</button>`).join('')}
-        </div>
-        <div id="ask-out" class="mt8">${askOut}</div>
-      </div>
+    <div class="row wrap mb16" style="gap:8px;align-items:center">
+      <span class="muted" style="font-size:12px">MBR type</span>
+      <select class="select" id="mbr-type">
+        <option value="partner" ${mbrType === 'partner' ? 'selected' : ''}>Delivery Partner MBR</option>
+        <option value="business" ${mbrType === 'business' ? 'selected' : ''}>SSD Business MBR (internal)</option>
+      </select>
+      <select class="select" id="mbr-partner" style="${mbrType === 'partner' ? '' : 'display:none'}">${partnerOpts}</select>
+      <select class="select" id="mbr-period">${periodOpts}</select>
+      <button class="btn primary sm" id="mbr-gen">${icon('sparkle', 14)} Generate MBR</button>
+      ${mbrShown ? `<button class="btn sm" id="mbr-print">Print / PDF</button>` : ''}
     </div>
-    <div class="card chart-card"><div class="chart-head"><strong>Deliveries by partner</strong>${aiChip('outliers')}</div><div class="chart-holder" style="height:240px"><canvas id="c-deliv"></canvas></div></div>`;
+    <div id="mbr-doc">${mbrShown ? '' : '<div class="muted">Choose an MBR type and period, then generate a full, sectioned Monthly Business Review from SSD IQ.</div>'}</div>`;
 
-  bar(tc.querySelector('#c-deliv'), { labels: d.partners.map((p) => p.name), values: deliveriesByPartner, color: COLORS.brand, label: 'Deliveries' });
-  const runMbr = () => { const p = d.partners.find((x) => x.id === selPartner); const r = mbrNarrative(p, selPeriod, d); mbrOut = `<div class="card pad" style="background:var(--bg-2)"><div class="row mb8">${aiChip()}<button class="btn sm" id="mbr-copy">Copy</button></div><pre style="white-space:pre-wrap;font-family:inherit;font-size:13px;margin:0">${esc(r.text)}</pre></div>`; renderMbr(tc); };
-  const runAsk = (q) => { askOut = `<div class="card pad" style="background:var(--bg-2)"><div class="row mb8">${aiChip()}</div><div>${esc(askData(q, d).text)}</div></div>`; renderMbr(tc); };
+  tc.querySelector('#mbr-type').addEventListener('change', (e) => { mbrType = e.target.value; mbrShown = false; renderMbrBuilder(tc); });
   tc.querySelector('#mbr-partner').addEventListener('change', (e) => { selPartner = e.target.value; });
   tc.querySelector('#mbr-period').addEventListener('change', (e) => { selPeriod = e.target.value; });
-  tc.querySelector('#mbr-gen').addEventListener('click', runMbr);
-  const copyBtn = tc.querySelector('#mbr-copy'); if (copyBtn) copyBtn.addEventListener('click', () => { const txt = tc.querySelector('#mbr-out pre'); if (txt && navigator.clipboard) navigator.clipboard.writeText(txt.textContent); });
+  tc.querySelector('#mbr-gen').addEventListener('click', () => { mbrShown = true; renderMbrBuilder(tc); });
+  const printBtn = tc.querySelector('#mbr-print'); if (printBtn) printBtn.addEventListener('click', () => window.print());
+
+  if (mbrShown) {
+    const doc = tc.querySelector('#mbr-doc');
+    if (mbrType === 'partner') buildPartnerMbr(doc);
+    else buildBusinessMbr(doc);
+  }
+}
+
+function buildPartnerMbr(doc) {
+  const d = store.data;
+  const p = d.partners.find((x) => x.id === selPartner);
+  const csas = d.csas.filter((c) => c.partnerId === p.id);
+  const active = csas.filter((c) => c.lifecycle === 'active');
+  const ids = csas.map((c) => c.id);
+  const engs = d.engagements.filter((e) => e.assignedTo && ids.includes(e.assignedTo));
+  const dels = d.deliveries.filter((dl) => engs.some((e) => e.id === dl.engagementId));
+  const escs = d.escalations.filter((e) => engs.some((x) => x.id === e.engagementId));
+  const cpeItems = d.cpe.filter((c) => engs.some((e) => e.id === c.engagementId));
+  const avgCpe = cpeItems.length ? Math.round((cpeItems.reduce((s, c) => s + c.score, 0) / cpeItems.length) * 10) / 10 : p.cpe;
+  const onTime = dels.length ? Math.round((dels.filter((dl) => { const e = engs.find((x) => x.id === dl.engagementId); return e && dl.completedDate <= e.dueDate; }).length / dels.length) * 100) : 100;
+  const util = active.length ? Math.round(active.reduce((s, c) => s + c.utilization, 0) / active.length) : 0;
+  const atRisk = engs.filter((e) => e.atRisk).length;
+  const openEsc = escs.filter((e) => e.status !== 'resolved').length;
+  const highSev = escs.filter((e) => e.severity === 'sev1' || e.severity === 'sev2').length;
+  const delByTrack = TRACKS.map((t) => dels.filter((x) => x.track === t).length);
+  const cpeByTrack = TRACKS.map((t) => { const items = cpeItems.filter((c) => c.track === t); return items.length ? Math.round((items.reduce((s, c) => s + c.score, 0) / items.length) * 10) / 10 : 0; });
+  const roll = d.sentiment.find((s) => s.scope === p.name && s.period === selPeriod);
+  const posV = cpeItems.filter((c) => c.sentiment === 'positive').slice(0, 2);
+  const summary = mbrNarrative(p, selPeriod, d).text;
+
+  doc.innerHTML = `
+    <div class="row wrap mb16" style="gap:8px;align-items:center"><span style="font-size:20px;font-weight:700">Delivery Partner MBR — ${esc(p.name)}</span>${badge(selPeriod, 'tint-info')}${badge('FY27', 'outline')}${aiChip()}</div>
+    ${slide(1, 'Executive summary', `<div class="kpi-grid">
+        ${kpiCard({ label: 'Deliveries', value: dels.length, iconName: 'check', tone: COLORS.brand })}
+        ${kpiCard({ label: 'On-time', value: onTime + '%', iconName: 'send', tone: onTime >= 90 ? COLORS.positive : COLORS.warning })}
+        ${kpiCard({ label: 'CPE', value: avgCpe.toFixed(1), iconName: 'star', tone: scoreColor(avgCpe) })}
+        ${kpiCard({ label: 'Open escalations', value: openEsc, iconName: 'warning', tone: openEsc ? COLORS.warning : COLORS.neutral, hint: `${highSev} high sev` })}
+        ${kpiCard({ label: 'Active CSAs', value: active.length, iconName: 'people' })}
+        ${kpiCard({ label: 'Utilization', value: util + '%', iconName: 'trending', tone: utilColor(util) })}
+      </div><div class="muted mt8" style="white-space:pre-wrap">${esc(summary)}</div>`)}
+    ${slide(2, 'Delivery volume by Success Program', `<div class="chart-holder" style="height:220px"><canvas id="pm-track"></canvas></div>`)}
+    ${slide(3, 'Customer & Partner Experience (CPE)', `<div class="chart-holder" style="height:220px"><canvas id="pm-cpe"></canvas></div>${posV.length ? `<div class="mt8">${posV.map((c) => `<div class="muted" style="font-size:12px">“${esc(c.verbatim)}” — ${esc(c.track)}</div>`).join('')}</div>` : ''}`)}
+    ${slide(4, 'Escalations & risk', `<div>Open escalations: <strong>${openEsc}</strong> (${highSev} high severity). At-risk engagements: <strong>${atRisk}</strong>. Net sentiment: <strong>${roll ? roll.net : '—'}</strong>.</div><div class="muted mt8" style="font-size:12px">${escs.length ? 'Top concern: ' + esc(escs[0].summary) : 'No escalations this period.'}</div>`)}
+    ${slide(5, 'Highlights & next steps', `<ul class="brief-bullets">
+        <li>Strong delivery across ${[...new Set(engs.map((e) => e.track))].slice(0, 3).map(esc).join(', ') || 'multiple tracks'}.</li>
+        <li>${dels.length} deliveries completed; CPE ${avgCpe.toFixed(1)}.</li>
+        <li>Next: sustain outreach cadence, close ${openEsc} open escalation(s) within SLA, maintain CPE ≥ 4.4.</li>
+      </ul>`)}`;
+
+  bar(doc.querySelector('#pm-track'), { labels: TRACKS.map((t) => t.replace(' (P&E)', '')), values: delByTrack, color: COLORS.brand, label: 'Deliveries' });
+  bar(doc.querySelector('#pm-cpe'), { labels: TRACKS.map((t) => t.replace(' (P&E)', '')), values: cpeByTrack, color: '#2aa0a4', label: 'CPE' });
+}
+
+function buildBusinessMbr(doc) {
+  const d = store.data;
+  const k = computeKpis(d);
+  const months = [...new Set([...d.deliveries.map((x) => x.completedDate.slice(0, 7)), ...d.cpe.map((c) => c.date.slice(0, 7))])].filter(Boolean).sort();
+  const delByMonth = months.map((m) => d.deliveries.filter((x) => x.completedDate.slice(0, 7) === m).length);
+  const tzs = Object.keys(TZ_MAP);
+  const delByTz = tzs.map((tz) => d.deliveries.filter((dl) => { const e = d.engagements.find((x) => x.id === dl.engagementId); const c = e && d.csas.find((cc) => cc.id === e.assignedTo); const pod = c && d.pods.find((pp) => pp.id === c.podId); return pod && pod.tz === tz; }).length);
+  const sev = ['sev1', 'sev2', 'sev3', 'sev4'].map((s) => d.escalations.filter((e) => e.severity === s && e.status !== 'resolved').length);
+  const onboarding = d.csas.filter((c) => c.lifecycle === 'onboarding').length;
+  const summary = execSummary(d).text;
+  const netSent = k.netSentiment;
+
+  doc.innerHTML = `
+    <div class="row wrap mb16" style="gap:8px;align-items:center"><span style="font-size:20px;font-weight:700">SSD Business MBR — ${selPeriod}</span>${badge('Internal', 'tint-danger')}${badge('FY27', 'outline')}${aiChip()}</div>
+    ${slide(1, 'Executive summary', `<div class="kpi-grid">
+        ${kpiCard({ label: 'Deliveries', value: k.deliveriesCompleted, iconName: 'check', tone: COLORS.brand })}
+        ${kpiCard({ label: 'On-time', value: k.onTimePct + '%', iconName: 'send', tone: k.onTimePct >= 90 ? COLORS.positive : COLORS.warning })}
+        ${kpiCard({ label: 'CPE', value: k.rollingCpe.toFixed(1), iconName: 'star', tone: scoreColor(k.rollingCpe) })}
+        ${kpiCard({ label: 'Open escalations', value: k.openEscalations, iconName: 'warning', tone: k.slaBreaches ? COLORS.negative : COLORS.neutral, hint: `${k.slaBreaches} SLA` })}
+        ${kpiCard({ label: 'Utilization', value: k.utilization + '%', iconName: 'people', tone: utilColor(k.utilization) })}
+        ${kpiCard({ label: 'Net sentiment', value: netSent > 0 ? '+' + netSent : netSent, iconName: 'emoji', tone: netSent >= 0 ? COLORS.positive : COLORS.negative })}
+      </div><div class="muted mt8">${esc(summary)}</div>`)}
+    ${slide(2, 'Delivery performance', `<div class="chart-holder" style="height:220px"><canvas id="bm-month"></canvas></div>`)}
+    ${slide(3, 'Delivery by territory (time zone)', `<div class="chart-holder" style="height:220px"><canvas id="bm-tz"></canvas></div>`)}
+    ${slide(4, 'Escalations & operational risk', `<div class="chart-holder" style="height:220px"><canvas id="bm-sev"></canvas></div>`)}
+    ${slide(5, 'Workforce & capacity', `<div>Active Partner CSAs: <strong>${d.csas.filter((c) => c.lifecycle === 'active').length}</strong>. In onboarding: <strong>${onboarding}</strong>. Utilization <strong>${k.utilization}%</strong> (healthy band 80–90%).</div>`)}
+    ${slide(6, 'Priorities & focus', `<ul class="brief-bullets">
+        <li>Protect CPE ≥ 4.4 and on-time ≥ 90%.</li>
+        <li>Clear ${k.slaBreaches} SLA-breaching escalation(s); enforce T-3W proactive dispatch.</li>
+        <li>Balance capacity toward the 80–90% band; sustain onboarding pipeline (${onboarding}).</li>
+      </ul>`)}`;
+
+  bar(doc.querySelector('#bm-month'), { labels: months, values: delByMonth, color: COLORS.brand, label: 'Deliveries' });
+  bar(doc.querySelector('#bm-tz'), { labels: tzs, values: delByTz, color: '#f7a600', label: 'Deliveries' });
+  donut(doc.querySelector('#bm-sev'), { labels: ['Sev 1', 'Sev 2', 'Sev 3', 'Sev 4'], values: sev, colors: [COLORS.sev1, COLORS.sev2, COLORS.sev3, COLORS.sev4] });
+}
+
+// ---- Ask-your-data ----
+function renderAsk(tc) {
+  clearCharts();
+  const d = store.data;
+  tc.innerHTML = `
+    <div class="card pad">
+      <strong>Ask your data</strong>
+      <div class="input-wrap mt8" style="width:100%;max-width:520px"><span class="in-ico">${icon('search', 18)}</span><input class="input" id="ask-in" style="width:100%" placeholder="e.g. CPE trend for Avanade"/></div>
+      <div class="row wrap mt8" style="gap:6px">${['CPE trend for Avanade', 'open escalations', 'utilization', 'on-time delivery'].map((q) => `<button class="btn sm" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+      <div id="ask-out" class="mt8">${askOut}</div>
+    </div>`;
+  const runAsk = (q) => { askOut = `<div class="card pad" style="background:var(--bg-2)"><div class="row mb8">${aiChip()}</div><div>${esc(askData(q, d).text)}</div></div>`; renderAsk(tc); };
   const askIn = tc.querySelector('#ask-in');
   askIn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && askIn.value.trim()) runAsk(askIn.value.trim()); });
   tc.querySelectorAll('[data-q]').forEach((b) => b.addEventListener('click', () => runAsk(b.getAttribute('data-q'))));
