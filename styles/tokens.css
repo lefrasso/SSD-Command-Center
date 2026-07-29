@@ -1,0 +1,54 @@
+/* Compass design tokens — Fluent 2 / Microsoft 365 look. */
+:root {
+  /* Brand (Microsoft blue) */
+  --brand-primary: #0f6cbd;
+  --brand-hover: #115ea3;
+  --brand-pressed: #0e4f89;
+  --brand-bg-2: #ebf3fc;
+  --brand-bg-2-hover: #dcecfa;
+  --brand-stroke-2: #b4d6fa;
+  --brand-fg: #0f6cbd;
+
+  /* Neutrals */
+  --fg-1: #242424;
+  --fg-2: #424242;
+  --fg-3: #616161;
+  --fg-4: #808080;
+  --bg-1: #ffffff;
+  --bg-2: #faf9f8;
+  --bg-3: #f3f2f1;
+  --bg-canvas: #f5f5f5;
+  --stroke-1: #d1d1d1;
+  --stroke-2: #e0e0e0;
+
+  /* Status / severity / sentiment */
+  --positive: #0e700e;
+  --neutral: #616161;
+  --negative: #c4314b;
+  --warning: #bc4b09;
+  --info: #0f6cbd;
+  --sev1: #a80000;
+  --sev2: #c4314b;
+  --sev3: #bc4b09;
+  --sev4: #616161;
+  --ai: #8661c5;
+  --ai-bg: #f3eefa;
+  --ai-stroke: #e0d3f5;
+
+  /* Chart palette */
+  --c1: #0f6cbd; --c2: #2aa0a4; --c3: #6b69d6; --c4: #f7a600; --c5: #c4314b; --c6: #5c2e91; --c7: #0e700e;
+
+  /* Shape & type */
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow-2: 0 1px 2px rgba(0,0,0,0.08), 0 0 2px rgba(0,0,0,0.06);
+  --shadow-8: 0 4px 8px rgba(0,0,0,0.10), 0 0 2px rgba(0,0,0,0.08);
+  --shadow-16: 0 8px 16px rgba(0,0,0,0.14), 0 0 2px rgba(0,0,0,0.10);
+  --font: "Segoe UI", "Segoe UI Web (West European)", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+
+  --bar-h: 48px;
+  --rail-w: 260px;
+  --rail-w-collapsed: 52px;
+  --copilot-w: 340px;
+}

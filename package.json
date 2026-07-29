@@ -1,0 +1,11 @@
+{
+  "name": "ssd-command-center",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Compass — SSD Delivery Console. Self-contained, no-build prototype over the SSD IQ System of Records. No dependencies to install.",
+  "scripts": {
+    "start": "node serve.mjs",
+    "serve": "node serve.mjs"
+  }
+}
