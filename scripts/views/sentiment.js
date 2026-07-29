@@ -46,7 +46,7 @@ export function renderSentiment(container) {
 
     <div class="two-col">
       <div class="card chart-card"><div class="chart-head"><strong>Net by partner</strong></div><div class="chart-holder" style="height:220px"><canvas id="c-partner"></canvas></div></div>
-      <div class="card chart-card"><div class="chart-head"><strong>Net by track</strong></div><div class="chart-holder" style="height:220px"><canvas id="c-track"></canvas></div></div>
+      <div class="card chart-card"><div class="chart-head"><strong>Net by family</strong></div><div class="chart-holder" style="height:220px"><canvas id="c-track"></canvas></div></div>
     </div>
 
     <div class="two-col">

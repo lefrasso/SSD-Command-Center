@@ -28,7 +28,9 @@
 - **FR-IDENT-1** — The system shall authenticate every user via **Microsoft Entra ID SSO**; no
   anonymous access.
 - **FR-IDENT-2** — The system shall derive the user's role(s) from Entra **app roles / group
-  membership** (roles: pod-lead, partner-csa, sdm, dpsm, business-lt; + HR-equivalent for PIPs).
+  membership** (11 personas across SSD, CSAM Innovation and Delivery Partner: `ww-lead`, `tz-lead`,
+  `csa-manager`, `pod-lead`, `business-manager`, `csa`, `ip-lead`, `adoption-lead`, `partner-csa`,
+  `sdm`, `operations-manager`; + HR-equivalent for PIPs).
 - **FR-IDENT-3** — The navigation shall show only modules permitted for the active role.
 - **FR-IDENT-4** — Action controls (dispatch, escalation edit, capacity edit, MBR, PIP) shall be shown
   only when the role holds the corresponding permission.

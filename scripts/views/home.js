@@ -51,14 +51,14 @@ export function renderHome(container) {
     return { pod, avgUtil, avgCpe, atRisk, openEsc, headcount: active.length };
   });
 
-  const trackOpts = ['All', ...TRACKS].map((t) => `<option value="${esc(t)}" ${t === track ? 'selected' : ''}>${t === 'All' ? 'All tracks' : esc(t)}</option>`).join('');
+  const trackOpts = ['All', ...TRACKS].map((t) => `<option value="${esc(t)}" ${t === track ? 'selected' : ''}>${t === 'All' ? 'All families' : esc(t)}</option>`).join('');
   const partnerOpts = ['All', ...d.partners.map((p) => p.id)].map((p) => { const label = p === 'All' ? 'All partners' : d.partners.find((x) => x.id === p).name; return `<option value="${esc(p)}" ${p === partner ? 'selected' : ''}>${esc(label)}</option>`; }).join('');
 
   container.innerHTML = `
     ${pageHeader({
       title: 'Delivery Cockpit',
       description: `Welcome, ${esc(persona.name.split(' ')[0])}. Here's what needs your attention today.`,
-      actions: `<select class="select" id="f-track" aria-label="Filter by track">${trackOpts}</select>
+      actions: `<select class="select" id="f-track" aria-label="Filter by family">${trackOpts}</select>
                 <select class="select" id="f-partner" aria-label="Filter by partner">${partnerOpts}</select>`,
     })}
 
@@ -127,7 +127,7 @@ export function renderHome(container) {
     </div>
 
     <div class="card chart-card mb16">
-      <div class="chart-head"><strong>Average CPE by track</strong></div>
+      <div class="chart-head"><strong>Average CPE by family</strong></div>
       <div class="chart-holder" style="height:220px"><canvas id="c-cpe"></canvas></div>
     </div>
 

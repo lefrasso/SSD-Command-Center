@@ -9,7 +9,7 @@
 |---|---|
 | Capability ID | `CAP-11` |
 | Area | Workforce |
-| Primary personas | All (editing restricted to enablement/DPSM/POD Lead) |
+| Primary personas | All (editing restricted to enablement / CSA Manager / POD Lead / Operations Manager) |
 | Priority | Should |
 | Target phase | P2 |
 | Prototype reference | `scripts/views/enablement.js` |
@@ -25,7 +25,8 @@
 
 ## 2. Functional requirements
 
-- **FR-EN-1** — **Accreditations:** show accreditation coverage across CSAs and per-CSA accreditations.
+- **FR-EN-1** — **Accreditations:** show accreditation coverage across CSAs and per-CSA accreditations
+  + languages. Each **Program** (service / event) maps 1:1 to an accreditation.
 - **FR-EN-2** — **S500 eligibility:** compute eligibility from CPE/quality/tenure with a reason when not
   eligible.
 - **FR-EN-3** — **SDM onboarding:** show a structured onboarding path and per-SDM progress.
@@ -33,15 +34,19 @@
 - **FR-EN-5** — **Shadowing:** show mentor/mentee pairs and status.
 - **FR-EN-6** — Integrate a real **accreditation** source (with expiry/renewal) and persist S500
   decisions (production).
+- **FR-EN-7** — **Service Catalogue:** show the catalogue of services — Family → Program →
+  accreditation — with the count of accredited CSAs per Program.
 
 ## 3. Business rules
 
 - **BR-EN-1** — S500 eligible ⇔ `cpe ≥ 4.4 AND quality ≥ 4.4 AND tenureMonths ≥ 6`; reason = first
   failing criterion.
 - **BR-EN-2** — Shadowing pairing: mentee = sourcing/selection/onboarding CSA; mentor = active CSA in the
-  same POD (fallback: shares a track).
+  same POD (fallback: shares a Family).
 - **BR-EN-3** — SDM onboarding = 6 steps (role/scope, escalation training, ADO/Power BI access, partner
   health dashboards, shadow live escalations, readiness sign-off).
+- **BR-EN-4** — A CSA's **accreditations** are the Programs (from the Families they work in) they are
+  certified to deliver; there is one accreditation per Program.
 
 ## 4. User stories & acceptance criteria
 

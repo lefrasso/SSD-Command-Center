@@ -12,20 +12,28 @@
 
 ## 2. Roles & RBAC
 
-Five roles (prototype: `scripts/roles.js`). Permissions checked as `can(role, permission)`.
+Eleven personas across three orgs — **SSD** (Microsoft), **CSAM Innovation**, and the **Delivery
+Partner** (prototype: `scripts/roles.js`). The SSD delivery line is a hierarchy:
+**WW Lead → TZ Lead → CSA Manager → POD Lead**, with multiple POD Leads per Territory/OU. Permissions
+are checked as `can(role, permission)`.
 
-| Permission | pod-lead | partner-csa | sdm | dpsm | business-lt |
-|---|:--:|:--:|:--:|:--:|:--:|
-| `view:portfolio` | ✅ | — | — | — | ✅ |
-| `view:pip` (confidential) | ✅¹ | — | — | — | — |
-| `edit:pip` | ✅¹ | — | — | — | — |
-| `edit:dispatch` | ✅ | — | — | — | — |
-| `edit:escalation` | ✅ | — | ✅ | — | — |
-| `edit:capacity` | ✅ | — | — | ✅ | — |
-| `view:allPartners` | ✅ | — | ✅ | ✅ | ✅ |
-| `run:mbr` | ✅ | — | ✅ | — | ✅ |
+| Permission | ww-lead | tz-lead | csa-manager | pod-lead | business-manager | csa | ip-lead | adoption-lead | partner-csa | sdm | operations-manager |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| `view:portfolio` | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | — | — | — |
+| `view:pip` (confidential) | — | — | ✅¹ | ✅¹ | — | — | — | — | — | — | — |
+| `edit:pip` | — | — | ✅ | ✅ | — | — | — | — | — | — | — |
+| `edit:dispatch` | — | — | ✅ | ✅ | — | — | — | — | — | — | — |
+| `edit:escalation` | — | — | ✅ | ✅ | — | — | — | — | — | ✅ | — |
+| `edit:capacity` | — | — | ✅ | ✅ | — | — | — | — | — | — | ✅ |
+| `view:allPartners` | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | — | — | ✅ | ✅ |
+| `run:mbr` | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | — | — | ✅ | — |
 
-¹ Production adds an **HR-equivalent** role for PIP access alongside POD Lead.
+¹ `view:pip` / `edit:pip` are confidential — **CSA Manager + POD Lead** in the prototype; production
+adds an **HR-equivalent** role.
+
+**Persona orgs:** SSD = `ww-lead`, `tz-lead`, `csa-manager`, `pod-lead`, `business-manager`, `csa` ·
+CSAM Innovation = `ip-lead`, `adoption-lead` · Delivery Partner = `partner-csa`, `sdm`,
+`operations-manager`.
 
 **Enforcement:** RBAC is enforced at the **API**, not only in the UI. Navigation hides unpermitted
 modules; **deep links** to unpermitted routes are also blocked. See [CAP-01](capabilities/CAP-01-identity-and-access.md).

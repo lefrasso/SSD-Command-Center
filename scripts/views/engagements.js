@@ -42,7 +42,7 @@ function openEngagement(id) {
     <div class="row wrap mb8" style="gap:8px">${statusPill(e.status)} ${e.atRisk ? badge('At risk', 'tint-warn') : ''}</div>
     <div class="field"><span class="field-key">Customer</span><span class="field-val">${esc(e.customer)}</span></div>
     <div class="field"><span class="field-key">CSAM</span><span class="field-val">${esc(e.csamName)}</span></div>
-    <div class="field"><span class="field-key">Track / Program</span><span class="field-val">${esc(e.track)} · ${esc(e.program)}</span></div>
+    <div class="field"><span class="field-key">Family / Program</span><span class="field-val">${esc(e.track)} · ${esc(e.program)}</span></div>
     <div class="field"><span class="field-key">Assigned CSA</span><span class="field-val">${csa ? esc(csa.name) + ' (' + esc(csa.vendor) + ')' : 'Unassigned'}</span></div>
     <div class="field"><span class="field-key">Due</span><span class="field-val">${esc(e.dueDate)}</span></div>
     <div class="section-title">Day 0–3 outreach</div><div class="row wrap" style="gap:6px">${outreach}</div>

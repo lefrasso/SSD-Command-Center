@@ -2,6 +2,7 @@
 import { store } from '../store.js';
 import { pageHeader, kpiCard, esc, badge, COLORS } from '../components.js';
 import { icon } from '../icons.js';
+import { PROGRAMS, TRACKS } from '../../data/generate.js';
 
 const SDM_ONBOARD = ['Role & scope orientation', 'Escalation process training', 'ADO & Power BI access', 'Partner health dashboards', 'Shadow live escalations', 'Readiness sign-off'];
 const SDMS = ['Priya Nair', 'Kenji Watanabe', 'Laura Bianchi', 'Mohammed Ali', 'Grace Park', 'Tomás Herrera'];
@@ -16,34 +17,55 @@ const userVoice = [
 const seedOf = (s) => [...s].reduce((a, ch) => a + ch.charCodeAt(0), 0);
 
 export function renderEnablement(container) {
-  const tabs = [['accred', 'Accreditations'], ['s500', 'S500 Eligibility'], ['sdm', 'SDM Onboarding'], ['uv', 'User Voice'], ['shadow', 'Shadowing']];
+  const tabs = [['accred', 'Accreditations'], ['catalogue', 'Service Catalogue'], ['s500', 'S500 Eligibility'], ['sdm', 'SDM Onboarding'], ['uv', 'User Voice'], ['shadow', 'Shadowing']];
   container.innerHTML = `
     ${pageHeader({ title: 'Enablement', description: 'Accreditations, S500 eligibility, SDM onboarding, User Voice and shadowing management.' })}
     <div class="tabs">${tabs.map(([k, l]) => `<div class="tab ${tab === k ? 'active' : ''}" data-tab="${k}">${l}</div>`).join('')}</div>
     <div id="tabc"></div>`;
   container.querySelectorAll('[data-tab]').forEach((el) => el.addEventListener('click', () => { tab = el.getAttribute('data-tab'); renderEnablement(container); }));
   const tc = container.querySelector('#tabc');
-  ({ accred: renderAccred, s500: renderS500, sdm: renderSdm, uv: renderUv, shadow: renderShadow })[tab](tc, container);
+  ({ accred: renderAccred, catalogue: renderCatalogue, s500: renderS500, sdm: renderSdm, uv: renderUv, shadow: renderShadow })[tab](tc, container);
 }
 
 function renderAccred(tc) {
   const d = store.data;
   const active = d.csas.filter((c) => c.lifecycle === 'active');
-  const skillCount = {};
-  active.forEach((c) => c.skills.forEach((s) => (skillCount[s] = (skillCount[s] || 0) + 1)));
-  const top = Object.entries(skillCount).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const accCount = {};
+  active.forEach((c) => (c.accreditations || []).forEach((s) => (accCount[s] = (accCount[s] || 0) + 1)));
+  const top = Object.entries(accCount).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const totalPrograms = TRACKS.reduce((s, t) => s + (PROGRAMS[t] || []).length, 0);
   tc.innerHTML = `
+    <div class="muted mb8" style="font-size:12px">Each Program (service / event) maps to one accreditation. Partner CSAs hold multiple accreditations and can deliver in any territory.</div>
     <div class="kpi-grid">
-      ${kpiCard({ label: 'Accredited CSAs', value: active.length, iconName: 'check', tone: COLORS.positive })}
-      ${kpiCard({ label: 'Distinct accreditations', value: Object.keys(skillCount).length, iconName: 'star' })}
-      ${kpiCard({ label: 'Avg per CSA', value: active.length ? Math.round(active.reduce((s, c) => s + c.skills.length, 0) / active.length) : 0, iconName: 'people' })}
+      ${kpiCard({ label: 'Accredited CSAs', value: active.filter((c) => (c.accreditations || []).length).length, iconName: 'check', tone: COLORS.positive })}
+      ${kpiCard({ label: 'Accreditations in catalogue', value: totalPrograms, iconName: 'star', hint: '= number of Programs' })}
+      ${kpiCard({ label: 'Avg per CSA', value: active.length ? Math.round(active.reduce((s, c) => s + (c.accreditations || []).length, 0) / active.length) : 0, iconName: 'people' })}
     </div>
     <div class="section-title">Top accreditations</div>
     <div class="row wrap mb16" style="gap:6px">${top.map(([s, n]) => `<span class="badge tint-info">${esc(s)} · ${n}</span>`).join('')}</div>
-    <div class="section-title">CSA accreditations</div>
-    <div class="table-wrap"><table class="grid"><thead><tr><th>CSA</th><th>Vendor</th><th>Accreditations</th></tr></thead><tbody>
-      ${active.slice(0, 40).map((c) => `<tr><td><strong>${esc(c.name)}</strong></td><td>${esc(c.vendor)}</td><td>${c.skills.map((s) => `<span class="badge outline" style="margin:1px">${esc(s)}</span>`).join('')}</td></tr>`).join('')}
+    <div class="section-title">CSA accreditations & languages</div>
+    <div class="table-wrap"><table class="grid"><thead><tr><th>CSA</th><th>Vendor</th><th>Languages</th><th>Accreditations (Programs)</th></tr></thead><tbody>
+      ${active.slice(0, 40).map((c) => `<tr><td><strong>${esc(c.name)}</strong></td><td>${esc(c.vendor)}</td><td>${(c.languages || []).map((l) => `<span class="badge outline" style="margin:1px">${esc(l)}</span>`).join('')}</td><td>${(c.accreditations || []).map((s) => `<span class="badge outline" style="margin:1px">${esc(s)}</span>`).join('')}</td></tr>`).join('')}
     </tbody></table></div>`;
+}
+
+function renderCatalogue(tc) {
+  const d = store.data;
+  const active = d.csas.filter((c) => c.lifecycle === 'active');
+  const accredited = (program) => active.filter((c) => (c.accreditations || []).includes(program)).length;
+  const totalPrograms = TRACKS.reduce((s, t) => s + (PROGRAMS[t] || []).length, 0);
+  tc.innerHTML = `
+    <div class="muted mb8" style="font-size:12px">The catalogue of services. Track = Family of services; Program = the service / event. Each Program requires its own accreditation to deliver.</div>
+    <div class="kpi-grid">
+      ${kpiCard({ label: 'Families', value: TRACKS.length, iconName: 'grid' })}
+      ${kpiCard({ label: 'Programs', value: totalPrograms, iconName: 'star' })}
+      ${kpiCard({ label: 'Accreditations', value: totalPrograms, iconName: 'check', hint: '1 per Program' })}
+    </div>
+    ${TRACKS.map((t) => `
+      <div class="section-title">${esc(t)}</div>
+      <div class="table-wrap mb16"><table class="grid"><thead><tr><th>Program</th><th>Accreditation</th><th>Accredited CSAs</th></tr></thead><tbody>
+        ${(PROGRAMS[t] || []).map((p) => `<tr><td><strong>${esc(p)}</strong></td><td class="muted" style="font-size:12px">${esc(p)} Accreditation</td><td>${accredited(p)}</td></tr>`).join('')}
+      </tbody></table></div>`).join('')}`;
 }
 
 function renderS500(tc) {
@@ -100,7 +122,7 @@ function renderShadow(tc) {
       ${kpiCard({ label: 'Completed', value: pairs.filter((p) => p.status === 'Completed').length, iconName: 'check', tone: COLORS.positive })}
     </div>
     <div class="section-title">Shadowing assignments</div>
-    <div class="table-wrap"><table class="grid"><thead><tr><th>Mentee</th><th>Mentor</th><th>Track</th><th>Status</th></tr></thead><tbody>
+    <div class="table-wrap"><table class="grid"><thead><tr><th>Mentee</th><th>Mentor</th><th>Family</th><th>Status</th></tr></thead><tbody>
       ${pairs.map((p) => `<tr><td><strong>${esc(p.m.name)}</strong></td><td>${esc(p.mentor ? p.mentor.name : '—')}</td><td>${esc(p.m.tracks.join(', '))}</td><td>${p.status === 'Completed' ? badge('Completed', 'tint-info') : p.status === 'In progress' ? badge('In progress', 'tint-warn') : badge('Scheduled', 'outline')}</td></tr>`).join('') || '<tr><td colspan="4" class="muted" style="padding:16px">No shadowing pairs in progress.</td></tr>'}
     </tbody></table></div>`;
 }

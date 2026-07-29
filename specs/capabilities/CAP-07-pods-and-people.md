@@ -24,18 +24,22 @@
 ## 2. Functional requirements
 
 - **FR-PODS-1** — Show KPIs: Active Partner CSAs, Avg utilization, PODs, Delivery Partners.
-- **FR-PODS-2** — Show a **capacity heatmap** by POD (coloured by utilization; TZ, CSA count, TZ lead).
-- **FR-PODS-3** — Show a **roster** table (name, vendor, POD, tracks, utilization, tenure, status).
+- **FR-PODS-2** — Show a **capacity heatmap** by POD (coloured by utilization; TZ, CSA count, POD lead).
+- **FR-PODS-3** — Show a **roster** table (name, vendor, POD, Families, utilization, tenure, status).
 - **FR-PODS-4** — Show **skills coverage** across active CSAs.
 - **FR-PODS-5** — Filter by **time zone** and **POD**; scope by the user's role/TZ.
 - **FR-PODS-6** — Provide AI **capacity-balancing** and **skill-gap** insight.
+- **FR-PODS-7** — Show the **org hierarchy**: WW Lead → TZ Lead → CSA Manager → POD Leads (multiple POD
+  Leads per Territory/OU).
 
 ## 3. Business rules
 
 - **BR-PODS-1** — Healthy utilization band 80–90%; over = >92%, under = <72%.
 - **BR-PODS-2** — POD utilization = mean of active CSAs' utilization (fallback to stored value).
-- **BR-PODS-3** — Skill-gap ratio = open demand for a track / active CSAs holding it; highest = watch.
+- **BR-PODS-3** — Skill-gap ratio = open demand for a Family / active CSAs holding it; highest = watch.
 - **BR-PODS-4** — TZ rollup via the region→TZ map.
+- **BR-PODS-5** — Org hierarchy: WW Lead → TZ Lead → CSA Manager → POD Lead; each POD has a
+  `csaManager`; a CSA can deliver in any territory (no restriction).
 
 ## 4. User stories & acceptance criteria
 

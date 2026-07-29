@@ -25,13 +25,13 @@ export function dailyBriefing(role, d = store.data) {
     headline = `${k.openEscalations} open escalations, ${k.slaBreaches} breaching SLA — co-owned with POD Leads.`;
     bullets.push(`${breaches.length} escalation(s) past SLA need an SDM decision.`);
     bullets.push(`${d.actions.filter((a) => a.status !== 'done').length} action items open across cases.`);
-  } else if (role === 'dpsm') {
+  } else if (role === 'operations-manager') {
     const onboarding = d.csas.filter((c) => c.lifecycle === 'onboarding').length;
     const offboarding = d.csas.filter((c) => c.lifecycle === 'offboarding').length;
     headline = `${onboarding} CSAs onboarding, ${offboarding} offboarding; utilization at ${k.utilization}%.`;
     bullets.push(`Capacity is ${k.utilization}% — ${k.utilization > 90 ? 'over the healthy band' : 'within band'}.`);
     bullets.push(`${newDemand.length} unassigned engagements may need additional headcount.`);
-  } else if (role === 'business-lt') {
+  } else if (['ww-lead', 'tz-lead', 'business-manager'].includes(role)) {
     headline = `Portfolio: CPE ${k.rollingCpe.toFixed(1)}, on-time ${k.onTimePct}%, net sentiment ${k.netSentiment}.`;
     bullets.push(`${k.deliveriesCompleted} deliveries completed this period.`);
     bullets.push(`${k.openEscalations} open escalations (${k.slaBreaches} breaching SLA).`);
@@ -69,7 +69,7 @@ export function recommendCSA(engagement, d = store.data) {
   const top = candidates[0];
   const text = top
     ? `Recommended: ${top.c.name} (${top.c.vendor}) for ${engagement.track}. Headroom ${top.headroom}/${top.c.capacity}, CPE ${top.c.cpe.toFixed(1)}, quality ${top.c.quality.toFixed(1)}, utilization ${top.c.utilization}%. Alternatives: ${candidates.slice(1).map((x) => x.c.name).join(', ') || 'none available'}.`
-    : `No active CSA currently matches the ${engagement.track} track with headroom.`;
+    : `No active CSA currently matches the ${engagement.track} family with headroom.`;
   return { text, sources: candidates.map((x) => ({ id: x.c.id, label: x.c.name })), generatedAt: now() };
 }
 
@@ -121,7 +121,7 @@ export function nlSearch(query, d = store.data) {
   const hits = [];
   const m = (s) => s.toLowerCase().includes(q);
   d.partners.forEach((p) => m(`${p.id} ${p.name} ${p.region} ${p.type}`) && hits.push({ entity: 'Partner', key: 'partners', id: p.id, label: p.name, snippet: `${p.type} · ${p.region} · CPE ${p.cpe}` }));
-  d.csas.forEach((c) => m(`${c.id} ${c.name} ${c.vendor} ${c.skills.join(' ')} ${c.tracks.join(' ')}`) && hits.push({ entity: 'CSA', key: 'csas', id: c.id, label: c.name, snippet: `${c.vendor} · ${c.tracks.join(', ')}` }));
+  d.csas.forEach((c) => m(`${c.id} ${c.name} ${c.vendor} ${c.skills.join(' ')} ${c.tracks.join(' ')} ${(c.accreditations || []).join(' ')} ${(c.languages || []).join(' ')}`) && hits.push({ entity: 'CSA', key: 'csas', id: c.id, label: c.name, snippet: `${c.vendor} · ${c.tracks.join(', ')}` }));
   d.pods.forEach((p) => m(`${p.id} ${p.name} ${p.region} ${p.leadName}`) && hits.push({ entity: 'POD', key: 'pods', id: p.id, label: p.name, snippet: `${p.region} · lead ${p.leadName}` }));
   d.engagements.forEach((e) => m(`${e.id} ${e.customer} ${e.program} ${e.track} ${e.csamName}`) && hits.push({ entity: 'Engagement', key: 'engagements', id: e.id, label: e.customer, snippet: `${e.program} · ${e.status}` }));
   d.escalations.forEach((e) => m(`${e.id} ${e.summary} ${e.adoRef} ${e.severity}`) && hits.push({ entity: 'Escalation', key: 'escalations', id: e.id, label: e.id, snippet: `${e.severity} · ${e.summary}` }));

@@ -5,13 +5,13 @@ import { icon } from '../icons.js';
 import { generateDeliverable } from '../ai.js';
 
 const IP_ASSETS = [
-  { name: 'Landing Zone Playbook', track: 'Cloud', type: 'Playbook' },
-  { name: 'Migration Runbook', track: 'Cloud', type: 'Runbook' },
-  { name: 'Expert Security Assessment Template', track: 'ESA', type: 'Template' },
+  { name: 'Landing Zone Playbook', track: 'Cloud Deployment', type: 'Playbook' },
+  { name: 'Migration Runbook', track: 'Cloud Deployment', type: 'Runbook' },
+  { name: 'Expert Security Assessment Template', track: 'Health', type: 'Template' },
   { name: 'Copilot Readiness Kit', track: 'AI Innovation', type: 'Kit' },
   { name: 'AI Foundry Enablement Deck', track: 'AI Innovation', type: 'Deck' },
-  { name: 'Customer Health Scorecard', track: 'Customer Health', type: 'Template' },
-  { name: 'Plan & Envision Workshop Deck', track: 'Scoping (P&E)', type: 'Deck' },
+  { name: 'Customer Health Scorecard', track: 'Health', type: 'Template' },
+  { name: 'Plan & Envision Workshop Deck', track: 'Foundations', type: 'Deck' },
 ];
 
 let generated = 0;
@@ -41,7 +41,7 @@ export function renderAgentic(container) {
     </div>
 
     <div class="section-title">Delivery agents</div>
-    <div class="table-wrap mb16"><table class="grid"><thead><tr><th>Customer</th><th>CSA</th><th>Track</th><th>Program</th><th>Agent status</th><th></th></tr></thead><tbody>
+    <div class="table-wrap mb16"><table class="grid"><thead><tr><th>Customer</th><th>CSA</th><th>Family</th><th>Program</th><th>Agent status</th><th></th></tr></thead><tbody>
       ${active.slice(0, 40).map((e) => { const c = d.csas.find((x) => x.id === e.assignedTo); const st = agentStatus(e); return `<tr>
         <td><strong>${esc(e.customer)}</strong></td>
         <td>${esc(c ? c.name : '—')}</td>

@@ -70,7 +70,7 @@ function renderCpe(tc) {
     </div>
     <div class="two-col">
       <div class="card chart-card"><div class="chart-head"><strong>CPE trend</strong></div><div class="chart-holder" style="height:220px"><canvas id="c-trend"></canvas></div></div>
-      <div class="card chart-card"><div class="chart-head"><strong>CPE by track</strong></div><div class="chart-holder" style="height:220px"><canvas id="c-track"></canvas></div></div>
+      <div class="card chart-card"><div class="chart-head"><strong>CPE by family</strong></div><div class="chart-holder" style="height:220px"><canvas id="c-track"></canvas></div></div>
     </div>
     <div class="two-col">
       <div class="card pad">
@@ -146,7 +146,7 @@ function renderQc(tc) {
         <div id="qc-note" class="mt8"></div>
       </div>
       <div>
-        <div class="card chart-card mb16"><div class="chart-head"><strong>Avg QC score by track</strong></div><div class="chart-holder" style="height:220px"><canvas id="c-qc"></canvas></div></div>
+        <div class="card chart-card mb16"><div class="chart-head"><strong>Avg QC score by family</strong></div><div class="chart-holder" style="height:220px"><canvas id="c-qc"></canvas></div></div>
         <div class="card pad"><strong>Recent quality checks</strong><div class="mt8">${[...qcSubmissions, ...results].slice(0, 12).map((r) => `<div class="row" style="justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--stroke-2)"><span style="font-size:13px">${esc(r.customer)} · ${esc(r.track)}</span><span class="row" style="gap:6px">${Number(r.score).toFixed(1)} ${r.pass ? badge('Pass', 'tint-info') : badge('Rework', 'tint-warn')}</span></div>`).join('')}</div></div>
       </div>
     </div>`;

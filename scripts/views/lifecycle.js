@@ -82,7 +82,7 @@ function openProfile(id) {
     <div class="field"><span class="field-key">Vendor</span><span class="field-val">${esc(c.vendor)}</span></div>
     <div class="field"><span class="field-key">Partner</span><span class="field-val">${esc(partner ? partner.name : '')}</span></div>
     <div class="field"><span class="field-key">POD</span><span class="field-val">${esc(pod ? pod.name : '')} (${esc(pod ? pod.tz : '')})</span></div>
-    <div class="field"><span class="field-key">Tracks</span><span class="field-val">${esc(c.tracks.join(', '))}</span></div>
+    <div class="field"><span class="field-key">Families</span><span class="field-val">${esc(c.tracks.join(', '))}</span></div>
     <div class="field"><span class="field-key">Tenure</span><span class="field-val">${c.tenureMonths} months</span></div>
     <div class="field"><span class="field-key">CPE / Quality</span><span class="field-val">${c.cpe.toFixed(1)} / ${c.quality.toFixed(1)}</span></div>
     <div class="section-title">Lifecycle</div>${timeline}

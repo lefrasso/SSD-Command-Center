@@ -9,7 +9,7 @@
 |---|---|
 | Capability ID | `CAP-08` |
 | Area | Workforce |
-| Primary personas | DPSM, POD Lead, SDM, business-lt (edits require `edit:capacity`) |
+| Primary personas | CSA Manager, POD Lead, Operations Manager, TZ Lead, WW Lead, Business Manager (edits require `edit:capacity`) |
 | Priority | Should |
 | Target phase | P2 |
 | Prototype reference | `scripts/views/capacity.js` |
@@ -18,13 +18,13 @@
 ## 1. Problem & outcome
 
 - **Problem:** Delivery must have enough of the right people in the right place; gaps surface too late.
-- **Outcome:** Forecast demand, map to headcount by program, and prove coverage across TZ and language.
+- **Outcome:** Forecast demand, map to headcount by Family, and prove coverage across time zone and language.
 - **Value:** Proactive hiring/assignment; no coverage blind spots.
 
 ## 2. Functional requirements
 
 - **FR-CAP-1** — Show KPIs: Active CSAs, Avg utilization, Headcount gap, Coverage gaps (program × TZ).
-- **FR-CAP-2** — Show a **headcount mapping** table per program: headcount, demand, required, gap,
+- **FR-CAP-2** — Show a **headcount mapping** table per Family: headcount, demand, required, gap,
   recommendation.
 - **FR-CAP-3** — Show a **coverage matrix** (program × time zone), highlighting zero-coverage cells.
 - **FR-CAP-4** — Show **language coverage** per TZ (target ≥1 CSA per program/language/TZ).
@@ -33,9 +33,11 @@
 
 ## 3. Business rules
 
-- **BR-CAP-1** — Required headcount = `ceil(open demand for track / capacity-per-CSA)` (prototype = 4; configurable).
-- **BR-CAP-2** — Gap = required − current active headcount on track (positive = assign/hire).
-- **BR-CAP-3** — Coverage cell = active CSAs whose POD TZ = TZ **and** who hold the track.
+- **BR-CAP-1** — Required headcount = `ceil(open demand for Family / capacity-per-CSA)` (prototype = 4; configurable).
+- **BR-CAP-2** — Gap = required − current active headcount in the Family (positive = assign/hire).
+- **BR-CAP-3** — Coverage cell = active CSAs **accredited in the Program** who **speak a language
+  supported in that time zone**. There is **no territory restriction** — a CSA can deliver in any time
+  zone if the language matches.
 - **BR-CAP-4** — Coverage target: **≥ 1 per program, per language, per time zone**.
 
 ## 4. User stories & acceptance criteria

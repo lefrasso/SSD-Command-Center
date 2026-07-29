@@ -1,7 +1,7 @@
 // Deterministic, seeded mock-data generator for SSD IQ.
 // Same seed => same data (repeatable demos). All names/figures are fictional.
 
-export const TRACKS = ['Scoping (P&E)', 'Customer Health', 'ESA', 'AI Innovation', 'Cloud'];
+export const TRACKS = ['Health', 'AI Innovation', 'Cloud Deployment', 'Foundations'];
 
 function mulberry32(seed) {
   return function () {
@@ -50,7 +50,13 @@ const LAST = ['Rossi','Kaur','Novak','García','Müller','Silva','Haddad','Chen'
 const CUSTOMERS = ['Northwind Traders','Contoso','Fabrikam','Adventure Works','Tailwind Traders','Wingtip Toys','Proseware','Litware','Fourth Coffee','Graphic Design Institute','Alpine Ski House','Coho Vineyard','Lucerne Publishing',"Margie's Travel",'Trey Research','VanArsdel','WideWorld Importers','Blue Yonder','Woodgrove Bank','Relecloud'];
 const CSAMS = ['Julia Meyer','Tom Baker','Sara Lind','Marcus Webb','Elif Demir','Paulo Neto','Hannah Ross','Ken Adachi','Bea Fontana','Ivan Petrov'];
 const SDMS = ['Priya Nair','Kenji Watanabe','Laura Bianchi','Mohammed Ali','Grace Park','Tomás Herrera'];
-const POD_LEADS = ['Alex Navarro','Amara Blake','Viktor Petrov','Rosa Mendes','Daniel Kim','Chiara Romano','Felix Wagner','Nadia Hassan','Oscar Lund','Meera Shah'];
+const POD_LEADS = ['Nils Berg','Amara Blake','Viktor Petrov','Rosa Mendes','Daniel Kim','Chiara Romano','Felix Wagner','Nadia Hassan','Oscar Lund','Meera Shah'];
+// CSA Managers sit between the TZ Lead and the POD Leads; multiple POD Leads report to a Manager per time zone.
+const TZ_MANAGERS = {
+  Americas: ['Devin Cole', 'Hana Kim'],
+  EMEA: ['Bruno Alves', 'Greta Roth'],
+  ASIA: ['Amir Khan', 'Lena Vogt'],
+};
 const SKILLS = ['Azure Migrate','Landing Zones','FinOps','Security Copilot','Sentinel','Fabric','Power BI','Copilot Studio','AKS','App Modernization','Data Governance','ESA Assessment','Well-Architected','Networking','Identity','Backup & ASR','Cost Optimization','AI Foundry','RAG Patterns','Prompt Engineering'];
 const REGIONS = ['Iberia','UKI','DACH','Nordics','France','Italy','North America','LATAM','India','ANZ'];
 // SSD leadership org — fictional vanity names for the prototype. Regions roll up to time zones.
@@ -72,12 +78,19 @@ export function tzForRegion(region) {
   for (const [tz, info] of Object.entries(TZ_MAP)) if (info.regions.includes(region)) return { tz, lead: info.lead };
   return { tz: 'Global', lead: LEADERSHIP.wwLead };
 }
-const PROGRAMS = {
-  'Scoping (P&E)': ['Plan & Envision Workshop', 'Scoping Assessment'],
-  'Customer Health': ['Health Check', 'Adoption Review'],
-  ESA: ['Expert Security Assessment', 'Zero Trust Review'],
-  'AI Innovation': ['AI Design Win', 'Copilot Readiness', 'AI Foundry Enablement'],
-  Cloud: ['Cloud Accelerate', 'Landing Zone Deployment', 'Migration Sprint'],
+// Delivery languages supported per time zone. A CSA can deliver in any territory; language is the real constraint.
+export const TZ_LANGUAGES = {
+  Americas: ['English', 'Spanish', 'Portuguese', 'French'],
+  EMEA: ['English', 'Spanish', 'Portuguese', 'French', 'Arabic', 'German'],
+  ASIA: ['English', 'Japanese', 'Mandarin', 'Korean'],
+};
+const ALL_LANGUAGES = [...new Set(Object.values(TZ_LANGUAGES).flat())];
+// Service catalogue: Track = Family of services; Program = the service / event. Each Program maps 1:1 to an accreditation.
+export const PROGRAMS = {
+  Health: ['ESA', 'Azure', 'M365', 'D365', 'Crisis Management - DMIRP', 'Crisis Management - Azure Sim', 'Crisis Management - M365 Sim', 'Crisis Management - Security', 'Crisis Management - D365 Sim'],
+  'AI Innovation': ['Adoption', 'Secure Copilot', 'Agents'],
+  'Cloud Deployment': ['MACC', 'AIR', 'Cloud Modernization', 'Github Copilot'],
+  Foundations: ['UfP', 'UO - Onboarding', 'OU - DMIRP', 'OU - Capability Briefing AI Innovation', 'OU - Capability Briefing Resiliency and Security', 'OU - Capability Briefing Cloud Success'],
 };
 const VERBATIMS = {
   positive: ['Exceptional guidance — exceeded our expectations.','The CSA unblocked our migration in days.','Clear, proactive and deeply technical.','Best delivery experience we have had with Microsoft.','Outstanding follow-through on every action.'],
@@ -106,8 +119,9 @@ function build() {
 
   const pods = REGIONS.map((region, i) => {
     const { tz, lead: tzLead } = tzForRegion(region);
+    const mgrs = TZ_MANAGERS[tz] || [tzLead];
     return {
-      id: `POD${i + 1}`, name: `POD ${region}`, leadName: POD_LEADS[i % POD_LEADS.length], region, tz, tzLead,
+      id: `POD${i + 1}`, name: `POD ${region}`, leadName: POD_LEADS[i % POD_LEADS.length], csaManager: mgrs[i % mgrs.length], region, tz, tzLead,
       tracks: pickN(TRACKS, int(2, 3)), capacity: int(24, 40), utilization: int(76, 92), ...gov('SSD IQ'),
     };
   });
@@ -124,13 +138,17 @@ function build() {
     const partner = pick(partners);
     const pod = pick(pods);
     const tracks = pickN(pod.tracks, int(1, pod.tracks.length));
+    const trackPrograms = tracks.flatMap((t) => PROGRAMS[t] || []);
+    const accreditations = pickN(trackPrograms, Math.min(trackPrograms.length, int(2, 5)));
+    const tzLangs = TZ_LANGUAGES[pod.tz] || ALL_LANGUAGES;
+    const languages = pickN(tzLangs, int(1, 3));
     const utilization = clamp(Math.round(84 + (rng() - 0.5) * 26), 62, 98);
     const cpe = round1(clamp(3.9 + rng() * 0.9, 1, 5));
     const quality = round1(clamp(3.7 + rng() * 1.1, 1, 5));
     const lifecycle = weighted([['active', 0.7], ['onboarding', 0.12], ['sourcing', 0.06], ['selection', 0.04], ['offboarding', 0.08]]);
     csas.push({
       id: `CSA${String(i + 1).padStart(3, '0')}`, name: fullName(usedNames), vendor: partner.name,
-      partnerId: partner.id, podId: pod.id, tracks, skills: pickN(SKILLS, int(3, 6)),
+      partnerId: partner.id, podId: pod.id, tracks, accreditations, languages, skills: pickN(SKILLS, int(3, 6)),
       capacity: int(3, 6), utilization, tenureMonths: int(2, 40), lifecycle, cpe, quality,
       sentiment: sentimentFromScore(cpe), ...gov('Operations'),
     });

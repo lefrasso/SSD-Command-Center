@@ -49,7 +49,7 @@ export function renderReportsPending(container) {
   const worstTrack = TRACKS.map((t) => ({ t, n: overdue.filter((e) => e.track === t).length })).sort((a, b) => b.n - a.n)[0];
   const aiText = `${overdue.length} reports pending (avg ${avgOverdue}d overdue). ${inWindow.length} engagements are in the T-3W window; proactive outreach has started on ${proactiveCoverage}% — ${notStarted.length} have no outreach yet and are likely to become pending. ${worstTrack && worstTrack.n ? `${worstTrack.t} carries the most pending reports. ` : ''}${proactiveCoverage < 80 ? 'Action: enforce the T-3W proactive dispatch on the not-started items.' : 'Proactive cadence is largely on track.'}`;
 
-  const trackOpts = ['All', ...TRACKS].map((t) => `<option value="${esc(t)}" ${t === fTrack ? 'selected' : ''}>${t === 'All' ? 'All programs' : esc(t)}</option>`).join('');
+  const trackOpts = ['All', ...TRACKS].map((t) => `<option value="${esc(t)}" ${t === fTrack ? 'selected' : ''}>${t === 'All' ? 'All families' : esc(t)}</option>`).join('');
   const tzOpts = ['All', ...Object.keys(TZ_MAP)].map((t) => `<option value="${esc(t)}" ${t === fTz ? 'selected' : ''}>${t === 'All' ? 'All territories' : esc(t)}</option>`).join('');
   const chip = (v) => (v ? `<span style="color:${COLORS.positive}">✓</span>` : `<span style="color:${COLORS.negative}">—</span>`);
 
@@ -71,7 +71,7 @@ export function renderReportsPending(container) {
     </div>
 
     <div class="section-title">Reports pending (${overdue.length})</div>
-    <div class="table-wrap mb16"><table class="grid"><thead><tr><th>Customer</th><th>CSA</th><th>Track</th><th>Territory</th><th>Due</th><th>Days overdue</th><th>Outreach</th><th>Reason</th></tr></thead><tbody>
+    <div class="table-wrap mb16"><table class="grid"><thead><tr><th>Customer</th><th>CSA</th><th>Family</th><th>Territory</th><th>Due</th><th>Days overdue</th><th>Outreach</th><th>Reason</th></tr></thead><tbody>
       ${overdue.slice().sort((a, b) => daysUntil(a.dueDate) - daysUntil(b.dueDate)).map((e) => { const c = csaOf(e); const p = podOf(e); const od = Math.abs(daysUntil(e.dueDate)); return `<tr>
         <td><strong>${esc(e.customer)}</strong></td>
         <td>${esc(c ? c.name : 'Unassigned')}</td>
@@ -86,7 +86,7 @@ export function renderReportsPending(container) {
 
     <div class="section-title">T-3W Proactive engagement tracker (${inWindow.length})</div>
     <div class="muted mb8" style="font-size:12px">Engagements due within 3 weeks. The Partner CSA owns the Day 0–3 proactive outreach cadence to prevent the report becoming pending.</div>
-    <div class="table-wrap"><table class="grid"><thead><tr><th>Customer</th><th>CSA</th><th>Track</th><th>Due in</th><th>Day 0</th><th>Day 1</th><th>Day 2</th><th>Day 3</th><th>Proactive status</th></tr></thead><tbody>
+    <div class="table-wrap"><table class="grid"><thead><tr><th>Customer</th><th>CSA</th><th>Family</th><th>Due in</th><th>Day 0</th><th>Day 1</th><th>Day 2</th><th>Day 3</th><th>Proactive status</th></tr></thead><tbody>
       ${inWindow.slice().sort((a, b) => daysUntil(a.dueDate) - daysUntil(b.dueDate)).map((e) => { const c = csaOf(e); const dd = daysUntil(e.dueDate); const ps = proStatus(e); return `<tr>
         <td><strong>${esc(e.customer)}</strong></td>
         <td>${esc(c ? c.name : 'Unassigned')}</td>

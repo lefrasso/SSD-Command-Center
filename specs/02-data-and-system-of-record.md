@@ -21,8 +21,8 @@ Every record carries the **governance envelope**: `sourceOfTruth`, `updatedAt`, 
 | Entity | ID | Key fields | Source of truth |
 |---|---|---|---|
 | **Partner** (Delivery Partner) | `P#` | `name`, `type`, `region`, `cpe` (derived), `deliveries`, `status` (active/onboarding), `contractRef` (MOSA), `podIds[]` | MOSA / Operations |
-| **CSA** (Partner CSA) | `CSA###` | `name`, `vendor`, `partnerId`, `podId`, `tracks[]`, `skills[]`, `capacity`, `utilization`, `tenureMonths`, `lifecycle`, `cpe`, `quality`, `sentiment` | Operations / Graph |
-| **POD** | `POD#` | `name`, `leadName`, `region`, `tz`, `tzLead`, `tracks[]`, `capacity`, `utilization` | SSD IQ |
+| **CSA** (Partner CSA) | `CSA###` | `name`, `vendor`, `partnerId`, `podId`, `tracks[]` (Families), `accreditations[]` (Programs), `languages[]`, `skills[]`, `capacity`, `utilization`, `tenureMonths`, `lifecycle`, `cpe`, `quality`, `sentiment` | Operations / Graph |
+| **POD** | `POD#` | `name`, `leadName` (POD Lead), `csaManager`, `region`, `tz`, `tzLead`, `tracks[]` (Families), `capacity`, `utilization` | SSD IQ |
 | **Engagement** | `ENG###` | `customer`, `csamName`, `track`, `program`, `assignedTo`, `status`, `dispatchStage`, `outreach{day0..3}`, `milestones[]`, `dueDate`, `atRisk` | Dispatch / Graph |
 | **Delivery** | `DLV###` | `engagementId`, `type`, `completedDate`, `track` | Dispatch / Power BI |
 | **Escalation** | `ESC###` | `engagementId`, `severity` (sev1–4), `status`, `ownerName`, `sdmName`, `adoRef`, `opened`, `slaHours`, `actionIds[]`, `summary` | Azure DevOps |
@@ -33,8 +33,19 @@ Every record carries the **governance envelope**: `sourceOfTruth`, `updatedAt`, 
 | **Sentiment Rollup** | `SEN###` | `scope`, `scopeType` (partner/track), `period`, `net`, `positive`, `neutral`, `negative`, `themes[]` | AI Services |
 
 ### Reference / master data
-- **Tracks (Success Programs):** Scoping (P&E), Customer Health, ESA, AI Innovation, Cloud — each with
-  named programs (e.g. ESA → Expert Security Assessment, Zero Trust Review).
+- **Families (Tracks) & Programs (service catalogue):** a **Track = Family**; a **Program = service /
+  event**; each Program maps 1:1 to an **accreditation**. Families → Programs:
+  - **Health:** ESA, Azure, M365, D365, Crisis Management — DMIRP, Crisis Management — Azure Sim,
+    Crisis Management — M365 Sim, Crisis Management — Security, Crisis Management — D365 Sim.
+  - **AI Innovation:** Adoption, Secure Copilot, Agents.
+  - **Cloud Deployment:** MACC, AIR, Cloud Modernization, GitHub Copilot.
+  - **Foundations:** UfP, UO — Onboarding, OU — DMIRP, OU — Capability Briefing AI Innovation, OU —
+    Capability Briefing Resiliency and Security, OU — Capability Briefing Cloud Success.
+- **Delivery languages by time zone:** Americas — English, Spanish, Portuguese, French · EMEA — English,
+  Spanish, Portuguese, French, Arabic, German · ASIA — English, Japanese, Mandarin, Korean. A CSA can
+  deliver in **any territory**; language (not location) is the coverage constraint.
+- **Org hierarchy:** WW Lead → TZ Lead → CSA Manager → POD Lead (multiple POD Leads per Territory/OU);
+  each POD has multiple Partner CSAs.
 - **Regions → Time Zones:** Americas (North America, LATAM) · EMEA (Iberia, UKI, DACH, Nordics, France,
   Italy) · ASIA (India, ANZ). **US territories additionally roll up to OUs** (see [CAP-17](capabilities/CAP-17-reporting-and-mbr.md)).
 - **CSA lifecycle states:** sourcing → selection → onboarding → active → offboarding.

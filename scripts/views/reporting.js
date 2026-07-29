@@ -73,7 +73,7 @@ function renderExec(tc) {
       <div class="card chart-card"><div class="chart-head"><strong>CPE trend</strong></div><div class="chart-holder" style="height:220px"><canvas id="e-cpem"></canvas></div></div>
     </div>
     <div class="two-col">
-      <div class="card chart-card"><div class="chart-head"><strong>Deliveries by Success Program</strong></div><div class="chart-holder" style="height:220px"><canvas id="e-track"></canvas></div></div>
+      <div class="card chart-card"><div class="chart-head"><strong>Deliveries by Family</strong></div><div class="chart-holder" style="height:220px"><canvas id="e-track"></canvas></div></div>
       <div class="card chart-card"><div class="chart-head"><strong>Deliveries by time zone</strong></div><div class="chart-holder" style="height:220px"><canvas id="e-tz"></canvas></div></div>
     </div>
     <div class="two-col">
@@ -147,7 +147,7 @@ function renderTerritory(tc) {
   const worst = [...rows].sort((a, b) => b.slaBreach - a.slaBreach)[0];
   const aiText = `Operational view — ${scope}: ${T.active} active engagements, ${T.atRisk} at risk, ${T.openEsc} open escalations (${T.sla} breaching SLA). On-time ${T.onTime}%, utilization ${T.util}%, CPE ${T.cpe}. ${T.sla > 0 && worst ? `Highest SLA pressure: ${worst.g} (${worst.slaBreach}).` : 'No SLA breaches in scope.'}`;
 
-  const GROUP_OPTS = [['tz', 'Time Zone'], ['region', 'Territory (Region / OU)'], ['partner', 'Partner'], ['track', 'Success Program']];
+  const GROUP_OPTS = [['tz', 'Time Zone'], ['region', 'Territory (Region / OU)'], ['partner', 'Partner'], ['track', 'Family']];
   const opt = (v, sel, label) => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(label)}</option>`;
   const groupLabel = GROUP_OPTS.find((x) => x[0] === groupBy)[1];
 
@@ -156,7 +156,7 @@ function renderTerritory(tc) {
     <div class="row wrap mb16" style="gap:8px;align-items:center">
       <label class="row" style="gap:4px"><span class="muted" style="font-size:12px">Group by</span><select class="select" id="t-group">${GROUP_OPTS.map(([v, l]) => opt(v, groupBy, l)).join('')}</select></label>
       <select class="select" id="t-tz">${['All', ...tzs].map((v) => opt(v, fTz, v === 'All' ? 'All time zones' : v)).join('')}</select>
-      <select class="select" id="t-track">${['All', ...TRACKS].map((v) => opt(v, fTrack, v === 'All' ? 'All programs' : v)).join('')}</select>
+      <select class="select" id="t-track">${['All', ...TRACKS].map((v) => opt(v, fTrack, v === 'All' ? 'All families' : v)).join('')}</select>
       <select class="select" id="t-partner">${['All', ...d.partners.map((p) => p.id)].map((v) => opt(v, fPartner, v === 'All' ? 'All partners' : partnerName(v))).join('')}</select>
       <select class="select" id="t-status">${['All', ...statuses].map((v) => opt(v, fStatus, v === 'All' ? 'All statuses' : v)).join('')}</select>
       <button class="btn sm" id="t-reset">Reset</button>
@@ -277,7 +277,7 @@ function buildPartnerMbr(doc) {
         ${kpiCard({ label: 'Active CSAs', value: active.length, iconName: 'people' })}
         ${kpiCard({ label: 'Utilization', value: util + '%', iconName: 'trending', tone: utilColor(util) })}
       </div><div class="muted mt8" style="white-space:pre-wrap">${esc(summary)}</div>`)}
-    ${slide(2, 'Delivery volume by Success Program', `<div class="chart-holder" style="height:220px"><canvas id="pm-track"></canvas></div>`)}
+    ${slide(2, 'Delivery volume by Family', `<div class="chart-holder" style="height:220px"><canvas id="pm-track"></canvas></div>`)}
     ${slide(3, 'Customer & Partner Experience (CPE)', `<div class="chart-holder" style="height:220px"><canvas id="pm-cpe"></canvas></div>${posV.length ? `<div class="mt8">${posV.map((c) => `<div class="muted" style="font-size:12px">“${esc(c.verbatim)}” — ${esc(c.track)}</div>`).join('')}</div>` : ''}`)}
     ${slide(4, 'Escalations & risk', `<div>Open escalations: <strong>${openEsc}</strong> (${highSev} high severity). At-risk engagements: <strong>${atRisk}</strong>. Net sentiment: <strong>${roll ? roll.net : '—'}</strong>.</div><div class="muted mt8" style="font-size:12px">${escs.length ? 'Top concern: ' + esc(escs[0].summary) : 'No escalations this period.'}</div>`)}
     ${slide(5, 'Highlights & next steps', `<ul class="brief-bullets">

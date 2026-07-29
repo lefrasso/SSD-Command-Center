@@ -39,19 +39,32 @@ console and an AI layer, all reading/writing a governed **SSD IQ**.
 | Assist, don't decide | AI drafts/scores/flags; humans decide; confidential data protected. |
 | Scale delivery | Capacity/coverage planning; agentic drafting; predictive risk. |
 
-## 4. Personas
+## 4. Personas & org structure
 
-| Persona | Role | Primary needs in Compass |
+The SSD delivery line is a **hierarchy**: **WW Lead → TZ Lead → CSA Manager → POD Lead**, with
+**multiple POD Leads per Territory/OU**. Each POD contains multiple **Partner CSAs** who deliver. A
+person in one POD can deliver in **any territory** — there is no territory restriction; language is the
+real constraint.
+
+Compass serves **eleven personas** across three orgs:
+
+| Org | Persona | Primary needs in Compass |
 |---|---|---|
-| **CSAM** | Customer Success Account Manager | Customer-facing; originates demand. |
-| **Partner CSA** | Vendor CSA (Delivery Partner) | Sees assigned engagements, dispatch, messages, own CPE/quality; completes onboarding. |
-| **POD Lead / CSA Manager** | Runs the POD | Dispatches, coaches, owns escalations, runs QC, generates MBRs, manages PIPs and offboarding. |
-| **SDM** | Service Delivery Manager | Co-owns escalations and action items; monitors partner health; joins MBRs. |
-| **DPSM / Operations** | Delivery Partner Service Manager | Sourcing, headcount, onboarding/offboarding, capacity. |
-| **CPE Lead** | Experience owner | Experience/quality insight across tracks. |
-| **Business LT** | SSD leadership | Portfolio dashboards, CPE/delivery trends, sentiment, escalation heatmap, MBR roll-ups. |
+| **SSD** | WW Lead | Global portfolio, CPE/delivery trends, sentiment, MBR roll-ups. |
+| **SSD** | TZ Lead | Territory (time zone / OUs) portfolio and operations. |
+| **SSD** | CSA Manager | Manages POD Leads; dispatch, capacity, escalations, performance. |
+| **SSD** | POD Lead | Runs a POD; dispatches, coaches, owns escalations, QC, MBRs, PIPs, offboarding. |
+| **SSD** | Business Manager | Business operations, planning, portfolio roll-ups. |
+| **SSD** | CSA (Microsoft) | Delivers engagements; dispatch, messages, own scorecard. |
+| **CSAM Innovation** | IP Lead | Delivery IP and reusable assets; reporting insight. |
+| **CSAM Innovation** | Adoption Lead | Adoption programs and outcomes; reporting insight. |
+| **Delivery Partner** | Partner CSA | Assigned engagements, dispatch, messages, own CPE/quality; onboarding. |
+| **Delivery Partner** | SDM | Co-owns escalations and action items; monitors partner health; joins MBRs. |
+| **Delivery Partner** | Operations Manager | Sourcing, headcount, onboarding/offboarding, capacity. |
 
-Identity, roles and the full RBAC matrix are in [04 — Security, Privacy & Compliance](04-security-privacy-compliance.md).
+Other ecosystem roles referenced (not app personas): **CSAM** (Customer Success Account Manager,
+originates demand) and **CPE Lead** (experience owner). Full RBAC matrix in
+[04 — Security, Privacy & Compliance](04-security-privacy-compliance.md).
 
 ## 5. Operating model Compass mirrors
 
@@ -66,10 +79,16 @@ Compass is organised around the lifecycle SSD already operates:
    tracking under KPI/Power BI governance; POD Lead owns.
 5. **Offboarding** — vendor validation, access removal, knowledge transfer, key-role coordination.
 
-**Success Programs / tracks:** Scoping (P&E), Customer Health, ESA, AI Innovation, Cloud (governance
-moving toward a single dispatch model for AI and Cloud). Experience is measured through **CPE**
-(Customer & Partner Experience) with a Proactive Delivery **CPE Recommended Practices** checklist. The
-governance heartbeat is the **Delivery Partner MBR** (per partner, per period) plus the internal SSD
+**Service catalogue — Families (Tracks) & Programs.** A **Track = Family of services**; a **Program =
+the service / event**; each Program maps 1:1 to an **accreditation**. Families and example Programs:
+**Health** (ESA, Azure, M365, D365, Crisis Management — DMIRP / Azure Sim / M365 Sim / Security / D365
+Sim), **AI Innovation** (Adoption, Secure Copilot, Agents), **Cloud Deployment** (MACC, AIR, Cloud
+Modernization, GitHub Copilot), **Foundations** (UfP, UO — Onboarding, OU — DMIRP, OU — Capability
+Briefings). **Delivery languages by time zone:** Americas (ATZ) — English, Spanish, Portuguese, French;
+EMEA — + Arabic, German; ASIA — English, Japanese, Mandarin, Korean. Experience is measured through
+**CPE** (Customer & Partner Experience) with a Proactive Delivery **CPE Recommended Practices**
+checklist. The governance heartbeat is the **Delivery Partner MBR** (per partner, per period) plus the
+internal SSD
 Business MBR.
 
 ## 6. Capability map
@@ -121,7 +140,11 @@ Full catalog with formulas in [07 — KPIs & Reporting](07-kpis-and-reporting.md
 | POD | Managed group of Partner CSAs led by a POD Lead, mapped to region/TZ. |
 | Time Zone (TZ) | Americas / EMEA / ASIA — global rollup of regions. |
 | OU | US Organizational Unit — inclusive US territory grouping. |
-| Track / Success Program | Scoping (P&E), Customer Health, ESA, AI Innovation, Cloud. |
+| Family (Track) | The family of services: Health, AI Innovation, Cloud Deployment, Foundations. |
+| Program | The service / event delivered (e.g. ESA, MACC, Adoption). Maps 1:1 to an accreditation. |
+| Accreditation | A CSA's certification to deliver a specific Program. |
+| CSA Manager | SSD manager between the TZ Lead and the POD Leads. |
+| Language | Delivery language; per-time-zone sets (a CSA can deliver in any territory). |
 | Day 0–3 outreach | Proactive outreach cadence a CSA runs at engagement start. |
 | T-3W | Three-weeks-out proactive window before a report is due. |
 | CPE | Customer & Partner Experience score (target ≥ 4.4). |
