@@ -22,7 +22,7 @@ Every record carries the **governance envelope**: `sourceOfTruth`, `updatedAt`, 
 |---|---|---|---|
 | **Partner** (Delivery Partner) | `P#` | `name`, `type`, `region`, `cpe` (derived), `deliveries`, `status` (active/onboarding), `contractRef` (MOSA), `podIds[]` | MOSA / Operations |
 | **CSA** (Partner CSA) | `CSA###` | `name`, `vendor`, `partnerId`, `podId`, `tracks[]` (Families), `accreditations[]` (Programs), `languages[]`, `skills[]`, `capacity`, `utilization`, `tenureMonths`, `lifecycle`, `cpe`, `quality`, `sentiment` | Operations / Graph |
-| **POD** | `POD#` | `name`, `leadName` (POD Lead), `csaManager`, `region`, `tz`, `tzLead`, `tracks[]` (Families), `capacity`, `utilization` | SSD IQ |
+| **POD** | `POD#` | `name`, `leadName` (POD Lead), `csaManager`, `region`, `tz`, `tzLead`, `tracks[]` (Families), `capacity`, `utilization`, `hcActive`, `hcTarget` | SSD IQ |
 | **Engagement** | `ENG###` | `customer`, `csamName`, `track`, `program`, `assignedTo`, `status`, `dispatchStage`, `outreach{day0..3}`, `milestones[]`, `dueDate`, `atRisk` | Dispatch / Graph |
 | **Delivery** | `DLV###` | `engagementId`, `type`, `completedDate`, `track` | Dispatch / Power BI |
 | **Escalation** | `ESC###` | `engagementId`, `severity` (sev1–4), `status`, `ownerName`, `sdmName`, `adoRef`, `opened`, `slaHours`, `actionIds[]`, `summary` | Azure DevOps |
@@ -31,6 +31,7 @@ Every record carries the **governance envelope**: `sourceOfTruth`, `updatedAt`, 
 | **Message** | `MSG###` | `threadId`, `engagementId`, `from`, `to`, `body`, `timestamp`, `sentiment` | Graph / Teams |
 | **PIP** (confidential) | `PIP###` | `csaId`, `status`, `opened`, `objectives[]`, `checkIns[]`, `outcome` | Confidential / HR |
 | **Sentiment Rollup** | `SEN###` | `scope`, `scopeType` (partner/track), `period`, `net`, `positive`, `neutral`, `negative`, `themes[]` | AI Services |
+| **Requisition** (hiring) | `REQ###` | `family`, `partnerId`, `podId`, `region`, `tz`, `type` (Growth/Backfill), `stage` (Sourcing→Screening→Interview→Offer→Hired), `opened`, `targetStart`, `hiredDate`, `source` | HC Consolidation (Power BI) |
 
 ### Reference / master data
 - **Families (Tracks) & Programs (service catalogue):** a **Track = Family**; a **Program = service /

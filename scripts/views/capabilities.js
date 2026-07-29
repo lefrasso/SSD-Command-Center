@@ -46,8 +46,10 @@ const CAPS = [
     { name: 'POD Lead Tools', status: 'live', to: '/home', note: 'Cockpit, dispatch, coaching, MBRs.' },
     { name: 'Coverage Analysis', status: 'live', to: '/capacity', note: '≥1 per program, per language, per time zone.' },
     { name: 'Forecasting', status: 'live', to: '/capacity', note: 'Demand & headcount forecast.' },
-    { name: 'Headcount Mapping', status: 'live', to: '/capacity', note: 'Map demand to headcount by track.' },
+    { name: 'Headcount Mapping', status: 'live', to: '/capacity', note: 'Map demand to headcount by Family.' },
     { name: 'Headcount Assignment', status: 'live', to: '/capacity', note: 'Assign / hire recommendations.' },
+    { name: 'HC Consolidation (Active & Future)', status: 'live', to: '/capacity', note: 'Active + pipeline HC vs required/target.' },
+    { name: 'Hiring Progress', status: 'live', to: '/capacity', note: 'Requisition funnel, fill rate, planned starts.' },
   ] },
   { group: 'Partner & provider', items: [
     { name: 'Partner Management', status: 'live', to: '/ssdiq', note: 'Partners governed in SSD IQ.' },

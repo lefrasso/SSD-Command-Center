@@ -32,7 +32,9 @@ const CFG = [
   { key: 'sentiment', name: 'Sentiment Rollup', description: 'AI sentiment aggregates.', source: 'AI Services', icon: 'emoji', label: (r) => `${r.scope} · ${r.period}`,
     columns: [['id', 'ID'], ['scope', 'Scope'], ['period', 'Period'], ['net', 'Net']] },
   { key: 'deliveries', name: 'Delivery', description: 'Completed deliveries.', source: 'Power BI', icon: 'check', label: (r) => r.type,
-    columns: [['id', 'ID'], ['engagementId', 'Customer', (r) => engCustomer(r.engagementId)], ['type', 'Type'], ['completedDate', 'Completed'], ['track', 'Track']] },
+    columns: [['id', 'ID'], ['engagementId', 'Customer', (r) => engCustomer(r.engagementId)], ['type', 'Type'], ['completedDate', 'Completed'], ['track', 'Family']] },
+  { key: 'hiring', name: 'Requisition', description: 'HC consolidation — hiring requisitions (Active & Future).', source: 'HC Consolidation', icon: 'personAdd', label: (r) => `${r.family} · ${r.stage}`,
+    columns: [['id', 'ID'], ['family', 'Family'], ['partnerId', 'Partner', (r) => (store.data.partners.find((p) => p.id === r.partnerId) || {}).name || r.partnerId], ['tz', 'TZ'], ['type', 'Type'], ['stage', 'Stage'], ['targetStart', 'Target start']] },
 ];
 
 let selectedEntity = 'partners';
@@ -224,6 +226,11 @@ function relationshipsFor(key, r) {
       return [{ label: 'CSA', items: [{ key: 'csas', id: r.csaId, label: csaName(r.csaId) }] }];
     case 'deliveries':
       return [{ label: 'Engagement', items: [{ key: 'engagements', id: r.engagementId, label: engCustomer(r.engagementId) }] }];
+    case 'hiring':
+      return [
+        { label: 'Partner', items: r.partnerId ? [{ key: 'partners', id: r.partnerId, label: lk(d.partners, r.partnerId, (p) => p.name) }] : [] },
+        { label: 'POD', items: r.podId ? [{ key: 'pods', id: r.podId, label: lk(d.pods, r.podId, (p) => p.name) }] : [] },
+      ];
     default:
       return [];
   }

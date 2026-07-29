@@ -20,6 +20,7 @@
 | **Microsoft Graph** | People, calendar, mail, Teams signals | In/Out | CSA profiles; schedule Day-1 sync; send outreach; message threads. |
 | **Azure DevOps** | Escalations + action items (`AB#`) | In/Out | Create/update/track escalations and actions. |
 | **Power BI** | Delivery metrics, executive datasets | Inbound (embed) | Embedded analytics; executive view; delivery volumes. |
+| **HC Consolidation** (Power BI) | Active & Future headcount + hiring requisitions | Inbound | HC Tracking + Hiring Progress ([CAP-08](capabilities/CAP-08-capacity-and-forecasting.md)). |
 | **Microsoft Forms** | Escalation + onboarding intake, CPE surveys | Inbound | Intake capture; CPE scores + verbatims. |
 | **Microsoft Teams** | Message threads | In/Out | Threaded partner comms (via Graph). |
 | **Viva** | Enablement / learning | Inbound | Accreditations, enablement (see [CAP-11](capabilities/CAP-11-enablement.md)). |

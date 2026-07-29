@@ -31,6 +31,8 @@
   + **DP onboarding** checklist.
 - **FR-DP-4** — Integrate MOSA contract data (terms, dates, renewal) (production).
 - **FR-DP-5** — Provide provider **risk scoring** (CPE trend + escalations + utilization) (production).
+- **FR-DP-6** — Show per-partner **Active HC** and **open requisitions** (from HC consolidation) on the
+  scorecard, linking to HC Tracking ([CAP-08](CAP-08-capacity-and-forecasting.md)).
 
 ## 3. Business rules
 

@@ -35,8 +35,14 @@ export function renderLifecycle(container) {
     };
   });
 
+  const hiring = (d.hiring || []).filter((h) => h.stage !== 'Hired');
+  const HSTAGES = ['Sourcing', 'Screening', 'Interview', 'Offer'];
   container.innerHTML = `
     ${pageHeader({ title: 'Partner CSA Lifecycle', description: 'Sourcing → selection → onboarding → active delivery → offboarding. Click a card for the profile, onboarding tracker and offboarding checklist.' })}
+    <div class="card pad mb16">
+      <div class="row mb8" style="justify-content:space-between"><strong>Hiring pipeline</strong><span class="row" style="gap:6px">${badge(hiring.length + ' open reqs', 'tint-info')}${badge('HC Consolidation', 'outline')}</span></div>
+      <div class="row wrap" style="gap:8px;align-items:center">${HSTAGES.map((s) => `<span class="badge outline">${esc(s)} · ${hiring.filter((h) => h.stage === s).length}</span>`).join('')}<a class="btn sm" href="#/capacity">Open HC Tracking ${icon('chevronRight', 14)}</a></div>
+    </div>
     ${kanban(columns)}`;
 
   container.querySelectorAll('.kan-card').forEach((el) => el.addEventListener('click', () => openProfile(el.getAttribute('data-id'))));

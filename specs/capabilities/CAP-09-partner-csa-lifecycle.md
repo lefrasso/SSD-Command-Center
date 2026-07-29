@@ -31,6 +31,8 @@
 - **FR-LC-4** — Compute and show an AI **onboarding readiness** score with guidance.
 - **FR-LC-5** — Present an **offboarding checklist** and AI **offboarding risk** (open engagements, KT).
 - **FR-LC-6** — Gate stage transitions on mock-delivery pass and shadowing completion (production).
+- **FR-LC-7** — Show a **hiring pipeline** summary (open requisitions by stage) that feeds the lifecycle,
+  linking to HC Tracking ([CAP-08](CAP-08-capacity-and-forecasting.md)).
 
 ## 3. Business rules
 

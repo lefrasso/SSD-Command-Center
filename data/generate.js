@@ -160,6 +160,12 @@ function build() {
     p.cpe = own.length ? round1(own.reduce((s, c) => s + c.cpe, 0) / own.length) : 4.3;
   }
 
+  // Headcount consolidation targets per POD (Active & Future HC tracking).
+  for (const p of pods) {
+    p.hcActive = csas.filter((c) => c.podId === p.id && c.lifecycle === 'active').length;
+    p.hcTarget = p.hcActive + int(1, 4);
+  }
+
   const activeCsas = csas.filter((c) => c.lifecycle === 'active');
   const csasForTrack = (t) => activeCsas.filter((c) => c.tracks.includes(t));
 
@@ -288,7 +294,25 @@ function build() {
     sentiment.push({ id: `SEN${String(sIdx++).padStart(3, '0')}`, scope: t, scopeType: 'track', period: '2026-07', net: positive - negative, positive, neutral, negative, themes: pickN(THEMES, 3) });
   }
 
-  return { partners, pods, csas, engagements, escalations, actions, cpe, messages, pips, sentiment, deliveries };
+  // Hiring requisitions (Active & Future SP HC Consolidation) — HC tracking + hiring progress.
+  const HIRE_STAGES = [['Sourcing', 0.3], ['Screening', 0.22], ['Interview', 0.2], ['Offer', 0.1], ['Hired', 0.18]];
+  const hiring = [];
+  for (let i = 0; i < 34; i++) {
+    const pod = pick(pods);
+    const partner = pick(partners);
+    const family = pick(pod.tracks);
+    const stage = weighted(HIRE_STAGES);
+    const hired = stage === 'Hired';
+    const hiredDate = hired ? daysAgo(int(1, 40)) : null;
+    hiring.push({
+      id: `REQ${String(i + 1).padStart(3, '0')}`, family, partnerId: partner.id, podId: pod.id,
+      region: pod.region, tz: pod.tz, type: chance(0.62) ? 'Growth' : 'Backfill', stage,
+      opened: daysAgo(int(10, 160)), targetStart: hired ? hiredDate : daysAhead(int(5, 130)), hiredDate,
+      source: chance(0.7) ? 'Delivery Partner' : 'Internal', ...gov('HC Consolidation'),
+    });
+  }
+
+  return { partners, pods, csas, engagements, escalations, actions, cpe, messages, pips, sentiment, deliveries, hiring };
 }
 
 export const dataset = build();

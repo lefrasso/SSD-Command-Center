@@ -22,14 +22,16 @@ export function renderPartners(container) {
     </div>
 
     <div class="section-title">Partner scorecards</div>
-    <div class="table-wrap"><table class="grid"><thead><tr><th>Partner</th><th>Region</th><th>Status</th><th>CPE</th><th>Deliveries</th><th>CSAs</th><th>PODs</th><th>Contract</th><th></th></tr></thead><tbody>
-      ${d.partners.map((p) => { const csas = d.csas.filter((c) => c.partnerId === p.id).length; return `<tr>
+    <div class="table-wrap"><table class="grid"><thead><tr><th>Partner</th><th>Region</th><th>Status</th><th>CPE</th><th>Deliveries</th><th>CSAs</th><th>Active HC</th><th>Open reqs</th><th>PODs</th><th>Contract</th><th></th></tr></thead><tbody>
+      ${d.partners.map((p) => { const pcsas = d.csas.filter((c) => c.partnerId === p.id); const csas = pcsas.length; const activeHC = pcsas.filter((c) => c.lifecycle === 'active').length; const openReq = (d.hiring || []).filter((h) => h.partnerId === p.id && h.stage !== 'Hired').length; return `<tr>
         <td><strong>${esc(p.name)}</strong></td>
         <td>${esc(p.region)}</td>
         <td>${statusPill(p.status)}</td>
         <td style="color:${scoreColor(p.cpe)};font-weight:600">${p.cpe.toFixed(1)}</td>
         <td>${p.deliveries}</td>
         <td>${csas}</td>
+        <td>${activeHC}</td>
+        <td>${openReq}</td>
         <td>${p.podIds.length}</td>
         <td class="muted" style="font-size:12px">${esc(p.contractRef)}</td>
         <td><button class="btn sm" data-p="${p.id}">Profile</button></td>
