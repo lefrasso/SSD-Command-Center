@@ -9,7 +9,7 @@
 |---|---|
 | Capability ID | `CAP-12` |
 | Area | Quality & Risk |
-| Primary personas | POD Lead, Partner CSA, SDM, business-lt |
+| Primary personas | POD Lead, CSA Manager, Partner CSA, CSA, SDM, leadership |
 | Priority | Must |
 | Target phase | P1 |
 | Prototype reference | `scripts/views/quality.js`, `scripts/ai.js` (`scoreQuality`) |

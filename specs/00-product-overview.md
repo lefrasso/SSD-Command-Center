@@ -6,7 +6,7 @@
 
 ## 1. Vision
 
-Give every POD Lead, Partner CSA, SDM, DPSM and SSD leader **one pane of glass** for the whole
+Give every POD Lead, Partner CSA, SDM, Operations Manager and SSD leaders **one pane of glass** for the whole
 delivery lifecycle — sourcing and onboarding, proactive dispatch and delivery, quality and CPE,
 escalations, performance, offboarding, reporting and sentiment — with an AI layer that drafts,
 summarizes, scores and flags, while a human stays firmly in control.
@@ -97,8 +97,8 @@ Compass is delivered as the capabilities catalogued in the [README](README.md). 
 
 - **Foundation:** Identity & Access, Delivery Cockpit, SSD IQ Explorer, Compass Copilot.
 - **Delivery:** Engagements & Dispatch, Reports Pending & T-3W, Agentic Delivery.
-- **Workforce & Partners:** PODs & People, Capacity & Forecasting, Partner CSA Lifecycle, Delivery
-  Partners, Enablement.
+- **Workforce & Partners:** PODs & People, Capacity & Forecasting (incl. HC tracking & hiring),
+  Partner CSA Lifecycle, Delivery Partners, Enablement.
 - **Quality & Risk:** Quality & CPE, Escalations & Actions, Performance & PIPs, Sentiment.
 - **Comms & Insight:** Messages Console, Reporting/Territory/MBR.
 
@@ -153,7 +153,7 @@ Full catalog with formulas in [07 — KPIs & Reporting](07-kpis-and-reporting.md
 | PIP | Performance Improvement Plan (confidential). |
 | MOSA | Microsoft Outsourced Services Agreement (partner contracting). |
 | S500 | Eligibility program (CPE ≥ 4.4, quality ≥ 4.4, tenure ≥ 6 months). |
-| DPSM | Delivery Partner Service Manager. |
+| Operations Manager (DPSM) | Delivery Partner ops: sourcing, headcount, onboarding/offboarding, capacity. |
 | SDM | Service Delivery Manager. |
 
 ## 10. References

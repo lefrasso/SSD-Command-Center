@@ -9,7 +9,7 @@
 |---|---|
 | Capability ID | `CAP-04` |
 | Area | Delivery |
-| Primary personas | POD Lead (dispatch), Partner CSA, SDM, DPSM, business-lt |
+| Primary personas | POD Lead & CSA Manager (dispatch), Partner CSA, CSA, SDM, leadership |
 | Priority | Must |
 | Target phase | P1 |
 | Prototype reference | `scripts/views/engagements.js`, `scripts/store.js` (`assignEngagement`), `scripts/ai.js` (`recommendCSA`, `draftOutreach`) |

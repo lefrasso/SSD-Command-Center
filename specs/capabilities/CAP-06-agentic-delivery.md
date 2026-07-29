@@ -9,7 +9,7 @@
 |---|---|
 | Capability ID | `CAP-06` |
 | Area | Delivery |
-| Primary personas | Partner CSA, POD Lead, business-lt |
+| Primary personas | All personas |
 | Priority | Should |
 | Target phase | P3 |
 | Prototype reference | `scripts/views/agentic.js`, `scripts/ai.js` (`generateDeliverable`) |

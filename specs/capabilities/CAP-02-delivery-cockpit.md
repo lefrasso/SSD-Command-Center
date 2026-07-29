@@ -42,8 +42,8 @@
 - **BR-COCKPIT-1** — Needs-attention priority: 1 = SLA-breaching escalation, 2 = at-risk engagement,
   3 = new demand; ascending; cap 9.
 - **BR-COCKPIT-2** — KPI formulas per [07 §1](../07-kpis-and-reporting.md).
-- **BR-COCKPIT-3** — Content/scoping adapts to role (Partner CSA → own outreach; SDM → escalations; DPSM
-  → capacity/onboarding; business-lt → portfolio; POD Lead → at-risk + demand).
+- **BR-COCKPIT-3** — Content/scoping adapts to role (Partner CSA → own outreach; SDM → escalations;
+  Operations Manager → capacity/onboarding; leadership → portfolio; POD Lead → at-risk + demand).
 
 ## 4. User stories & acceptance criteria
 

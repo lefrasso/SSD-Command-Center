@@ -9,7 +9,7 @@
 |---|---|
 | Capability ID | `CAP-13` |
 | Area | Quality & Risk |
-| Primary personas | POD Lead, SDM, business-lt (edits require `edit:escalation`) |
+| Primary personas | POD Lead, CSA Manager, SDM, leadership (edits require `edit:escalation`) |
 | Priority | Must |
 | Target phase | P1 |
 | Prototype reference | `scripts/views/escalations.js`, `scripts/store.js`, `scripts/ai.js` |

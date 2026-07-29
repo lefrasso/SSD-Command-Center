@@ -7,7 +7,8 @@
 ## 1. KPI catalog
 
 Formulas from the prototype (`scripts/store.js → computeKpis`), "now" pinned in the prototype to
-`2026-07-28T09:00:00Z`. Production computes these server-side over SSD IQ / Fabric.
+`2026-07-28T09:00:00Z`. Production computes these server-side over SSD IQ / Fabric. HC & hiring metrics
+derive from the **HC Consolidation** dataset (`data/generate.js → hiring`, POD `hcTarget`).
 
 | KPI | Definition / formula | Target |
 |---|---|---|
@@ -24,7 +25,14 @@ Formulas from the prototype (`scripts/store.js → computeKpis`), "now" pinned i
 | **Proactive coverage (T-3W)** | in-window engagements with outreach started / in-window | ≥ 80% |
 | **QC pass rate** | QCs ≥ 4/5 / total QCs | ≥ 80% |
 | **S500 eligibility rate** | eligible / active CSAs | Increase |
-| **Coverage gaps** | program × time-zone cells with 0 CSAs | 0 |
+| **Coverage gaps** | Program × time-zone cells with no accredited, language-capable CSA | 0 |
+| **Active HC** | Count of active Partner CSAs | Meet plan |
+| **Future HC** | Active HC + open hiring requisitions (pipeline) | ≥ required |
+| **Headcount gap to plan** | max(0, required − future HC) | 0 |
+| **Open requisitions** | Hiring reqs with stage ≠ Hired | Fill to plan |
+| **Fill rate** | hired / all requisitions | Increase |
+| **Avg time-to-hire** | mean(hiredDate − opened), days | Decrease |
+| **Planned starts (90d)** | open reqs with targetStart within 90 days | Meet ramp plan |
 
 ## 2. Reporting surfaces
 

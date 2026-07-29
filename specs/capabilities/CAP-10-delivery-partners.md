@@ -9,7 +9,7 @@
 |---|---|
 | Capability ID | `CAP-10` |
 | Area | Workforce |
-| Primary personas | DPSM, POD Lead, SDM, business-lt |
+| Primary personas | Operations Manager, CSA Manager, POD Lead, SDM, leadership |
 | Priority | Should |
 | Target phase | P2 |
 | Prototype reference | `scripts/views/partners.js` |
@@ -44,12 +44,12 @@
 ## 4. User stories & acceptance criteria
 
 ### Story: Govern a provider
-- **As a** DPSM **I want** a scorecard per Delivery Partner **so that** I govern health and contracts.
+- **As an** Operations Manager **I want** a scorecard per Delivery Partner **so that** I govern health and contracts.
 - **AC:** Given a partner, When I open the profile, Then I see CPE, deliveries, CSAs, open escalations,
   utilization and the onboarding checklist.
 
 ### Story: Onboard a provider
-- **As a** DPSM **I want** a provider onboarding checklist with gate approvals **so that** new partners
+- **As an** Operations Manager **I want** a provider onboarding checklist with gate approvals **so that** new partners
   reach go-live safely.
 - **AC:** Given an onboarding partner, When I view onboarding, Then gates (security/compliance) must be
   approved before go-live sign-off (production).
@@ -83,4 +83,4 @@ Avg partner CPE (≥4.4), deliveries per partner, open escalations per partner, 
 
 - **Q:** "Provider" distinct from "partner"? **A (assumption):** same entity (Delivery Partner);
   provider/DP management are facets.
-- **Q:** Who owns go-live sign-off? **A (assumption):** DPSM with security/compliance approval.
+- **Q:** Who owns go-live sign-off? **A (assumption):** Operations Manager with security/compliance approval.

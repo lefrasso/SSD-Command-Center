@@ -87,4 +87,4 @@ Accreditation coverage, S500 eligibility rate, SDM readiness, shadowing completi
 
 - **Q:** Are accreditations the same as dispatch `skills`? **A (assumption):** yes — unify on the
   accreditation source.
-- **Q:** Who approves S500? **A (assumption):** enablement/DPSM per the rule + review.
+- **Q:** Who approves S500? **A (assumption):** enablement / Operations Manager per the rule + review.

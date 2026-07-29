@@ -9,7 +9,7 @@
 |---|---|
 | Capability ID | `CAP-09` |
 | Area | Workforce |
-| Primary personas | POD Lead, DPSM, business-lt |
+| Primary personas | CSA Manager, POD Lead, Operations Manager, TZ/WW Lead |
 | Priority | Must |
 | Target phase | P1 |
 | Prototype reference | `scripts/views/lifecycle.js` |
@@ -36,7 +36,7 @@
 
 ## 3. Business rules
 
-- **BR-LC-1** — Onboarding plan = 5 phases / 17 tasks: Pre-boarding (DPSM/Ops), Tools & access (Ops),
+- **BR-LC-1** — Onboarding plan = 5 phases / 17 tasks: Pre-boarding (Operations Manager / Ops), Tools & access (Ops),
   Bootcamp (POD Lead), Ramp & shadowing (POD Lead), Sign-off (POD Lead).
 - **BR-LC-2** — Readiness % = onboarding tasks done / 17; ≥80% ready, 40–79% on track, <40% early.
 - **BR-LC-3** — Offboarding tasks: reassign open engagements → KT → access removal → vendor sign-off.
@@ -51,7 +51,7 @@
   and a readiness score.
 
 ### Story: Safe offboarding
-- **As a** DPSM **I want** offboarding risk flags **so that** we reassign work before removing access.
+- **As an** Operations Manager **I want** offboarding risk flags **so that** we reassign work before removing access.
 - **AC:** Given an offboarding CSA with open engagements, When I view risk, Then it warns to reassign
   before access removal.
 
@@ -83,4 +83,4 @@ Time-to-ready, onboarding readiness, offboarding compliance.
 ## 10. Open questions & assumptions
 
 - **Q:** Who signs off readiness? **A (assumption):** POD Lead.
-- **Q:** Sourcing/selection managed here or upstream? **A:** visible here; managed with DPSM tooling.
+- **Q:** Sourcing/selection managed here or upstream? **A:** visible here; managed with Operations Manager tooling.

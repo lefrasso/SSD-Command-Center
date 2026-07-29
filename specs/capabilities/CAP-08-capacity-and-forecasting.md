@@ -52,7 +52,7 @@
 ## 4. User stories & acceptance criteria
 
 ### Story: Forecast headcount
-- **As a** DPSM **I want** required headcount from live demand **so that** I plan hiring on facts.
+- **As a** CSA Manager **I want** required headcount from live demand **so that** I plan hiring on facts.
 - **AC:** Given open demand per track, When the table renders, Then required = ceil(demand/capacity) and
   gap is highlighted.
 

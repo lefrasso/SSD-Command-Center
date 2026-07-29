@@ -9,7 +9,7 @@
 |---|---|
 | Capability ID | `CAP-15` |
 | Area | Quality & Risk |
-| Primary personas | POD Lead, SDM, business-lt |
+| Primary personas | POD Lead, CSA Manager, SDM, leadership |
 | Priority | Should |
 | Target phase | P2 |
 | Prototype reference | `scripts/views/sentiment.js`, `scripts/ai.js` (`earlyWarnings`), `scripts/store.js` (`sentimentBreakdown`) |

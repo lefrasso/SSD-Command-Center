@@ -9,7 +9,7 @@
 |---|---|
 | Capability ID | `CAP-17` |
 | Area | Comms & Insight |
-| Primary personas | business-lt, POD Lead, SDM, DPSM (MBR requires `run:mbr`) |
+| Primary personas | WW/TZ Lead, Business Manager, CSA Manager, POD Lead, SDM, Operations Manager, IP/Adoption Lead (MBR requires `run:mbr`) |
 | Priority | Must |
 | Target phase | P1 |
 | Prototype reference | `scripts/views/reporting.js`, `scripts/ai.js` (`execSummary`, `mbrNarrative`, `askData`) |

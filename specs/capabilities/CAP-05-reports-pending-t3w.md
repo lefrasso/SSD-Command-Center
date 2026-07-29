@@ -9,7 +9,7 @@
 |---|---|
 | Capability ID | `CAP-05` |
 | Area | Delivery |
-| Primary personas | POD Lead, Partner CSA, SDM, business-lt |
+| Primary personas | All personas |
 | Priority | Must |
 | Target phase | P1 |
 | Prototype reference | `scripts/views/reportspending.js` |

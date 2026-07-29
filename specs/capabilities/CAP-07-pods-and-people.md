@@ -9,7 +9,7 @@
 |---|---|
 | Capability ID | `CAP-07` |
 | Area | Workforce |
-| Primary personas | POD Lead, SDM, DPSM, business-lt |
+| Primary personas | CSA Manager, POD Lead, TZ/WW Lead, Business Manager, Operations Manager, SDM |
 | Priority | Must |
 | Target phase | P1 |
 | Prototype reference | `scripts/views/pods.js` |
@@ -49,7 +49,7 @@
   healthy band.
 
 ### Story: Rebalance
-- **As a** DPSM **I want** over/under-utilised CSAs flagged **so that** I can rebalance work.
+- **As a** CSA Manager **I want** over/under-utilised CSAs flagged **so that** I can rebalance work.
 - **AC:** Given a CSA >92% and another <72%, When the insight renders, Then it suggests shifting demand.
 
 ## 5. Data & system of record
