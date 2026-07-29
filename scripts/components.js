@@ -74,12 +74,16 @@ export function emptyState({ title, description }) {
 // ---- Charts (global Chart from vendored UMD) ----
 let activeCharts = [];
 export function clearCharts() { activeCharts.forEach((c) => { try { c.destroy(); } catch (e) { /* noop */ } }); activeCharts = []; }
-function mk(canvas, cfg) { const ch = new window.Chart(canvas, cfg); activeCharts.push(ch); return ch; }
+function chartTheme() {
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  return { text: dark ? '#c8c6c4' : '#605e5c', grid: dark ? '#3a3a40' : '#ededed', border: dark ? '#1f2023' : '#ffffff' };
+}
+function mk(canvas, cfg) { window.Chart.defaults.color = chartTheme().text; window.Chart.defaults.font.family = 'Segoe UI'; const ch = new window.Chart(canvas, cfg); activeCharts.push(ch); return ch; }
 
 export function donut(canvas, { labels, values, colors }) {
   return mk(canvas, {
     type: 'doughnut',
-    data: { labels, datasets: [{ data: values, backgroundColor: colors || CHART_PALETTE, borderWidth: 2, borderColor: '#fff' }] },
+    data: { labels, datasets: [{ data: values, backgroundColor: colors || CHART_PALETTE, borderWidth: 2, borderColor: chartTheme().border }] },
     options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, font: { family: 'Segoe UI' } } } } },
   });
 }
@@ -87,14 +91,14 @@ export function bar(canvas, { labels, values, color, label }) {
   return mk(canvas, {
     type: 'bar',
     data: { labels, datasets: [{ label: label || '', data: values, backgroundColor: color || COLORS.brand, borderRadius: 4, maxBarThickness: 46 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#eee' } } } },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: chartTheme().grid } } } },
   });
 }
 export function line(canvas, { labels, datasets }) {
   return mk(canvas, {
     type: 'line',
     data: { labels, datasets: datasets.map((d, i) => ({ label: d.label, data: d.values, borderColor: d.color || CHART_PALETTE[i % CHART_PALETTE.length], backgroundColor: 'transparent', tension: 0.3, borderWidth: 2, pointRadius: 2 })) },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 10 } } }, scales: { x: { grid: { display: false } }, y: { grid: { color: '#eee' } } } },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 10 } } }, scales: { x: { grid: { display: false } }, y: { grid: { color: chartTheme().grid } } } },
   });
 }
 

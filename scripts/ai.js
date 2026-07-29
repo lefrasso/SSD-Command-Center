@@ -204,3 +204,18 @@ export function performanceSummary(csa, d = store.data) {
   const escs = d.escalations.filter((e) => mine.some((m) => m.id === e.engagementId)).length;
   return { text: `Advisory summary for ${csa.name} (${csa.vendor}). Delivery: ${complete} completed of ${mine.length} assigned. CPE ${csa.cpe.toFixed(1)}, quality ${csa.quality.toFixed(1)}, utilization ${csa.utilization}%, ${escs} linked escalation(s). Sentiment ${csa.sentiment}. This is an advisory input for the POD Lead — not an automated decision.`, sources: mine.slice(0, 4).map((e) => ({ id: e.id, label: e.customer })), generatedAt: now() };
 }
+
+// ---- Executive summary (Reporting → Executive View) ----
+export function execSummary(d = store.data) {
+  const k = computeKpis(d);
+  const byTrack = {};
+  d.deliveries.forEach((dl) => { byTrack[dl.track] = (byTrack[dl.track] || 0) + 1; });
+  const topTrack = Object.entries(byTrack).sort((a, b) => b[1] - a[1])[0];
+  const text =
+    `Success Programs delivery is tracking at CPE ${k.rollingCpe.toFixed(1)} (target ≥ 4.4) and on-time ${k.onTimePct}%, ` +
+    `with ${k.deliveriesCompleted} deliveries completed and ${k.activeEngagements} active engagements. ` +
+    `${topTrack ? `${topTrack[0]} leads delivery volume (${topTrack[1]}). ` : ''}` +
+    `${k.openEscalations} escalations open (${k.slaBreaches} breaching SLA); utilization ${k.utilization}% and net sentiment ${k.netSentiment > 0 ? '+' + k.netSentiment : k.netSentiment}. ` +
+    `${k.slaBreaches > 0 ? 'Priority: clear SLA-breaching escalations and protect at-risk engagements.' : 'Operations are within healthy bands.'}`;
+  return { text, sources: [], generatedAt: now() };
+}

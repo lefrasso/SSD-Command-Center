@@ -25,6 +25,10 @@ const cb = document.getElementById('commandbar');
 const navEl = document.getElementById('nav');
 const copilotEl = document.getElementById('copilot');
 
+function currentTheme() { return localStorage.getItem('compass-theme') || 'light'; }
+function applyTheme(t) { document.documentElement.setAttribute('data-theme', t); }
+function toggleTheme() { const t = currentTheme() === 'dark' ? 'light' : 'dark'; localStorage.setItem('compass-theme', t); applyTheme(t); renderCommandBar(); renderView(); }
+
 function renderCommandBar() {
   const p = PERSONAS[store.role];
   const flags = dataQualityFlags();
@@ -34,6 +38,7 @@ function renderCommandBar() {
     <div class="cmd-search"><span class="search-ico">${icon('search', 18)}</span><input id="global-search" aria-label="Search SSD IQ" placeholder="Search SSD IQ — partners, CSAs, engagements, escalations…"/></div>
     <div class="cmd-spacer"></div>
     <div class="cmd-right">
+      <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">${icon(currentTheme() === 'dark' ? 'sun' : 'moon', 20)}</button>
       <button class="ask-btn" id="ask-copilot">${icon('sparkle', 18)} Ask Copilot</button>
       <span class="menu-anchor">
         <button class="icon-btn" id="bell" aria-label="Notifications: ${flags.length} alerts">${icon('bell', 20)}${flags.length ? `<span class="bell-badge">${flags.length}</span>` : ''}</button>
@@ -47,6 +52,7 @@ function renderCommandBar() {
 
   cb.querySelector('#nav-toggle').onclick = toggleNav;
   cb.querySelector('#ask-copilot').onclick = () => toggleCopilot();
+  cb.querySelector('#theme-toggle').onclick = toggleTheme;
   const gs = cb.querySelector('#global-search');
   gs.onkeydown = (e) => { if (e.key === 'Enter' && gs.value.trim()) navigate(`/ssdiq?q=${encodeURIComponent(gs.value.trim())}`); };
 
@@ -115,6 +121,7 @@ document.addEventListener('click', () => cb.querySelectorAll('.menu').forEach((m
 
 // Initial render
 if (!location.hash) location.hash = '/home';
+applyTheme(currentTheme());
 renderCommandBar();
 applyChrome();
 renderView();

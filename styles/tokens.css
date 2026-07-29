@@ -34,6 +34,7 @@
   --ai: #8661c5;
   --ai-bg: #f3eefa;
   --ai-stroke: #e0d3f5;
+  --ai-fg: #5c2e91;
 
   /* Chart palette */
   --c1: #0f6cbd; --c2: #2aa0a4; --c3: #6b69d6; --c4: #f7a600; --c5: #c4314b; --c6: #5c2e91; --c7: #0e700e;
@@ -51,4 +52,32 @@
   --rail-w: 260px;
   --rail-w-collapsed: 52px;
   --copilot-w: 340px;
+}
+
+/* Dark mode — elegant deep-neutral surfaces with brand accents. */
+[data-theme="dark"] {
+  --brand-bg-2: #12283f;
+  --brand-bg-2-hover: #163455;
+  --brand-stroke-2: #234f78;
+  --brand-fg: #5aa7e6;
+
+  --fg-1: #f3f2f1;
+  --fg-2: #d8d6d4;
+  --fg-3: #a6a3a0;
+  --fg-4: #7a7876;
+  --bg-1: #1f2023;
+  --bg-2: #26272b;
+  --bg-3: #303237;
+  --bg-canvas: #16171a;
+  --stroke-1: #3d3d43;
+  --stroke-2: #313136;
+
+  --ai: #b69ae0;
+  --ai-bg: #2a2340;
+  --ai-stroke: #3d3560;
+  --ai-fg: #cbb6f0;
+
+  --shadow-2: 0 1px 2px rgba(0,0,0,0.45), 0 0 2px rgba(0,0,0,0.35);
+  --shadow-8: 0 4px 10px rgba(0,0,0,0.5);
+  --shadow-16: 0 10px 24px rgba(0,0,0,0.6);
 }

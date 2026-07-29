@@ -28,6 +28,8 @@ const PATHS = {
   thumbUp: '<path d="M7 10v10"/><path d="M7 10 11 3a2 2 0 0 1 2 2v4h5.5a2 2 0 0 1 2 2.4l-1.4 7A2 2 0 0 1 17 20H7"/>',
   thumbDown: '<path d="M17 14V4"/><path d="M17 14 13 21a2 2 0 0 1-2-2v-4H5.5a2 2 0 0 1-2-2.4l1.4-7A2 2 0 0 1 7 4h10"/>',
   minus: '<path d="M5 12h14"/>',
+  moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z"/>',
+  sun: '<circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.5 1.5M17.6 17.6l1.5 1.5M17.6 6.4l1.5-1.5M4.9 19.1l1.5-1.5"/>',
 };
 
 const FILLED = {
