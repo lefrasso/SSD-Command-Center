@@ -1,9 +1,10 @@
 // Messages Console — threaded comms with templates + AI assist.
-import { store, addMessage } from '../store.js';
+import { store, addMessage, actionsByThread } from '../store.js';
 import { PERSONAS } from '../roles.js';
 import { pageHeader, aiChip, esc, sentimentPill } from '../components.js';
 import { icon } from '../icons.js';
 import { suggestReply, toneCheck, summarizeThread } from '../ai.js';
+import { openAssignActionDrawer, actionItemHtml, wireActionToggles } from '../actions.js';
 
 const TEMPLATES = {
   '': '',
@@ -13,6 +14,7 @@ const TEMPLATES = {
 };
 
 let selectedThread = null;
+let appliedParam = null;
 let aiNote = '';
 
 function threads(d) {
@@ -27,12 +29,20 @@ function threads(d) {
   }).filter((t) => t.eng);
 }
 
-export function renderMessages(container) {
+export function renderMessages(container, threadParam = '') {
   const d = store.data;
   const list = threads(d);
+  if (threadParam && threadParam !== appliedParam) {
+    const q = threadParam.toLowerCase();
+    const hit = list.find((t) => t.tid === threadParam) || list.find((t) => t.eng && t.eng.customer.toLowerCase().includes(q));
+    if (hit) selectedThread = hit.tid;
+    appliedParam = threadParam;
+  }
   if (!selectedThread || !list.find((t) => t.tid === selectedThread)) selectedThread = list[0] && list[0].tid;
   const cur = list.find((t) => t.tid === selectedThread);
   const me = PERSONAS[store.role].name;
+  const acts = cur ? actionsByThread(cur.tid).slice().sort((a, b) => (a.status === 'done') - (b.status === 'done') || String(a.due).localeCompare(String(b.due))) : [];
+  const openCount = acts.filter((a) => a.status !== 'done').length;
 
   container.innerHTML = `
     ${pageHeader({ title: 'Messages Console', description: 'Threaded communication with Partner CSAs — every thread tied to an engagement. Templates speed dispatch; AI offers replies, tone check and summaries.' })}
@@ -47,11 +57,18 @@ export function renderMessages(container) {
         ${cur ? `
         <div class="row" style="justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--stroke-2)">
           <strong>${esc(cur.eng.customer)} · ${esc(cur.eng.program)}</strong>
-          <button class="btn sm" id="summ">${icon('sparkle', 14)} Summarize</button>
+          <div class="row" style="gap:6px">
+            <button class="btn sm" id="assign-action">${icon('flag', 14)} Assign action</button>
+            <button class="btn sm" id="summ">${icon('sparkle', 14)} Summarize</button>
+          </div>
         </div>
         ${aiNote ? `<div style="padding:8px 14px;background:var(--ai-bg);font-size:13px">${aiChip()} ${esc(aiNote)}</div>` : ''}
+        <div class="conv-actions">
+          <strong style="font-size:13px">${icon('flag', 14)} Actions <span class="muted" style="font-weight:400">· ${openCount} open</span></strong>
+          ${acts.length ? `<div class="ca-list">${acts.map((a) => actionItemHtml(a)).join('')}</div>` : '<div class="muted" style="font-size:12px;margin-top:4px">No actions yet — assign one from the button above or any message below.</div>'}
+        </div>
         <div class="conv-body" id="conv-body">
-          ${cur.msgs.map((m) => `<div class="bubble ${m.from === me ? 'me' : 'them'}"><div>${esc(m.body)}</div><div class="b-meta">${esc(m.from)} · ${new Date(m.timestamp).toLocaleString()} · ${m.sentiment}</div></div>`).join('')}
+          ${cur.msgs.map((m) => `<div class="bubble ${m.from === me ? 'me' : 'them'}"><div>${esc(m.body)}</div><div class="b-meta">${esc(m.from)} · ${new Date(m.timestamp).toLocaleString()} · ${m.sentiment} · <button class="linkish assign-from-msg" data-msg="${esc(m.id)}" title="Assign an action from this message">${icon('flag', 11)} Action</button></div></div>`).join('')}
         </div>
         <div class="conv-foot">
           <div class="row" style="gap:6px">
@@ -67,6 +84,12 @@ export function renderMessages(container) {
 
   container.querySelectorAll('[data-tid]').forEach((el) => el.addEventListener('click', () => { selectedThread = el.getAttribute('data-tid'); aiNote = ''; renderMessages(container); }));
   if (!cur) return;
+  wireActionToggles(container);
+  container.querySelector('#assign-action').addEventListener('click', () => openAssignActionDrawer({ engagementId: cur.eng.id, threadId: cur.tid }));
+  container.querySelectorAll('.assign-from-msg').forEach((b) => b.addEventListener('click', () => {
+    const m = cur.msgs.find((x) => x.id === b.getAttribute('data-msg'));
+    openAssignActionDrawer({ engagementId: cur.eng.id, threadId: cur.tid, prefillTitle: m ? m.body : '' });
+  }));
   const body = container.querySelector('#conv-body'); if (body) body.scrollTop = body.scrollHeight;
   const composer = container.querySelector('#composer');
   container.querySelector('#tmpl').addEventListener('change', (e) => { composer.value = TEMPLATES[e.target.value] || ''; });

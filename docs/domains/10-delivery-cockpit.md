@@ -3,6 +3,11 @@
 > The role-personalised landing page — "what needs me today" — combining live KPIs, an AI daily
 > briefing, a prioritised needs-attention list, portfolio charts and POD health.
 
+> **Action items.** The cockpit now surfaces an **Open actions** KPI and an **Action items** card that
+> lists open actions assigned from [Messages](40-messages-console.md) or [Escalations](31-escalations-and-actions.md),
+> lets you **mark them done** and **deep-links** to the source thread/escalation. Spec:
+> [CAP-02](../../specs/capabilities/CAP-02-delivery-cockpit.md).
+
 ## 1. At a glance
 
 | Field | Value |
@@ -49,7 +54,7 @@ deliveries, cpe, csas, sentiment, pods, plus `LEADERSHIP`.
 
 1. **Personalised header** — greeting by persona first name; **track** and **partner** filters.
 2. **KPI grid** (`computeKpis`): Active engagements, On-time %, Rolling CPE, Open escalations (+SLA
-   breaches hint), Utilization, Net sentiment — each colour-toned to targets.
+   breaches hint), Utilization, Net sentiment, **Open actions (+overdue)** — each colour-toned to targets.
 3. **SSD Leadership card** — WW Lead, three TZ Leads, Business Manager (from `LEADERSHIP`).
 4. **Daily briefing** (AI) — role-specific headline, bullets and **anomaly callouts**.
 5. **Needs attention** — merged, priority-sorted list (SLA breaches p1, at-risk p2, new demand p3),
@@ -57,6 +62,8 @@ deliveries, cpe, csas, sentiment, pods, plus `LEADERSHIP`.
 6. **Charts** — Engagements by status (donut), Sentiment mix (donut, NLP-labelled), Avg CPE by track
    (bar).
 7. **POD health tiles** — per POD: region · TZ · active CSAs, utilization, avg CPE, at-risk/open esc.
+8. **Action items** — open actions (assigned from Messages/Escalations) with owner, due, source and
+   status; **mark done** in place and **deep-link** to the source thread/escalation. Respects filters.
 
 ## 7. User stories
 

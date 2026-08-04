@@ -187,6 +187,8 @@ table.grid tr.clickable:hover td { background: var(--bg-2); }
 .check-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--stroke-2); font-size: 13px; }
 .check-box { width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--stroke-1); display: grid; place-items: center; flex-shrink: 0; color: #fff; }
 .check-box.done { background: var(--positive); border-color: var(--positive); }
+.check-item.act-done .flex1 { text-decoration: line-through; color: var(--fg-3); }
+.due-over { color: var(--negative); font-weight: 600; }
 
 /* Timeline */
 .timeline { position: relative; padding-left: 18px; }
@@ -207,6 +209,11 @@ table.grid tr.clickable:hover td { background: var(--bg-2); }
 .bubble.them { background: var(--bg-3); align-self: flex-start; }
 .bubble.me { background: var(--brand-bg-2); align-self: flex-end; }
 .b-meta { font-size: 11px; color: var(--fg-3); margin-top: 4px; }
+.conv-actions { padding: 8px 14px; border-bottom: 1px solid var(--stroke-2); background: var(--bg-1); }
+.conv-actions .ca-list { margin-top: 6px; max-height: 132px; overflow-y: auto; }
+.conv-actions .check-item { padding: 5px 0; }
+.linkish { background: none; border: none; color: var(--brand-fg); cursor: pointer; font: inherit; padding: 0; display: inline-flex; align-items: center; gap: 2px; }
+.linkish:hover { text-decoration: underline; }
 .conv-foot { border-top: 1px solid var(--stroke-2); padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 .conv-foot textarea { width: 100%; min-height: 44px; border: 1px solid var(--stroke-1); border-radius: var(--radius-sm); padding: 8px; font-family: inherit; font-size: 13px; resize: vertical; }
 

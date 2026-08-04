@@ -109,7 +109,7 @@ function renderView() {
     case 'lifecycle': renderLifecycle(view); break;
     case 'engagements': renderEngagements(view); break;
     case 'reports-pending': renderReportsPending(view); break;
-    case 'messages': renderMessages(view); break;
+    case 'messages': renderMessages(view, params.get('thread') || params.get('q') || ''); break;
     case 'quality': renderQuality(view); break;
     case 'escalations': renderEscalations(view); break;
     case 'performance': can(store.role, 'view:pip') ? renderPerformance(view) : renderPlaceholder(view, mod, true); break;

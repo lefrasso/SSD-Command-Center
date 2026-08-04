@@ -19,6 +19,7 @@ derive from the **HC Consolidation** dataset (`data/generate.js → hiring`, POD
 | **Open escalations** | count(status ≠ resolved) | Trending down |
 | **SLA breaches** | open escalations where `hoursSince(opened) > slaHours` | 0 |
 | **Mean time to resolve** | mean(resolved − opened) | Within track SLA |
+| **Open actions** | Action items with status ≠ done (overdue = `due < today`) | Trend down |
 | **Utilization** | mean(active CSA `utilization`) | 80–90% band |
 | **Net sentiment** | mean(net) of partner sentiment rollups (period) | ≥ 0 and rising |
 | **Onboarding time-to-productive** | onboarding start → readiness sign-off | Trending down |

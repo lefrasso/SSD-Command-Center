@@ -36,6 +36,9 @@
 - **FR-COCKPIT-7** — Filters shall scope KPIs, attention and charts; leadership sees the SSD Leadership
   org card.
 - **FR-COCKPIT-8** — KPIs shall be **server-side aggregated/materialised** in production (not client-computed).
+- **FR-COCKPIT-9** — Display an **Action items** card listing **open actions** (assigned from Messages or
+  Escalations) with owner, due date, source and status; allow **marking done** in place and
+  **deep-linking** to the source thread/escalation. Include an **Open actions** KPI (with overdue count).
 
 ## 3. Business rules
 
@@ -44,6 +47,8 @@
 - **BR-COCKPIT-2** — KPI formulas per [07 §1](../07-kpis-and-reporting.md).
 - **BR-COCKPIT-3** — Content/scoping adapts to role (Partner CSA → own outreach; SDM → escalations;
   Operations Manager → capacity/onboarding; leadership → portfolio; POD Lead → at-risk + demand).
+- **BR-COCKPIT-4** — Open actions = status ≠ done; **overdue** when `due < today`; the Action items card
+  respects the track/partner filter and marking done writes through to the Action Item SoT.
 
 ## 4. User stories & acceptance criteria
 
@@ -82,7 +87,7 @@ Consumes SSD IQ aggregates; leadership org from config. No external writes.
 
 ## 9. KPIs
 
-Surfaces the six headline KPIs; targets per [07](../07-kpis-and-reporting.md).
+Surfaces the six headline KPIs plus **Open actions** (with overdue count); targets per [07](../07-kpis-and-reporting.md).
 
 ## 10. Open questions & assumptions
 

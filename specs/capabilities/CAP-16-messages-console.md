@@ -32,6 +32,10 @@
 - **FR-MSG-5** — **Send** persists to Microsoft **Teams** (SoT) in production; support attachments,
   delivery/read state.
 - **FR-MSG-6** — Allow raising an **escalation** from a thread (production).
+- **FR-MSG-7** — **Assign & track action items** from a thread or a specific message: capture title, owner,
+  due date and status (open / in-progress / done), with an AI **suggest-from-thread** prefill. Open
+  actions surface on the Delivery Cockpit ([CAP-02](CAP-02-delivery-cockpit.md)) and can be marked done
+  from either surface.
 
 ## 3. Business rules
 
@@ -41,6 +45,9 @@
 - **BR-MSG-3** — Suggest-reply: if last message mentions blocker/escalation/permission → escalation-
   oriented; else status-confirmation.
 - **BR-MSG-4** — Tone check flags urgent/firm words and suggests softening.
+- **BR-MSG-5** — A thread/message **action item** is tied to the thread's engagement; it carries `threadId`
+  + `engagementId` (and no `escalationId`), distinguishing it from an escalation action while sharing the
+  same Action Item model. Marking done writes through to the Action Item source of truth.
 
 ## 4. User stories & acceptance criteria
 
@@ -60,6 +67,7 @@
 | Entity | Fields | R/W | SoT |
 |---|---|---|---|
 | Message | threadId, engagementId, from, to, body, timestamp, sentiment | R/W | Teams/Graph |
+| Action Item | id, threadId, engagementId, title, ownerName, due, status, source | R/W | Azure DevOps / SSD IQ |
 
 ## 6. AI touchpoints
 
@@ -68,6 +76,7 @@
 | Suggest reply | last message | drafted reply | advisory | [05](../05-ai-and-copilot-platform.md) |
 | Tone check | composer text | tone assessment | advisory | [05](../05-ai-and-copilot-platform.md) |
 | Summarize thread | messages | recap + sentiment | advisory | [05](../05-ai-and-copilot-platform.md) |
+| Suggest action | thread messages | suggested action title | advisory | [05](../05-ai-and-copilot-platform.md) |
 
 ## 7. Integrations
 
@@ -80,7 +89,8 @@ Message content governed (privacy/retention); reliable send to SoT; conversation
 
 ## 9. KPIs
 
-Response time (down), template usage, negative-thread rate (down).
+Response time (down), template usage, negative-thread rate (down), open actions per thread, action
+follow-through (done / assigned).
 
 ## 10. Open questions & assumptions
 

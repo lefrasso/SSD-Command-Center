@@ -3,6 +3,11 @@
 > Threaded communication with Partner CSAs — every thread tied to an engagement — with templates and
 > AI assist (suggested replies, tone check, thread summaries).
 
+> **Actions.** Threads (and individual messages) can **assign action items** — title, owner, due date and
+> status — with an AI *suggest-from-thread* prefill. Open actions surface on the
+> [Delivery Cockpit](10-delivery-cockpit.md), where they can be checked off. Spec:
+> [CAP-16](../../specs/capabilities/CAP-16-messages-console.md).
+
 ## 1. At a glance
 
 | Field | Value |
@@ -48,6 +53,9 @@
 **Message** entity (SoT = Teams): `threadId`, `engagementId`, `from`, `to`, `body`, `timestamp`,
 `sentiment`. Threads are grouped by `threadId`; thread sentiment is aggregated from messages.
 
+Actions raised from a thread reuse the **Action Item** entity with `threadId` + `engagementId` (and no
+`escalationId`), so message and escalation follow-ups share one model and both surface on the Cockpit.
+
 ## 6. Features (current prototype)
 
 1. **Split-pane console** — thread list (customer + last message + sentiment) and conversation view.
@@ -55,6 +63,9 @@
 3. **AI assist** — **Suggest reply** (context-aware), **Tone check** (softening advice),
    **Summarize** thread (recap + sentiment).
 4. **Send** — appends a message to the thread (`addMessage`); "me" resolves from the active persona.
+5. **Action items** — **assign an action** from the thread header or any message (owner, due, status)
+   with an AI *suggest-from-thread* prefill; see the thread's open actions inline and **mark them done**.
+   Open actions also appear on the [Delivery Cockpit](10-delivery-cockpit.md).
 
 ## 7. User stories
 

@@ -1,5 +1,5 @@
 // Home — Delivery Cockpit.
-import { store, computeKpis, sentimentBreakdown, hoursSince } from '../store.js';
+import { store, computeKpis, sentimentBreakdown, hoursSince, openActions, todayISO } from '../store.js';
 import { PERSONAS } from '../roles.js';
 import { dailyBriefing } from '../ai.js';
 import { navigate } from '../router.js';
@@ -9,6 +9,7 @@ import {
   scoreColor, utilColor, COLORS, CHART_PALETTE, clearCharts, donut, bar,
 } from '../components.js';
 import { icon } from '../icons.js';
+import { openAssignActionDrawer, actionItemHtml, wireActionToggles } from '../actions.js';
 
 const initials = (n) => n.split(' ').filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
@@ -36,6 +37,18 @@ export function renderHome(container) {
   const attention = [...breaches, ...risky, ...demand]
     .filter((a) => (track === 'All' || a.track === track) && (partner === 'All' || a.partner === partner || a.priority === 3))
     .sort((a, b) => a.priority - b.priority).slice(0, 9);
+
+  // Action items (assigned from Messages / Escalations) — checkable here.
+  const actionEng = (a) => {
+    if (a.engagementId) return d.engagements.find((e) => e.id === a.engagementId);
+    if (a.escalationId) { const es = d.escalations.find((x) => x.id === a.escalationId); return es && d.engagements.find((e) => e.id === es.engagementId); }
+    return null;
+  };
+  const actInFilter = (a) => { const e = actionEng(a); if (!e) return track === 'All' && partner === 'All'; return (track === 'All' || e.track === track) && (partner === 'All' || partnerOf(e.assignedTo) === partner); };
+  const openActs = openActions(d);
+  const overdueActs = openActs.filter((a) => a.due && a.due < todayISO()).length;
+  const actionsFiltered = openActs.filter(actInFilter).sort((a, b) => String(a.due).localeCompare(String(b.due)));
+  const actionsDone = d.actions.filter((a) => a.status === 'done').length;
 
   const engCount = (st) => filteredEngs.filter((e) => e.status === st).length;
   const cpeByTrack = TRACKS.map((t) => { const items = d.cpe.filter((c) => c.track === t); return { t: t.replace(' (P&E)', ''), v: items.length ? Math.round((items.reduce((s, c) => s + c.score, 0) / items.length) * 10) / 10 : 0 }; });
@@ -69,6 +82,7 @@ export function renderHome(container) {
       ${kpiCard({ label: 'Open escalations', value: k.openEscalations, iconName: 'warning', tone: k.slaBreaches > 0 ? COLORS.negative : COLORS.neutral, hint: `${k.slaBreaches} breaching SLA` })}
       ${kpiCard({ label: 'Utilization', value: k.utilization + '%', iconName: 'people', tone: utilColor(k.utilization), hint: 'Healthy band 80–90%' })}
       ${kpiCard({ label: 'Net sentiment', value: k.netSentiment > 0 ? '+' + k.netSentiment : k.netSentiment, iconName: 'emoji', tone: k.netSentiment >= 0 ? COLORS.positive : COLORS.negative, hint: 'Across channels' })}
+      ${kpiCard({ label: 'Open actions', value: openActs.length, iconName: 'flag', tone: overdueActs > 0 ? COLORS.warning : COLORS.neutral, hint: `${overdueActs} overdue` })}
     </div>
 
     <div class="card pad mb16">
@@ -126,6 +140,20 @@ export function renderHome(container) {
       </div>
     </div>
 
+    <div class="card pad mb16">
+      <div class="row" style="justify-content:space-between">
+        <div class="row" style="gap:8px"><strong style="font-size:16px">Action items</strong>${badge(actionsFiltered.length + ' open', 'tint-info')}${actionsDone ? badge(actionsDone + ' done', 'outline') : ''}</div>
+        <div class="row" style="gap:6px">
+          <button class="btn sm" id="assign-action">${icon('flag', 14)} Assign action</button>
+          <button class="btn subtle sm" id="open-messages">${icon('send', 14)} Messages</button>
+        </div>
+      </div>
+      <hr class="divider"/>
+      <div id="home-actions">
+        ${actionsFiltered.length ? actionsFiltered.map((a) => actionItemHtml(a, { showSource: true, withOpen: true })).join('') : '<div class="muted">No open actions for this filter. Assign one from a message thread or an escalation.</div>'}
+      </div>
+    </div>
+
     <div class="card chart-card mb16">
       <div class="chart-head"><strong>Average CPE by family</strong></div>
       <div class="chart-holder" style="height:220px"><canvas id="c-cpe"></canvas></div>
@@ -166,5 +194,16 @@ export function renderHome(container) {
   container.querySelector('#attn-list').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-q]');
     if (btn) navigate(`/ssdiq?q=${encodeURIComponent(btn.getAttribute('data-q'))}`);
+  });
+
+  // Action items
+  wireActionToggles(container);
+  container.querySelector('#assign-action').addEventListener('click', () => openAssignActionDrawer({}));
+  container.querySelector('#open-messages').addEventListener('click', () => navigate('/messages'));
+  container.querySelector('#home-actions').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-open]'); if (!btn) return;
+    const v = btn.getAttribute('data-open');
+    if (v.startsWith('thread:')) navigate(`/messages?thread=${encodeURIComponent(v.slice(7))}`);
+    else if (v === 'esc') navigate('/escalations');
   });
 }

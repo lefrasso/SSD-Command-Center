@@ -23,9 +23,14 @@ export const csasByPartner = (partnerId) => store.data.csas.filter((c) => c.part
 export const engagementsByCsa = (csaId) => store.data.engagements.filter((e) => e.assignedTo === csaId);
 export const escalationsByEngagement = (engId) => store.data.escalations.filter((e) => e.engagementId === engId);
 export const actionsByEscalation = (escId) => store.data.actions.filter((a) => a.escalationId === escId);
+export const actionsByThread = (threadId) => store.data.actions.filter((a) => a.threadId === threadId);
+export const actionsByEngagement = (engId) => store.data.actions.filter((a) => a.engagementId === engId);
+export const openActions = (d = store.data) => d.actions.filter((a) => a.status !== 'done');
 
 const NOW = new Date('2026-07-28T09:00:00Z').getTime();
 export const hoursSince = (iso) => (NOW - new Date(iso).getTime()) / 3.6e6;
+export const todayISO = () => new Date(NOW).toISOString().slice(0, 10);
+export const daysFromNowISO = (n) => new Date(NOW + n * 864e5).toISOString().slice(0, 10);
 
 export function computeKpis(d = store.data) {
   const active = d.engagements.filter((e) => e.status === 'assigned' || e.status === 'in-delivery').length;
@@ -53,6 +58,7 @@ export function sentimentBreakdown(d = store.data) {
 // ---- Mutations (mutate in-memory data + notify) ----
 let msgSeq = 9000;
 let escSeq = 9000;
+let actSeq = 9000;
 export function assignEngagement(engId, csaId) {
   const e = byId(store.data.engagements, engId);
   if (e) { e.assignedTo = csaId; if (e.status === 'new') e.status = 'assigned'; if (e.dispatchStage === 'Day 0') e.dispatchStage = 'Day 1'; }
@@ -71,4 +77,11 @@ export function addMessage(threadId, engagementId, from, to, body, sentiment) {
   const id = `MSG${msgSeq++}`;
   store.data.messages.push({ id, threadId, engagementId, from, to, body, timestamp: new Date().toISOString(), sentiment: sentiment || 'neutral', sourceOfTruth: 'Teams', updatedAt: new Date().toISOString().slice(0, 10), audit: [{ at: new Date().toISOString(), who: 'you', action: 'message sent' }] });
   emit('data');
+}
+export function addAction({ engagementId = null, threadId = null, escalationId = null, title, ownerName, due, status }) {
+  const id = `ACT${actSeq++}`;
+  store.data.actions.unshift({ id, escalationId, threadId, engagementId, title: title || 'Follow-up action', ownerName: ownerName || 'Unassigned', due: due || daysFromNowISO(7), status: status || 'open', source: escalationId ? 'escalation' : 'message', sourceOfTruth: 'Azure DevOps', updatedAt: todayISO(), audit: [{ at: new Date().toISOString(), who: 'you', action: 'action assigned' }] });
+  if (escalationId) { const e = byId(store.data.escalations, escalationId); if (e) (e.actionIds = e.actionIds || []).push(id); }
+  emit('data');
+  return id;
 }
