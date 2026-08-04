@@ -36,6 +36,9 @@
 - **FR-CAP-8** — **Hiring Progress:** show open requisitions, a **pipeline funnel** (Sourcing → Screening
   → Interview → Offer → Hired), **fill rate**, **avg time-to-hire**, **planned starts** (by month / next
   90 days), and an open-requisitions list.
+- **FR-CAP-9** — **8-week delivery pipeline:** show forecast **labor hours per Partner CSA per ISO week**
+  for the next eight weeks, to spot under-/over-loaded CSAs and reallocate demand. This is a fixed-window
+  view, independent of the date and RMOT-status filters.
 
 ## 3. Business rules
 
@@ -48,6 +51,8 @@
 - **BR-CAP-5** — Future HC = Active HC + open requisitions (pipeline); Gap-to-plan = max(0, required − future).
 - **BR-CAP-6** — Fill rate = hired / all requisitions; time-to-hire = hiredDate − opened (days);
   requisition `stage` ∈ {Sourcing, Screening, Interview, Offer, Hired}; `type` ∈ {Growth, Backfill}.
+- **BR-CAP-7** — The 8-week pipeline is a **fixed-window** forecast (next 8 ISO weeks from "today") in
+  labor **hours per CSA per week**; it is deliberately unaffected by the date or RMOT-status filters.
 
 ## 4. User stories & acceptance criteria
 

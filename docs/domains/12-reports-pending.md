@@ -3,6 +3,12 @@
 > Surface overdue delivery reports **and** track whether the proactive engagement process (the Day 0–3
 > outreach the CSA runs ~3 weeks out) is preventing reports from becoming pending in the first place.
 
+> **Source alignment — POD Lead Report.** Production reports-pending uses **Has Labor** + aging buckets
+> **`≤7 / >7 / >14 / >21` days** (action emphasis on **>14** and **>21**), a **per-CSA** breakdown, and a
+> **delivered-hours-in-Reports-Pending** measure. Only requests with **labor logged** count, and **RMOT
+> status** trails the source refresh (near-real-time, not live). Canonical spec:
+> [CAP-05](../../specs/capabilities/CAP-05-reports-pending-t3w.md).
+
 ## 1. At a glance
 
 | Field | Value |
@@ -82,7 +88,9 @@ Derived entirely from **Engagement** records (no new entity). Key fields used: `
 - **Proactive coverage:** in-window with `outreach.day0` / all in-window (100% if none in window).
 - **Reason:** "No proactive outreach (T-3W missed)" if 0 outreach; else "At-risk engagement" if
   at-risk; else "Delivery running late".
-- **Aging buckets:** |daysUntil| in 1–7 / 8–14 / 15–30 / 30+.
+- **Aging buckets:** |daysUntil| in 1–7 / 8–14 / 15–30 / 30+ (prototype). *Production adopts the POD Lead
+  Report scheme:* **Has Labor** → `≤7` → `>7` → `>14` → `>21` days overdue, with action emphasis on
+  **>14** and **>21**; only requests with **labor logged** count as pending.
 
 ## 9. AI capabilities
 

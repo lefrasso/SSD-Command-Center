@@ -33,6 +33,9 @@
 - **FR-DP-5** — Provide provider **risk scoring** (CPE trend + escalations + utilization) (production).
 - **FR-DP-6** — Show per-partner **Active HC** and **open requisitions** (from HC consolidation) on the
   scorecard, linking to HC Tracking ([CAP-08](CAP-08-capacity-and-forecasting.md)).
+- **FR-DP-7** — Expose the partner as the CSA's **Supplier** (vendor) filter/dimension across operational
+  reporting (e.g. Avanade, Cognizant, Concentrix), and show per-partner **S500-ready CSA** count plus any
+  **S500 customers served by non-S500-ready CSAs** for that partner.
 
 ## 3. Business rules
 
@@ -40,6 +43,8 @@
 - **BR-DP-2** — Status: active / onboarding.
 - **BR-DP-3** — DP onboarding: MOSA signed → security & compliance review → tooling & access → POD
   alignment & ramp → first CSA cohort → go-live sign-off.
+- **BR-DP-4** — Partner **S500 readiness** = share of its active CSAs marked S500-ready (reconciled);
+  delivery to an S500 customer by a non-ready CSA is a partner-health flag (see [CAP-11](CAP-11-enablement.md)).
 
 ## 4. User stories & acceptance criteria
 
@@ -77,7 +82,8 @@ Contract data access-controlled (MOSA/NDA); health reconciled with SSD IQ; onboa
 
 ## 9. KPIs
 
-Avg partner CPE (≥4.4), deliveries per partner, open escalations per partner, onboarding cycle time.
+Avg partner CPE (≥4.4), deliveries per partner, open escalations per partner, S500 readiness per partner,
+onboarding cycle time.
 
 ## 10. Open questions & assumptions
 

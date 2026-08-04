@@ -32,6 +32,9 @@
 - **FR-ESC-4** — Provide AI triage: **similar cases**, **extract actions**, **draft resolution**.
 - **FR-ESC-5** — **Bi-directional Azure DevOps** sync (create/update work items; pull status).
 - **FR-ESC-6** — **SLA timers** with breach alerts/paging.
+- **FR-ESC-7** — Capture an **Escalation Category** (Delivery / Quality / Technical / Compliance Issue) and
+  a free-text **Escalation Event Name**, and record both the **current POD Lead** and the **submitting POD
+  Lead** (they differ when a CSA changes POD after submission).
 
 ## 3. Business rules
 
@@ -41,6 +44,9 @@
 - **BR-ESC-3** — Severity classification (keywords): sev1 (down/breach/security/data loss/outage),
   sev2 (blocker/at risk/milestone), sev3 (delay/scheduling), else sev4.
 - **BR-ESC-4** — Co-ownership: POD Lead owner + named SDM; owner/SDM auto-filled from the engagement's POD.
+- **BR-ESC-5** — When a Partner CSA changes POD Lead after an escalation is raised, filtering by POD Lead
+  shows the **current** POD Lead alongside the **submitting** POD Lead; the escalation stays attached to
+  the CSA/engagement.
 
 ## 4. User stories & acceptance criteria
 
@@ -59,7 +65,7 @@
 
 | Entity | Fields | R/W | SoT |
 |---|---|---|---|
-| Escalation | engagementId, severity, status, ownerName, sdmName, adoRef, opened, slaHours, actionIds, summary | R/W | Azure DevOps |
+| Escalation | engagementId, severity, category, eventName, status, ownerName, submittedByPodLead, sdmName, adoRef, opened, escalationDate, slaHours, actionIds, summary | R/W | Azure DevOps |
 | Action Item | escalationId, title, ownerName, due, status | R/W | Azure DevOps |
 
 ## 6. AI touchpoints

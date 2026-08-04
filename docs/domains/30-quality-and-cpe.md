@@ -3,6 +3,12 @@
 > Experience management, quality checks and mock-delivery QC — all measured against the **Proactive
 > Delivery CPE Recommended Practices**.
 
+> **Source alignment — POD Lead Report.** Production CPE adds **VSAT/DSAT** classification, **CPE surveys
+> received**, **Avg satisfaction score**, **unanswered CPE surveys**, and a **Received CPEs** list (PFE
+> alias/name, satisfaction score, company, RossID, survey status). Quality Checks log **creation date, MS
+> quarter, title and a QC URL**; a POD's average CPE **includes CSAs who left the practice**. Canonical
+> spec: [CAP-12](../../specs/capabilities/CAP-12-quality-and-cpe.md).
+
 ## 1. At a glance
 
 | Field | Value |

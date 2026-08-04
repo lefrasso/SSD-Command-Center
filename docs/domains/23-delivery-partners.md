@@ -3,6 +3,11 @@
 > Delivery Partner (provider) management — scorecards, contracts, onboarding and profiles, governed
 > under MOSA.
 
+> **Source alignment — POD Lead Report.** The partner is the CSA's **Supplier** (vendor; e.g. Avanade,
+> Cognizant, Concentrix) — a first-class filter/dimension — and each partner has an **S500 readiness**
+> measure (share of active CSAs marked S500-ready, reconciled). Canonical spec:
+> [CAP-10](../../specs/capabilities/CAP-10-delivery-partners.md).
+
 ## 1. At a glance
 
 | Field | Value |

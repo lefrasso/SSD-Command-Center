@@ -33,6 +33,12 @@
   submissions with reviewer/evidence (production).
 - **FR-QUALITY-5** — **Mock deliveries:** records for ramping CSAs scored vs the Mock Delivery QC Guide;
   pass gates first live delivery.
+- **FR-QUALITY-6** — **CPE operational metrics:** surface **CPE surveys received**, **VSAT** / **DSAT**
+  counts, **Avg satisfaction score** and **unanswered CPE surveys** (sent, never completed); list
+  **Received CPEs** with PFE detail (alias, name), satisfaction score, company, RossID and survey status.
+- **FR-QUALITY-7** — **Quality Check log:** record QCs with reviewer/CSA alias, **creation date**, **MS
+  quarter**, **title** and a **QC URL** (evidence link); a QC may be flagged **MOCK** (excluded from
+  coverage). Target coverage is **≥ 1 QC per active CSA per month**.
 
 ## 3. Business rules
 
@@ -42,6 +48,10 @@
 - **BR-QUALITY-4** — Recommended Practices (6): Day 0 outreach; Day 1 sync; stakeholders engaged;
   milestone plan baselined; artifacts captured; CPE survey requested.
 - **BR-QUALITY-5** — Mock pass precedes first supervised delivery ([CAP-09](CAP-09-partner-csa-lifecycle.md)).
+- **BR-QUALITY-6** — CPE **class**: **VSAT** when score ≥ 4.3 (positive), **DSAT** when negative; a POD's
+  average CPE **includes** surveys for CSAs who have **left the practice** (their score still counts).
+- **BR-QUALITY-7** — QC coverage target = **≥ 1 QC per active CSA per month**, counting **active** POD
+  members and **excluding MOCK** QCs.
 
 ## 4. User stories & acceptance criteria
 
@@ -59,8 +69,8 @@
 
 | Entity | Fields | R/W | SoT |
 |---|---|---|---|
-| CPE Feedback | engagementId, score, track, verbatim, date, sentiment | R | CPE/Forms |
-| QC submission | customer, track, date, score, pass, reviewer, evidence | R/W | SSD IQ (new) |
+| CPE Feedback | engagementId, requestTrackingId (RossID), score (satisfactionScore 1–5), class (VSAT/DSAT), track, verbatim, pfeAlias, pfeFullName, companyName, esxpUrl, surveyStatus (Completed/Unanswered), date, sentiment | R | CPE/Forms |
+| Quality Check | podLead, csaAlias, qcCreationDate, msQuarter, title, qcUrl, score, pass, isMock, reviewer, evidence | R/W | SSD IQ (CES Design & Engagement) |
 
 ## 6. AI touchpoints
 
@@ -79,7 +89,8 @@ QC records immutable + attributed + evidence-linked; verbatims may contain custo
 
 ## 9. KPIs
 
-Rolling CPE (≥4.4), positive share, QC pass rate (≥80%), mock pass rate (≥70%).
+Rolling CPE (≥4.4), avg satisfaction score, VSAT / DSAT counts, positive share, unanswered CPE surveys
+(minimise), CPE surveys received, QC pass rate (≥80%), QC coverage (≥1/active CSA/month), mock pass rate (≥70%).
 
 ## 10. Open questions & assumptions
 

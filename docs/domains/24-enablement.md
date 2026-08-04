@@ -3,6 +3,12 @@
 > Accreditations, S500 eligibility, SDM onboarding, User Voice and shadowing management — the skilling
 > and readiness backbone for the delivery workforce.
 
+> **Source alignment — POD Lead Report.** Accreditations add **Primary Skill**, **Rating (0–5)**,
+> **Professional Service Name** and **Is Active**, plus an **accreditations distribution** by Program.
+> **S500 readiness** (marked ready in SharePoint, **reconciled** via `_S500reconciled`) is distinct from
+> S500 **eligibility**; an S500 customer must be served by an S500-ready CSA. Canonical spec:
+> [CAP-11](../../specs/capabilities/CAP-11-enablement.md).
+
 ## 1. At a glance
 
 | Field | Value |

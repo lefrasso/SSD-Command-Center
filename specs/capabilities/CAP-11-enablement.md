@@ -36,6 +36,12 @@
   decisions (production).
 - **FR-EN-7** — **Service Catalogue:** show the catalogue of services — Family → Program →
   accreditation — with the count of accredited CSAs per Program.
+- **FR-EN-8** — **Accreditation detail & distribution:** show accreditation **distribution by Program**
+  across Partner CSAs, plus per-CSA **Primary Skill**, **Rating (0–5)**, **Professional Service Name** and
+  **Is Active** status.
+- **FR-EN-9** — **S500 readiness:** track whether a CSA is marked **S500-ready** (in SharePoint) and
+  whether that flag is **reconciled** (`_S500reconciled`) against actual S500 eligibility; surface
+  mismatches (marked-ready-but-not-eligible, or eligible-but-not-marked).
 
 ## 3. Business rules
 
@@ -47,6 +53,9 @@
   health dashboards, shadow live escalations, readiness sign-off).
 - **BR-EN-4** — A CSA's **accreditations** are the Programs (from the Families they work in) they are
   certified to deliver; there is one accreditation per Program.
+- **BR-EN-5** — **S500 readiness** (marked ready in SharePoint, **reconciled** against eligibility) is
+  distinct from **S500 eligibility** (the CPE/quality/tenure rule, BR-EN-1); an **S500 customer** must be
+  served by an S500-ready CSA, and delivery to an S500 customer by a non-ready CSA is a flag.
 
 ## 4. User stories & acceptance criteria
 
@@ -81,7 +90,8 @@ Accreditations/tenure from systems of record; S500 rules explicit + auditable; e
 
 ## 9. KPIs
 
-Accreditation coverage, S500 eligibility rate, SDM readiness, shadowing completion, idea throughput.
+Accreditation coverage, S500 eligibility rate, S500 readiness rate (reconciled), S500 cx served by
+non-ready CSAs (0), SDM readiness, shadowing completion, idea throughput.
 
 ## 10. Open questions & assumptions
 

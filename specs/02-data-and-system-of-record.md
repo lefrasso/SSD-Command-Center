@@ -21,13 +21,15 @@ Every record carries the **governance envelope**: `sourceOfTruth`, `updatedAt`, 
 | Entity | ID | Key fields | Source of truth |
 |---|---|---|---|
 | **Partner** (Delivery Partner) | `P#` | `name`, `type`, `region`, `cpe` (derived), `deliveries`, `status` (active/onboarding), `contractRef` (MOSA), `podIds[]` | MOSA / Operations |
-| **CSA** (Partner CSA) | `CSA###` | `name`, `vendor`, `partnerId`, `podId`, `tracks[]` (Families), `accreditations[]` (Programs), `languages[]`, `skills[]`, `capacity`, `utilization`, `tenureMonths`, `lifecycle`, `cpe`, `quality`, `sentiment` | Operations / Graph |
-| **POD** | `POD#` | `name`, `leadName` (POD Lead), `csaManager`, `region`, `tz`, `tzLead`, `tracks[]` (Families), `capacity`, `utilization`, `hcActive`, `hcTarget` | SSD IQ |
-| **Engagement** | `ENG###` | `customer`, `csamName`, `track`, `program`, `assignedTo`, `status`, `dispatchStage`, `outreach{day0..3}`, `milestones[]`, `dueDate`, `atRisk` | Dispatch / Graph |
-| **Delivery** | `DLV###` | `engagementId`, `type`, `completedDate`, `track` | Dispatch / Power BI |
-| **Escalation** | `ESC###` | `engagementId`, `severity` (sev1–4), `status`, `ownerName`, `sdmName`, `adoRef`, `opened`, `slaHours`, `actionIds[]`, `summary` | Azure DevOps |
+| **CSA** (Partner CSA) | `CSA###` | `name`, `alias` (`_DPalias` / `pfeAlias`), `vendor` (Supplier), `partnerId`, `podId`, `tracks[]` (Families), `accreditations[]` (Programs), `primarySkill`, `languages[]`, `skills[]`, `resourceType` (e.g. Contingent Staff), `resourceCitizenship`, `capacity`, `utilization`, `tenureMonths`, `lifecycle`, `esxpProfileCompletion`, `esxpUrl`, `s500Ready`, `s500Reconciled`, `cpe`, `quality`, `sentiment` | Operations / Graph |
+| **POD** | `POD#` | `name`, `leadName` (POD Lead), `csaManager`, `sdmName`, `region`, `tz`, `tzLead`, `tracks[]` (Families), `capacity`, `utilization`, `hcActive`, `hcTarget` | SSD IQ |
+| **Engagement / Request** | `ENG###` | `customer`, `csamName`, `track`, `program`, `deliveryProduct`, `requestTrackingId` (RMOT/SCOP), `rmotStatus`, `assignedTo`, `status`, `dispatchStage`, `outreach{day0..3}`, `milestones[]`, `dueDate`, `firstScheduledArrivalTime`, `laborHours`, `offStrategy`, `edeDeliveryLinkId`, `isTRAI`, `atRisk` | Dispatch / Graph |
+| **Delivery** | `DLV###` | `engagementId`, `requestTrackingId`, `type`, `deliveryProduct`, `hours`, `completedDate`, `msQuarter`, `track` | Dispatch / Power BI |
+| **Escalation** | `ESC###` | `engagementId`, `severity` (sev1–4), `category` (Delivery / Quality / Technical / Compliance Issue), `eventName`, `status`, `ownerName`, `submittedByPodLead`, `sdmName`, `adoRef`, `opened`, `escalationDate`, `slaHours`, `actionIds[]`, `summary` | Azure DevOps |
 | **Action Item** | `ACT###` | `escalationId`, `title`, `ownerName`, `due`, `status` | Azure DevOps |
-| **CPE Feedback** | `CPE###` | `engagementId`, `score`, `track`, `verbatim`, `date`, `sentiment` | CPE / Forms |
+| **CPE Feedback** | `CPE###` | `engagementId`, `requestTrackingId` (RossID), `score` (satisfactionScore 1–5), `class` (VSAT / neutral / DSAT), `track`, `verbatim`, `pfeAlias`, `pfeFullName`, `companyName`, `esxpUrl`, `surveyStatus` (Completed / Unanswered), `date`, `sentiment` | CPE / Forms |
+| **Quality Check** | `QC###` | `podLead`, `csaAlias` (`_DPalias`), `qcCreationDate`, `msQuarter`, `title`, `qcUrl`, `score`, `pass`, `isMock` | SSD IQ (CES Design & Engagement) |
+| **Accreditation** | `ACR###` | `csaId`, `programName` (Professional Service Name), `primarySkill`, `rating` (0–5), `isActive` | Skilling |
 | **Message** | `MSG###` | `threadId`, `engagementId`, `from`, `to`, `body`, `timestamp`, `sentiment` | Graph / Teams |
 | **PIP** (confidential) | `PIP###` | `csaId`, `status`, `opened`, `objectives[]`, `checkIns[]`, `outcome` | Confidential / HR |
 | **Sentiment Rollup** | `SEN###` | `scope`, `scopeType` (partner/track), `period`, `net`, `positive`, `neutral`, `negative`, `themes[]` | AI Services |
@@ -51,6 +53,27 @@ Every record carries the **governance envelope**: `sourceOfTruth`, `updatedAt`, 
   Italy) · ASIA (India, ANZ). **US territories additionally roll up to OUs** (see [CAP-17](capabilities/CAP-17-reporting-and-mbr.md)).
 - **CSA lifecycle states:** sourcing → selection → onboarding → active → offboarding.
 - **Severity → SLA:** sev1 = 8h, sev2 = 24h, sev3 = 48h, sev4 = 72h.
+- **Suppliers (vendors):** the Delivery Partner firm a CSA belongs to (e.g. Avanade, Cognizant,
+  Concentrix); a first-class **filter/dimension** across operational reporting.
+- **Request tracking (RMOT / SCOP):** every delivery request carries a **Request Tracking ID**. A
+  `RMOT…` prefix denotes a Success-Programs request; a `SCOP…` (and other ROSS) prefix denotes work that
+  **does not belong** to Success Programs (**off-strategy** — see [CAP-04](capabilities/CAP-04-engagements-and-dispatch.md)).
+- **RMOT status:** `Active`, `Dispatched`, `Complete`, `Cancelled`, plus the derived **Reports Pending**
+  state. Report status **lags** the source datasource refresh (a request in Pending-Billing may still
+  show as Reports Pending) — treat as eventually-consistent, not real-time.
+- **Delivery Product:** the catalogue label for a request, formatted `Success Program - <Family> -
+  <Event>` (e.g. *Customer Health - Scoping Event*, *Customer Health - Enterprise Security Assessment*,
+  *Customer Health - Solution Health Event Azure/M365/D365*, *AI Innovation - Secure Copilot Capabilities
+  Review*, *Cloud Deployment - Azure Investment Review*). Maps to a Family + Program/accreditation.
+- **Escalation categories:** Delivery Issue, Quality Issue, Technical Issue, Compliance Issue (paired
+  with a free-text **Escalation Event Name**). See [CAP-13](capabilities/CAP-13-escalations-and-actions.md).
+- **CPE classification:** **VSAT** (very satisfied), neutral, **DSAT** (dissatisfied), plus **Unanswered**
+  (survey sent, never completed). A CSA's CPE score includes surveys for CSAs who **left the practice**.
+- **S500 readiness:** `s500Ready` (marked ready in SharePoint) is **reconciled** against actual
+  eligibility (`s500Reconciled`); an **S500 customer** must be served by an S500-ready CSA. Distinct from
+  S500 **eligibility** ([CAP-11](capabilities/CAP-11-enablement.md)).
+- **ESXP profile completion:** the Partner-CSA experience profile captured at onboarding; target 100%,
+  with `≤ 50% Complete` flagged as an onboarding gap ([CAP-09](capabilities/CAP-09-partner-csa-lifecycle.md)).
 - **Leadership org / TZ leads:** configuration (fictional vanity names in the prototype), not code.
 
 ## 3. Relationships
@@ -66,6 +89,8 @@ erDiagram
   ENGAGEMENT ||--o{ CPE : receives
   ENGAGEMENT ||--o{ DELIVERY : produces
   ENGAGEMENT ||--o{ MESSAGE : discusses
+  ENGAGEMENT ||--o{ QC : "reviewed by"
+  CSA ||--o{ ACCREDITATION : holds
   CSA ||--o| PIP : "may have"
 ```
 
@@ -97,8 +122,13 @@ Automated data-quality rules (prototype: `scripts/ai.js → dataQualityFlags`), 
 |---|---|
 | Engagement in-delivery with no assigned CSA | High |
 | Escalation past its SLA | High |
+| Off-strategy request (`SCOP`/ROSS) assigned to a CSA | High |
+| S500 customer served by a non-S500-ready CSA | High |
+| Report pending > 21 days with labor logged | High |
 | Active CSA utilization > 95% | Medium |
+| Active CSA with ESXP profile ≤ 50% complete | Medium |
 | Partner with no PODs mapped | Low |
+| CPE survey sent but unanswered (aged) | Low |
 
 Production extends this to a rules + anomaly engine with assign/resolve workflow, freshness and
 foreign-key integrity monitoring.

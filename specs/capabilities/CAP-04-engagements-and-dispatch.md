@@ -37,6 +37,13 @@
   **schedule the Day-1 sync** via Graph.
 - **FR-DISPATCH-6** — Surface an **at-risk** signal for engagements trending late.
 - **FR-DISPATCH-7** — Advance `dispatchStage` from real outreach signals (production).
+- **FR-DISPATCH-8** — Track each request's **Request Tracking ID** (`RMOT`/`SCOP`), **DeliveryProduct**
+  (`Success Program - <Family> - <Event>`) and **RMOT status** (Active / Dispatched / Complete / Cancelled
+  / Reports Pending), and roll up **delivered hours**, **delivered events** and **upcoming deliveries**
+  (including next-week and next-month horizons).
+- **FR-DISPATCH-9** — Flag **off-strategy** assignments — requests that **do not belong** to Success
+  Programs (`SCOP`/ROSS elements) assigned to a Partner CSA — for immediate action; the healthy state is
+  **zero**.
 
 ## 3. Business rules
 
@@ -47,6 +54,10 @@
   operational risk factor).
 - **BR-DISPATCH-4** — Status lifecycle: new → assigned → in-delivery → complete.
 - **BR-DISPATCH-5** — Assignment respects capacity (do not over-allocate).
+- **BR-DISPATCH-6** — **Off-strategy** = a request whose tracking ID / DeliveryProduct is **not** a
+  Success-Programs (`RMOT` SP) element (e.g. `SCOP`/ROSS); surfaced separately and reassigned off the CSA.
+- **BR-DISPATCH-7** — A request in `Reports Pending` still counts as delivered work (labor logged);
+  **RMOT status** trails the source refresh, so board state is eventually-consistent.
 
 ## 4. User stories & acceptance criteria
 
@@ -68,7 +79,7 @@
 
 | Entity | Fields | R/W | SoT |
 |---|---|---|---|
-| Engagement | customer, csamName, track, program, assignedTo, status, dispatchStage, outreach, milestones, dueDate, atRisk | R/W | Dispatch |
+| Engagement / Request | customer, csamName, track, program, deliveryProduct, requestTrackingId (RMOT/SCOP), rmotStatus, assignedTo, status, dispatchStage, outreach, milestones, dueDate, firstScheduledArrivalTime, laborHours, offStrategy, atRisk | R/W | Dispatch |
 | CSA | tracks, skills, capacity, utilization, lifecycle | R | Operations |
 
 ## 6. AI touchpoints
@@ -89,7 +100,8 @@ See [03](../03-integrations.md).
 
 ## 9. KPIs
 
-Time-to-dispatch, outreach completion, at-risk rate, on-time delivery.
+Time-to-dispatch, outreach completion, at-risk rate, on-time delivery, delivered hours/events, upcoming
+deliveries (7d/30d), off-strategy deliveries (0).
 
 ## 10. Open questions & assumptions
 

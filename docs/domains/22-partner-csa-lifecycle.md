@@ -3,6 +3,11 @@
 > The end-to-end journey of a Partner CSA — sourcing → selection → onboarding → active delivery →
 > offboarding — with a structured onboarding plan, readiness scoring and offboarding checklist.
 
+> **Source alignment — POD Lead Report.** Adds **ESXP profile completion** as an onboarding artifact
+> (target 100%); Partner CSAs with a profile **`≤ 50%` complete** are flagged (should be empty once
+> onboarded), with resource type, citizenship and solution area. Canonical spec:
+> [CAP-09](../../specs/capabilities/CAP-09-partner-csa-lifecycle.md).
+
 ## 1. At a glance
 
 | Field | Value |

@@ -37,6 +37,12 @@
   delivery by territory, escalations/risk, workforce/capacity, priorities.
 - **FR-REPORT-6** — **Export** MBRs to PowerPoint/PDF; save/share.
 - **FR-REPORT-7** — **Ask-your-data:** NL questions answered from SSD IQ with sources.
+- **FR-REPORT-8** — **POD Lead Report:** a native, POD-Lead-facing operational report (three pages —
+  **POD Snapshot**, **CPE/Accreditations/Quality**, **Delivery/Operations**) filterable by POD Lead /
+  Date / Supplier / Partner CSA / SDM / RMOT status and default-scoped to the signed-in POD Lead. Fully
+  specified in [07 §2.6](../07-kpis-and-reporting.md); surfaces the operational KPIs (requests
+  completed/upcoming, reports-pending aging, delivered hours/events, VSAT/DSAT, off-strategy, S500
+  readiness, ESXP gaps, 8-week pipeline).
 
 ## 3. Business rules
 
@@ -45,6 +51,9 @@
 - **BR-REPORT-3** — Partner MBR uses the partner's real records; internal MBR uses portfolio aggregates.
 - **BR-REPORT-4** — MBR generation requires `run:mbr`; partner MBRs contain only that partner's data.
 - **BR-REPORT-5** — Figures reconcile to the Power BI source of truth.
+- **BR-REPORT-6** — **POD Lead Report** fixed-window visuals (rolling 3-month, 8-week pipeline) ignore the
+  date filter by design; **RMOT status** is eventually-consistent (it trails the source datasource
+  refresh), so pending/complete counts may briefly lag reality and must not be treated as real-time.
 
 ## 4. User stories & acceptance criteria
 
@@ -94,3 +103,6 @@ Surfaces the full KPI catalog ([07](../07-kpis-and-reporting.md)) sliced by mont
 - **Q:** Source of the executive dataset? **A (assumption):** the FY Success Programs Power BI/warehouse.
 - **Q:** Full US OU tree vs region proxy? **A (assumption):** OU tree needed for the US; regions roll to
   TZ elsewhere.
+- **Q:** Is the POD Lead Report rebuilt natively or embedded from Power BI? **A (assumption):** productised
+  natively over SSD IQ so it inherits filtering/RBAC/deep-links; the current Power BI report is the
+  metric source of truth until then.

@@ -33,6 +33,9 @@
 - **FR-LC-6** — Gate stage transitions on mock-delivery pass and shadowing completion (production).
 - **FR-LC-7** — Show a **hiring pipeline** summary (open requisitions by stage) that feeds the lifecycle,
   linking to HC Tracking ([CAP-08](CAP-08-capacity-and-forecasting.md)).
+- **FR-LC-8** — Track **ESXP profile completion** as an onboarding artifact; surface Partner CSAs whose
+  profile is **≤ 50% complete** (should always be empty once onboarded), with resource type, citizenship
+  and solution area, so the owner can close the gap.
 
 ## 3. Business rules
 
@@ -41,6 +44,8 @@
 - **BR-LC-2** — Readiness % = onboarding tasks done / 17; ≥80% ready, 40–79% on track, <40% early.
 - **BR-LC-3** — Offboarding tasks: reassign open engagements → KT → access removal → vendor sign-off.
 - **BR-LC-4** — Offboarding risk: open engagements still assigned ⇒ reassign before access removal.
+- **BR-LC-5** — The **ESXP profile** must reach **100%** during onboarding; a `≤ 50% Complete` profile on an
+  active/onboarded CSA is an onboarding-quality flag (see [02 data quality](../02-data-and-system-of-record.md)).
 
 ## 4. User stories & acceptance criteria
 
@@ -57,8 +62,9 @@
 
 ## 5. Data & system of record
 
-**CSA** `lifecycle` + derived onboarding/offboarding progress; onboarding/offboarding task status
-(production SoT = Operations/HR + provisioning systems).
+**CSA** `lifecycle`, `esxpProfileCompletion`, `resourceType`, `resourceCitizenship` + derived onboarding/
+offboarding progress; onboarding/offboarding task status (production SoT = Operations/HR + provisioning
+systems).
 
 ## 6. AI touchpoints
 

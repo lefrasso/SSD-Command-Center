@@ -3,6 +3,11 @@
 > Escalation management for all delivery concerns — intake → triage → resolution — with SDM
 > co-ownership, SLA timers, action items and AI triage.
 
+> **Source alignment — POD Lead Report.** Production escalations carry an **Escalation Category**
+> (Delivery / Quality / Technical / Compliance Issue) and a free-text **Escalation Event Name**, and
+> distinguish the **current POD Lead** from the **submitting POD Lead** (they differ when a CSA changes
+> POD). Canonical spec: [CAP-13](../../specs/capabilities/CAP-13-escalations-and-actions.md).
+
 ## 1. At a glance
 
 | Field | Value |

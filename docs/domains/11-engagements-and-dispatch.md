@@ -3,6 +3,12 @@
 > Proactive Dispatch — move delivery demand from **new** to **complete**, assign the best-fit Partner
 > CSA, and drive the Day 0–3 outreach cadence, with AI recommendations and draft outreach.
 
+> **Source alignment — POD Lead Report.** Each request carries a **Request Tracking ID** (`RMOT`/`SCOP`),
+> a **DeliveryProduct** (`Success Program - <Family> - <Event>`) and an **RMOT status** (Active /
+> Dispatched / Complete / Cancelled / Reports Pending). The report rolls up **delivered hours/events** and
+> **upcoming deliveries**, and flags **off-strategy** work (non-SP `SCOP`/ROSS assigned to a CSA — should
+> be zero). Canonical spec: [CAP-04](../../specs/capabilities/CAP-04-engagements-and-dispatch.md).
+
 ## 1. At a glance
 
 | Field | Value |

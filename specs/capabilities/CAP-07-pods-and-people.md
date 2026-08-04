@@ -31,6 +31,12 @@
 - **FR-PODS-6** — Provide AI **capacity-balancing** and **skill-gap** insight.
 - **FR-PODS-7** — Show the **org hierarchy**: WW Lead → TZ Lead → CSA Manager → POD Leads (multiple POD
   Leads per Territory/OU).
+- **FR-PODS-8** — Provide a **POD Snapshot** (the POD Lead's actionable home): per-CSA **Quality Checks**
+  (rolling 3 months + current; active members only, excludes MOCK), **Reports Pending**, **Completed**
+  and **Current & Upcoming Requests**, **Survey CPE** and **Open Escalations** — to spot CSAs needing a
+  quality check, chasing, or rebalancing. Fully specified in [07 §2.6](../07-kpis-and-reporting.md).
+- **FR-PODS-9** — Support a **Supplier** (vendor — the CSA's Delivery Partner firm) and **SDM** filter/
+  dimension across the roster and snapshot.
 
 ## 3. Business rules
 
@@ -40,6 +46,8 @@
 - **BR-PODS-4** — TZ rollup via the region→TZ map.
 - **BR-PODS-5** — Org hierarchy: WW Lead → TZ Lead → CSA Manager → POD Lead; each POD has a
   `csaManager`; a CSA can deliver in any territory (no restriction).
+- **BR-PODS-6** — Quality-Check coverage target: **≥ 1 QC per active CSA per month** (MOCK events
+  excluded); the POD Snapshot lists active POD members only.
 
 ## 4. User stories & acceptance criteria
 
@@ -75,7 +83,8 @@ People data scoped by role/TZ; no confidential performance data here; heatmap co
 
 ## 9. KPIs
 
-Avg utilization (80–90%), over/under-utilised counts, skill coverage per track/TZ.
+Avg utilization (80–90%), over/under-utilised counts, skill coverage per track/TZ, QC coverage
+(≥ 1/active CSA/month), reports pending and upcoming requests per CSA.
 
 ## 10. Open questions & assumptions
 

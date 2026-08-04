@@ -3,6 +3,11 @@
 > Demand forecasting, headcount mapping & assignment, and coverage analysis — ensuring **at least one
 > CSA per program, per language and per time zone**.
 
+> **Source alignment — POD Lead Report.** Adds an **8-week delivery pipeline** — forecast **labor hours
+> per Partner CSA per ISO week** — a fixed-window view (independent of the date/RMOT filters) used to spot
+> under-/over-loaded CSAs and reallocate demand. Canonical spec:
+> [CAP-08](../../specs/capabilities/CAP-08-capacity-and-forecasting.md).
+
 ## 1. At a glance
 
 | Field | Value |

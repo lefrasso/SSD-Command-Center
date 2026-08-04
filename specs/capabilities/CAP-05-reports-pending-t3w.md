@@ -31,11 +31,19 @@
   T-3W not started.
 - **FR-RPEND-3** — Show a **T-3W tracker** of in-window engagements with per-day (Day 0–3) outreach
   status and a proactive status pill.
-- **FR-RPEND-4** — Show charts: pending-report **aging buckets** and proactive **status** distribution.
+- **FR-RPEND-4** — Show charts/breakdowns: pending-report **aging buckets** (`Has Labor`, then `≤7 / >7 /
+  >14 / >21` days overdue — with special emphasis on **>14** and **>21**) and proactive **status**
+  distribution.
 - **FR-RPEND-5** — Filter by Success Program and Territory (TZ).
 - **FR-RPEND-6** — Use the **real report-submission status** (delivery reporting) for "pending" in
   production, not just `dueDate`.
 - **FR-RPEND-7** — **Nudge/enforce**: notify CSA/POD Lead on not-started in-window engagements (production).
+- **FR-RPEND-8** — Show **Reports Pending per CSA** (counts by `≤7 / >7 / >14 / >21` bucket, with a total)
+  so a POD Lead can chase the right people, and **delivered hours sitting in the Reports-Pending state**
+  (labor logged but report not yet submitted).
+- **FR-RPEND-9** — Count only requests **with labor logged** (*Has Labor*) as reportable-pending, and
+  reconcile the **RMOT status lag** (a request already in Pending-Billing may still show as Reports
+  Pending because the source datasource refresh trails real time).
 
 ## 3. Business rules
 
@@ -44,7 +52,12 @@
 - **BR-RPEND-3** — Proactive status: Overdue if past due; **Not started** if 0 outreach; **On track** if
   ≥3 outreach; else **In progress**.
 - **BR-RPEND-4** — Proactive coverage = in-window with Day 0 outreach / all in-window (100% if none).
-- **BR-RPEND-5** — Aging buckets: |daysUntil| in 1–7 / 8–14 / 15–30 / 30+.
+- **BR-RPEND-5** — Aging buckets (POD Lead Report scheme): **Has Labor** (labor logged) → `≤7` → `>7` →
+  `>14` → `>21` days overdue; **>14 and >21** are the action-priority tail. (The Phase-0 prototype chart
+  used `1–7 / 8–14 / 15–30 / 30+`; production adopts the report scheme.)
+- **BR-RPEND-6** — Only requests with **labor logged** count as pending; **RMOT status** is
+  eventually-consistent (it trails the source refresh), so "pending" is a near-real-time estimate, not a
+  live figure.
 
 ## 4. User stories & acceptance criteria
 
@@ -84,7 +97,8 @@ Accuracy tied to the real reporting system; status labelled (not colour-only).
 
 ## 9. KPIs
 
-Reports pending (→0), avg days overdue, proactive coverage (≥80%), T-3W not started (0).
+Reports pending (→0) with `≤7 / >7 / >14 / >21` aging, delivered hours in Reports-Pending state
+(minimise), avg days overdue, proactive coverage (≥80%), T-3W not started (0).
 
 ## 10. Open questions & assumptions
 

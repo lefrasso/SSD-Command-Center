@@ -3,6 +3,12 @@
 > POD structure, roster, capacity/utilization, skills coverage and time-zone rollup — the operational
 > view of the Partner CSA workforce.
 
+> **Source alignment — POD Lead Report.** This domain is the operational home of the production **POD
+> Lead Report** (*Success Programs Insights & Operations*). Its **POD Snapshot** page adds a per-CSA
+> actionable view (Quality Checks, Reports Pending, Completed & Upcoming Requests, Survey CPE, Open
+> Escalations) plus a **Supplier** (vendor) and **SDM** dimension. Canonical spec:
+> [specs/07 §2.6](../../specs/07-kpis-and-reporting.md) · [CAP-07](../../specs/capabilities/CAP-07-pods-and-people.md).
+
 ## 1. At a glance
 
 | Field | Value |
