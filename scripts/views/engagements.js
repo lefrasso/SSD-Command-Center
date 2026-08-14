@@ -1,5 +1,5 @@
 // Engagements & Dispatch — dispatch board + engagement detail with AI dispatch.
-import { store, assignEngagement } from '../store.js';
+import { store, assignEngagement, canonicalEntityMap } from '../store.js';
 import { pageHeader, badge, statusPill, aiChip, esc, kanban, openDrawer, closeDrawer, COLORS } from '../components.js';
 import { icon } from '../icons.js';
 import { recommendCSA, draftOutreach } from '../ai.js';
@@ -8,6 +8,7 @@ const COLS = [['new', 'New'], ['assigned', 'Assigned'], ['in-delivery', 'In deli
 
 export function renderEngagements(container) {
   const d = store.data;
+  const governed = canonicalEntityMap(d).filter((x) => ['Engagements', 'People', 'PODs', 'Partners', 'Actions', 'Messages'].includes(x.entity));
   const columns = COLS.map(([status, title]) => {
     const engs = d.engagements.filter((e) => e.status === status);
     return {
@@ -24,7 +25,23 @@ export function renderEngagements(container) {
   });
 
   container.innerHTML = `
-    ${pageHeader({ title: 'Engagements & Dispatch', description: 'Proactive Dispatch — move demand from new to complete. Open an engagement for milestones, Day 0–3 outreach and AI best-fit dispatch.' })}
+    ${pageHeader({ title: 'Engagements & Dispatch', description: 'Demand enters the platform as an engagement record, is governed in SSD IQ, and is routed through dispatch with human review and AI guidance.' })}
+    <section class="card pad mb16" aria-label="Canonical operating model">
+      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
+        <strong style="font-size:16px">Canonical operating model</strong>
+        ${badge('Engagement decisions are sourced from SSD IQ', 'tint-info')}
+      </div>
+      <div class="governance-list">
+        ${governed.map(({ entity, owner, source, count }) => `
+          <div class="governance-item">
+            <div class="governance-meta">${esc(entity)}</div>
+            <div class="governance-owner">${esc(owner)}</div>
+            <div class="governance-source">${esc(source)}</div>
+            <div class="governance-count">${count}</div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
     ${kanban(columns)}`;
 
   container.querySelectorAll('.kan-card').forEach((el) => el.addEventListener('click', () => openEngagement(el.getAttribute('data-id'))));

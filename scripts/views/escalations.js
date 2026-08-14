@@ -1,5 +1,5 @@
 // Escalations & Actions — triage board, SLA timers, actions, AI triage.
-import { store, setEscalationStatus, setActionStatus, addEscalation, hoursSince } from '../store.js';
+import { store, setEscalationStatus, setActionStatus, addEscalation, hoursSince, canonicalEntityMap } from '../store.js';
 import { pageHeader, badge, severityPill, statusPill, aiChip, esc, kanban, openDrawer, closeDrawer, COLORS } from '../components.js';
 import { icon } from '../icons.js';
 import { similarCases, extractActions, draftResolution, classifySeverity } from '../ai.js';
@@ -9,6 +9,7 @@ const NEXT = ['investigating', 'mitigating', 'resolved'];
 
 export function renderEscalations(container) {
   const d = store.data;
+  const governed = canonicalEntityMap(d).filter((x) => ['Engagements', 'Escalations', 'Actions', 'PODs', 'People'].includes(x.entity));
   const columns = COLS.map(([status, title]) => {
     const items = d.escalations.filter((e) => e.status === status);
     return {
@@ -27,7 +28,23 @@ export function renderEscalations(container) {
   });
 
   container.innerHTML = `
-    ${pageHeader({ title: 'Escalations & Actions', description: 'Escalation management for all delivery concerns — intake to triage to resolution, with SDM co-ownership and SLA timers.', actions: `<button class="btn primary" id="new-esc">${icon('warning', 16)} New escalation</button>` })}
+    ${pageHeader({ title: 'Escalations & Actions', description: 'Escalations are logged against the engagement record in SSD IQ, then triaged with action tracking and SLA ownership.', actions: `<button class="btn primary" id="new-esc">${icon('warning', 16)} New escalation</button>` })}
+    <section class="card pad mb16" aria-label="Canonical operating model">
+      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
+        <strong style="font-size:16px">Canonical operating model</strong>
+        ${badge('Escalations are traceable to the source system-of-record', 'tint-info')}
+      </div>
+      <div class="governance-list">
+        ${governed.map(({ entity, owner, source, count }) => `
+          <div class="governance-item">
+            <div class="governance-meta">${esc(entity)}</div>
+            <div class="governance-owner">${esc(owner)}</div>
+            <div class="governance-source">${esc(source)}</div>
+            <div class="governance-count">${count}</div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
     ${kanban(columns)}`;
 
   container.querySelectorAll('.kan-card').forEach((el) => el.addEventListener('click', () => openEsc(el.getAttribute('data-id'))));

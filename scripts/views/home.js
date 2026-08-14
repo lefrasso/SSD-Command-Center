@@ -1,5 +1,5 @@
 // Home — Delivery Cockpit.
-import { store, computeKpis, sentimentBreakdown, hoursSince, openActions, todayISO } from '../store.js';
+import { store, computeKpis, sentimentBreakdown, hoursSince, openActions, todayISO, canonicalEntityMap } from '../store.js';
 import { PERSONAS } from '../roles.js';
 import { dailyBriefing } from '../ai.js';
 import { navigate } from '../router.js';
@@ -74,6 +74,152 @@ export function renderHome(container) {
       actions: `<select class="select" id="f-track" aria-label="Filter by family">${trackOpts}</select>
                 <select class="select" id="f-partner" aria-label="Filter by partner">${partnerOpts}</select>`,
     })}
+
+    <section class="framework-shell" aria-label="Platform framework overview">
+      <div class="framework-intake">
+        <div class="framework-intake-box">
+          <div class="framework-intake-list">
+            <span>Requests</span>
+            <span>Surveys</span>
+            <span>Labor Insights</span>
+            <span>Capacity Insights</span>
+            <span>Offerings</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="framework-center">
+        <div class="framework-band framework-band--green">POD Management (QC, Escalations, MOCK, Reports Pending, Shadowing, CPE, User Voice, Sentiment Analysis)</div>
+        <div class="framework-band framework-band--green">pCSA Lifecycle Management (Onboarding, Accreditations, Offboarding, Readiness, S500, PIP)</div>
+        <div class="framework-band framework-band--green">Capacity Management (Forecast, Hiring Tracking)</div>
+        <div class="framework-band framework-band--orange">Agentic delivery</div>
+        <div class="framework-platform">SSD Command Center Platform</div>
+        <div class="framework-service-box">Messaging - Actions</div>
+        <div class="framework-service-box">Data Model (People - Targets - KPIs) / Data Ontology / AI Harness</div>
+      </div>
+
+      <div class="framework-services">
+        <div class="framework-service-stack">
+          <div class="framework-cylinder">SSD IQ</div>
+        </div>
+        <div class="framework-lower-box">Reporting</div>
+        <div class="framework-lower-box">Agents</div>
+      </div>
+    </section>
+
+    <section class="card pad mb16" aria-label="Operational workflow">
+      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
+        <strong style="font-size:16px">Operational flow</strong>
+        ${badge('Source → SSD IQ → Action → Insight', 'tint-info')}
+      </div>
+      <div class="workflow-steps">
+        <div class="workflow-step">
+          <div class="workflow-number">1</div>
+          <div class="workflow-body">
+            <div class="workflow-title">Intake</div>
+            <div class="workflow-text">Requests, surveys, labor, capacity, and offerings feed the platform.</div>
+          </div>
+        </div>
+        <div class="workflow-step">
+          <div class="workflow-number">2</div>
+          <div class="workflow-body">
+            <div class="workflow-title">Normalize in SSD IQ</div>
+            <div class="workflow-text">People, targets, KPIs, and operational records become the canonical source of truth.</div>
+          </div>
+        </div>
+        <div class="workflow-step">
+          <div class="workflow-number">3</div>
+          <div class="workflow-body">
+            <div class="workflow-title">Drive action</div>
+            <div class="workflow-text">Dispatch, escalations, lifecycle moves, and assigned work operate from those records.</div>
+          </div>
+        </div>
+        <div class="workflow-step">
+          <div class="workflow-number">4</div>
+          <div class="workflow-body">
+            <div class="workflow-title">Reporting & AI</div>
+            <div class="workflow-text">Insights, MBRs, and agent-generated recommendations are derived from the governed data layer.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card pad mb16" aria-label="System of record overview">
+      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
+        <strong style="font-size:16px">System of record</strong>
+        ${badge('SSD IQ canonical model', 'tint-info')}
+      </div>
+      <div class="record-grid">
+        <div class="record-card">
+          <div class="record-label">People</div>
+          <div class="record-value">${d.csas.length + d.partners.length}</div>
+          <div class="record-foot">CSAs + partner profiles</div>
+        </div>
+        <div class="record-card">
+          <div class="record-label">PODs</div>
+          <div class="record-value">${d.pods.length}</div>
+          <div class="record-foot">Org structure + coverage</div>
+        </div>
+        <div class="record-card">
+          <div class="record-label">Engagements</div>
+          <div class="record-value">${d.engagements.length}</div>
+          <div class="record-foot">Delivery demand + assignments</div>
+        </div>
+        <div class="record-card">
+          <div class="record-label">Escalations</div>
+          <div class="record-value">${d.escalations.length}</div>
+          <div class="record-foot">Issues, SLA and actions</div>
+        </div>
+        <div class="record-card">
+          <div class="record-label">Actions</div>
+          <div class="record-value">${d.actions.length}</div>
+          <div class="record-foot">Operational follow-through</div>
+        </div>
+        <div class="record-card">
+          <div class="record-label">Quality</div>
+          <div class="record-value">${d.cpe.length}</div>
+          <div class="record-foot">CPE, checks and readiness</div>
+        </div>
+      </div>
+      <div class="entity-list" style="margin-top: 14px;">
+        ${['People','PODs','Partners','Engagements','Escalations','Actions','Messages','Quality','Capacity','Sentiment'].map((name) => `<span class="entity-pill">${name}</span>`).join('')}
+      </div>
+      <div class="governance-list" style="margin-top: 14px;">
+        ${canonicalEntityMap(d).map(({ entity, owner, source, count }) => `
+          <div class="governance-item">
+            <div class="governance-meta">${esc(entity)}</div>
+            <div class="governance-owner">${esc(owner)}</div>
+            <div class="governance-source">${esc(source)}</div>
+            <div class="governance-count">${count}</div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
+
+    <section class="card pad mb16" aria-label="Delivery roadmap">
+      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
+        <strong style="font-size:16px">Implementation roadmap</strong>
+        ${badge('9-stage platform rollout', 'tint-info')}
+      </div>
+      <div class="roadmap-grid">
+        ${[
+          'Design data model',
+          'Connect sources',
+          'Implement coding harnesses',
+          'Identity management',
+          'Platform basics',
+          'Implement pCSA lifecycle',
+          'Implement POD management capabilities',
+          'Capacity management',
+          'Agentic delivery automation'
+        ].map((label, index) => `
+          <div class="roadmap-step">
+            <div class="roadmap-step-number">${index + 1}</div>
+            <div class="roadmap-step-label">${esc(label)}</div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
 
     <div class="kpi-grid">
       ${kpiCard({ label: 'Active engagements', value: k.activeEngagements, iconName: 'send', hint: 'Assigned + in delivery' })}

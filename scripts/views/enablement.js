@@ -1,5 +1,5 @@
 // Enablement — accreditations, S500 eligibility, SDM onboarding, user voice, shadowing.
-import { store } from '../store.js';
+import { store, canonicalEntityMap } from '../store.js';
 import { pageHeader, kpiCard, esc, badge, COLORS } from '../components.js';
 import { icon } from '../icons.js';
 import { PROGRAMS, TRACKS } from '../../data/generate.js';
@@ -18,8 +18,25 @@ const seedOf = (s) => [...s].reduce((a, ch) => a + ch.charCodeAt(0), 0);
 
 export function renderEnablement(container) {
   const tabs = [['accred', 'Accreditations'], ['catalogue', 'Service Catalogue'], ['s500', 'S500 Eligibility'], ['sdm', 'SDM Onboarding'], ['uv', 'User Voice'], ['shadow', 'Shadowing']];
+  const governed = canonicalEntityMap(store.data).filter((x) => ['People', 'PODs', 'Capacity', 'Quality', 'Engagements'].includes(x.entity));
   container.innerHTML = `
-    ${pageHeader({ title: 'Enablement', description: 'Accreditations, S500 eligibility, SDM onboarding, User Voice and shadowing management.' })}
+    ${pageHeader({ title: 'Enablement', description: 'Enablement is positioned as a governed capability in SSD IQ: skills, readiness, quality, and shadowing all feed the people and delivery model.' })}
+    <section class="card pad mb16" aria-label="Canonical operating model">
+      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
+        <strong style="font-size:16px">Canonical operating model</strong>
+        ${badge('People readiness is governed through SSD IQ', 'tint-info')}
+      </div>
+      <div class="governance-list">
+        ${governed.map(({ entity, owner, source, count }) => `
+          <div class="governance-item">
+            <div class="governance-meta">${esc(entity)}</div>
+            <div class="governance-owner">${esc(owner)}</div>
+            <div class="governance-source">${esc(source)}</div>
+            <div class="governance-count">${count}</div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
     <div class="tabs">${tabs.map(([k, l]) => `<div class="tab ${tab === k ? 'active' : ''}" data-tab="${k}">${l}</div>`).join('')}</div>
     <div id="tabc"></div>`;
   container.querySelectorAll('[data-tab]').forEach((el) => el.addEventListener('click', () => { tab = el.getAttribute('data-tab'); renderEnablement(container); }));

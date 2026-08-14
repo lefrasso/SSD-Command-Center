@@ -1,7 +1,7 @@
 // Messages Console — threaded comms with templates + AI assist.
-import { store, addMessage, actionsByThread } from '../store.js';
+import { store, addMessage, actionsByThread, canonicalEntityMap } from '../store.js';
 import { PERSONAS } from '../roles.js';
-import { pageHeader, aiChip, esc, sentimentPill } from '../components.js';
+import { pageHeader, aiChip, esc, sentimentPill, badge } from '../components.js';
 import { icon } from '../icons.js';
 import { suggestReply, toneCheck, summarizeThread } from '../ai.js';
 import { openAssignActionDrawer, actionItemHtml, wireActionToggles } from '../actions.js';
@@ -31,6 +31,7 @@ function threads(d) {
 
 export function renderMessages(container, threadParam = '') {
   const d = store.data;
+  const governed = canonicalEntityMap(d).filter((x) => ['Messages', 'Engagements', 'Actions', 'People', 'Quality'].includes(x.entity));
   const list = threads(d);
   if (threadParam && threadParam !== appliedParam) {
     const q = threadParam.toLowerCase();
@@ -45,7 +46,23 @@ export function renderMessages(container, threadParam = '') {
   const openCount = acts.filter((a) => a.status !== 'done').length;
 
   container.innerHTML = `
-    ${pageHeader({ title: 'Messages Console', description: 'Threaded communication with Partner CSAs — every thread tied to an engagement. Templates speed dispatch; AI offers replies, tone check and summaries.' })}
+    ${pageHeader({ title: 'Messages Console', description: 'Every thread is tied to an engagement record in SSD IQ, with action follow-through and communication history tracked as part of the platform source-of-truth.' })}
+    <section class="card pad mb16" aria-label="Canonical operating model">
+      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
+        <strong style="font-size:16px">Canonical operating model</strong>
+        ${badge('Messages are context, not the system of record', 'tint-info')}
+      </div>
+      <div class="governance-list">
+        ${governed.map(({ entity, owner, source, count }) => `
+          <div class="governance-item">
+            <div class="governance-meta">${esc(entity)}</div>
+            <div class="governance-owner">${esc(owner)}</div>
+            <div class="governance-source">${esc(source)}</div>
+            <div class="governance-count">${count}</div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
     <div class="msg-layout">
       <div class="thread-list">
         ${list.map((t) => `<div class="thread-item ${t.tid === selectedThread ? 'active' : ''}" data-tid="${t.tid}">

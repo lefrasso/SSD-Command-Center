@@ -32,6 +32,26 @@ export const hoursSince = (iso) => (NOW - new Date(iso).getTime()) / 3.6e6;
 export const todayISO = () => new Date(NOW).toISOString().slice(0, 10);
 export const daysFromNowISO = (n) => new Date(NOW + n * 864e5).toISOString().slice(0, 10);
 
+export const CANONICAL_ENTITIES = [
+  { entity: 'People', owner: 'People & POD Ops', source: 'HR roster + partner registry', key: 'people', count: (d) => d.csas.length + d.partners.length },
+  { entity: 'PODs', owner: 'POD leadership', source: 'SSD IQ org model', key: 'pods', count: (d) => d.pods.length },
+  { entity: 'Partners', owner: 'Delivery partner management', source: 'MOSA / provider registry', key: 'partners', count: (d) => d.partners.length },
+  { entity: 'Engagements', owner: 'Dispatch & delivery lead', source: 'Demand + assignment pipeline', key: 'engagements', count: (d) => d.engagements.length },
+  { entity: 'Escalations', owner: 'Escalation triage', source: 'Azure DevOps + service desk', key: 'escalations', count: (d) => d.escalations.length },
+  { entity: 'Actions', owner: 'Ops follow-through', source: 'Action backlog', key: 'actions', count: (d) => d.actions.length },
+  { entity: 'Messages', owner: 'Communications', source: 'Teams thread hub', key: 'messages', count: (d) => d.messages.length },
+  { entity: 'Quality', owner: 'Quality & CPE', source: 'CPE / quality program', key: 'cpe', count: (d) => d.cpe.length },
+  { entity: 'Capacity', owner: 'Capacity planning', source: 'Forecast + hiring plan', key: 'hiring', count: (d) => d.hiring.length },
+  { entity: 'Sentiment', owner: 'Voice of customer', source: 'AI sentiment rollup', key: 'sentiment', count: (d) => d.sentiment.length },
+];
+
+export function canonicalEntityMap(d = store.data) {
+  return CANONICAL_ENTITIES.map((e) => ({
+    ...e,
+    count: e.count(d),
+  }));
+}
+
 export function computeKpis(d = store.data) {
   const active = d.engagements.filter((e) => e.status === 'assigned' || e.status === 'in-delivery').length;
   const onTime = d.deliveries.filter((dl) => { const e = d.engagements.find((x) => x.id === dl.engagementId); return e ? dl.completedDate <= e.dueDate : false; }).length;

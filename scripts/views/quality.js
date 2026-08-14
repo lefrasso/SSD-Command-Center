@@ -1,5 +1,5 @@
 // Quality & CPE — CPE trends, Quality Check forms + reporting, and Mock Deliveries.
-import { store } from '../store.js';
+import { store, canonicalEntityMap } from '../store.js';
 import { pageHeader, kpiCard, aiChip, esc, badge, sentimentPill, scoreColor, COLORS, clearCharts, line, bar, openDrawer } from '../components.js';
 import { icon } from '../icons.js';
 import { scoreQuality } from '../ai.js';
@@ -34,8 +34,25 @@ const seedOf = (id) => [...id].reduce((a, ch) => a + ch.charCodeAt(0), 0);
 
 export function renderQuality(container) {
   const tabs = [['cpe', 'CPE & Trends'], ['qc', 'Quality Checks'], ['mock', 'Mock Deliveries']];
+  const governed = canonicalEntityMap(store.data).filter((x) => ['Quality', 'Engagements', 'People', 'Messages', 'Actions'].includes(x.entity));
   container.innerHTML = `
-    ${pageHeader({ title: 'Quality & CPE', description: 'Experience management, quality checks and mock delivery QC — against the Proactive Delivery CPE Recommended Practices.' })}
+    ${pageHeader({ title: 'Quality & CPE', description: 'Quality signals are captured against the engagement record in SSD IQ and rolled up to delivery quality, action follow-through, and customer sentiment.' })}
+    <section class="card pad mb16" aria-label="Canonical operating model">
+      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
+        <strong style="font-size:16px">Canonical operating model</strong>
+        ${badge('Quality outcomes remain tied to engagement truth', 'tint-info')}
+      </div>
+      <div class="governance-list">
+        ${governed.map(({ entity, owner, source, count }) => `
+          <div class="governance-item">
+            <div class="governance-meta">${esc(entity)}</div>
+            <div class="governance-owner">${esc(owner)}</div>
+            <div class="governance-source">${esc(source)}</div>
+            <div class="governance-count">${count}</div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
     <div class="tabs">${tabs.map(([k, l]) => `<div class="tab ${tab === k ? 'active' : ''}" data-tab="${k}">${l}</div>`).join('')}</div>
     <div id="tabc"></div>`;
   container.querySelectorAll('[data-tab]').forEach((el) => el.addEventListener('click', () => { tab = el.getAttribute('data-tab'); renderQuality(container); }));

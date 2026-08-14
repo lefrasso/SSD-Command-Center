@@ -1,5 +1,5 @@
 // SSD IQ — System of Records catalog.
-import { store } from '../store.js';
+import { store, canonicalEntityMap } from '../store.js';
 import { can } from '../roles.js';
 import { nlSearch, dataQualityFlags } from '../ai.js';
 import {
@@ -97,12 +97,30 @@ function renderContent() {
         </div>`).join('') || emptyState({ title: 'No matching records', description: 'Try a partner name, track, severity or record id.' })}
     </div>`;
 
+  const governance = canonicalEntityMap(d);
+
   host.innerHTML = `
     ${pageHeader({
       title: 'SSD IQ — System of Records',
       description: 'The governed source of truth. Browse and search every entity, inspect a record and its relationships, and see source-of-truth badges and the audit trail.',
       actions: aiChip('NL search + DQ'),
     })}
+    <section class="card pad mb16" aria-label="Canonical governance model">
+      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
+        <strong style="font-size:16px">Canonical governance model</strong>
+        ${badge('Data-owned and sourced through SSD IQ', 'tint-info')}
+      </div>
+      <div class="governance-list">
+        ${governance.map(({ entity, owner, source, count }) => `
+          <div class="governance-item">
+            <div class="governance-meta">${esc(entity)}</div>
+            <div class="governance-owner">${esc(owner)}</div>
+            <div class="governance-source">${esc(source)}</div>
+            <div class="governance-count">${count}</div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
     <div class="row wrap mb16" style="gap:10px">
       <div class="input-wrap flex1" style="max-width:520px">
         <span class="in-ico">${icon('search', 18)}</span>

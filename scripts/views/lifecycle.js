@@ -1,5 +1,5 @@
 // Partner CSA Lifecycle — pipeline Kanban + per-CSA profile drawer.
-import { store } from '../store.js';
+import { store, canonicalEntityMap } from '../store.js';
 import { pageHeader, badge, aiChip, esc, kanban, openDrawer, meter, COLORS, sentimentPill } from '../components.js';
 import { icon } from '../icons.js';
 
@@ -18,6 +18,7 @@ const seedOf = (id) => [...id].reduce((a, ch) => a + ch.charCodeAt(0), 0);
 
 export function renderLifecycle(container) {
   const d = store.data;
+  const governed = canonicalEntityMap(d).filter((x) => ['People', 'PODs', 'Partners', 'Engagements', 'Capacity'].includes(x.entity));
 
   const columns = STAGES.map((stage) => {
     const csas = d.csas.filter((c) => c.lifecycle === stage);
@@ -38,7 +39,23 @@ export function renderLifecycle(container) {
   const hiring = (d.hiring || []).filter((h) => h.stage !== 'Hired');
   const HSTAGES = ['Sourcing', 'Screening', 'Interview', 'Offer'];
   container.innerHTML = `
-    ${pageHeader({ title: 'Partner CSA Lifecycle', description: 'Sourcing → selection → onboarding → active delivery → offboarding. Click a card for the profile, onboarding tracker and offboarding checklist.' })}
+    ${pageHeader({ title: 'Partner CSA Lifecycle', description: 'Each lifecycle stage is a governed record in SSD IQ, tying sourcing, assignment, quality, and readiness to the canonical people and POD model.' })}
+    <section class="card pad mb16" aria-label="Canonical operating model">
+      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
+        <strong style="font-size:16px">Canonical operating model</strong>
+        ${badge('Lifecycle status is owned in SSD IQ', 'tint-info')}
+      </div>
+      <div class="governance-list">
+        ${governed.map(({ entity, owner, source, count }) => `
+          <div class="governance-item">
+            <div class="governance-meta">${esc(entity)}</div>
+            <div class="governance-owner">${esc(owner)}</div>
+            <div class="governance-source">${esc(source)}</div>
+            <div class="governance-count">${count}</div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
     <div class="card pad mb16">
       <div class="row mb8" style="justify-content:space-between"><strong>Hiring pipeline</strong><span class="row" style="gap:6px">${badge(hiring.length + ' open reqs', 'tint-info')}${badge('HC Consolidation', 'outline')}</span></div>
       <div class="row wrap" style="gap:8px;align-items:center">${HSTAGES.map((s) => `<span class="badge outline">${esc(s)} · ${hiring.filter((h) => h.stage === s).length}</span>`).join('')}<a class="btn sm" href="#/capacity">Open HC Tracking ${icon('chevronRight', 14)}</a></div>

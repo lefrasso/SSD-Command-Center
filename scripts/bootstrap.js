@@ -73,7 +73,27 @@ function renderCommandBar() {
 function renderNav() {
   const items = modulesForRole(store.role);
   const { id: activeId } = parseHash();
-  navEl.innerHTML = `<div class="nav-list">${items.map((m) => `<a class="nav-item ${m.id === activeId ? 'active' : ''}" href="#${m.path}"><span class="nav-ico">${icon(m.icon, 20)}</span><span class="nav-label">${esc(m.label)}</span></a>`).join('')}</div><div class="nav-foot">Prototype · mock data · simulated AI</div>`;
+
+  const groups = [
+    { title: 'Platform', ids: ['home', 'ssdiq', 'capabilities'] },
+    { title: 'Operations', ids: ['pods', 'lifecycle', 'capacity', 'engagements', 'enablement', 'reports-pending'] },
+    { title: 'Delivery', ids: ['agentic', 'messages', 'quality', 'escalations', 'reporting', 'sentiment'] },
+    { title: 'People', ids: ['delivery-partners', 'performance'] },
+  ];
+
+  const navGroups = groups.map((group) => {
+    const sectionItems = items.filter((m) => group.ids.includes(m.id));
+    if (!sectionItems.length) return '';
+
+    return `
+      <div class="nav-group">
+        <div class="nav-group-title">${group.title}</div>
+        ${sectionItems.map((m) => `<a class="nav-item ${m.id === activeId ? 'active' : ''}" href="#${m.path}"><span class="nav-ico">${icon(m.icon, 20)}</span><span class="nav-label">${esc(m.label)}</span></a>`).join('')}
+      </div>
+    `;
+  }).join('');
+
+  navEl.innerHTML = `<div class="nav-list">${navGroups}</div><div class="nav-foot">Prototype · mock data · simulated AI</div>`;
 }
 
 onChange((reason) => {
