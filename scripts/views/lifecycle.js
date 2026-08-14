@@ -19,6 +19,11 @@ const seedOf = (id) => [...id].reduce((a, ch) => a + ch.charCodeAt(0), 0);
 export function renderLifecycle(container) {
   const d = store.data;
   const governed = canonicalEntityMap(d).filter((x) => ['People', 'PODs', 'Partners', 'Engagements', 'Capacity'].includes(x.entity));
+  const resourceSummary = d.csas.reduce((acc, c) => {
+    const type = c.resourceType || (c.vendor === 'Nebula' || c.vendor === 'GSCD' ? 'FTE' : 'FTC');
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, { FTC: 0, FTE: 0 });
 
   const columns = STAGES.map((stage) => {
     const csas = d.csas.filter((c) => c.lifecycle === stage);
@@ -29,7 +34,7 @@ export function renderLifecycle(container) {
         const pod = d.pods.find((p) => p.id === c.podId);
         return `<div class="kan-card" data-id="${c.id}">
           <div class="kc-title">${esc(c.name)}</div>
-          <div class="kc-meta">${esc(c.vendor)} · ${esc(pod ? pod.name : '')}</div>
+          <div class="kc-meta">${esc(c.resourceType || (c.vendor === 'Nebula' || c.vendor === 'GSCD' ? 'FTE' : 'FTC'))} · ${esc(c.vendor)} · ${esc(pod ? pod.name : '')}</div>
           <div class="kc-foot">${c.tracks.slice(0, 2).map((t) => badge(t, 'outline')).join('')}</div>
         </div>`;
       }),
@@ -39,13 +44,25 @@ export function renderLifecycle(container) {
   const hiring = (d.hiring || []).filter((h) => h.stage !== 'Hired');
   const HSTAGES = ['Sourcing', 'Screening', 'Interview', 'Offer'];
   container.innerHTML = `
-    ${pageHeader({ title: 'Partner CSA Lifecycle', description: 'Each lifecycle stage is a governed record in SSD IQ, tying sourcing, assignment, quality, and readiness to the canonical people and POD model.' })}
-    <section class="card pad mb16" aria-label="Canonical operating model">
+    ${pageHeader({ title: 'Resource Lifecycle', description: 'FTC and FTE resource states are governed in SSD IQ, from sourcing and onboarding to active delivery and offboarding.' })}
+    <section class="card pad mb16" aria-label="Resource lifecycle overview">
       <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
-        <strong style="font-size:16px">Canonical operating model</strong>
-        ${badge('Lifecycle status is owned in SSD IQ', 'tint-info')}
+        <strong style="font-size:16px">Resource mix</strong>
+        ${badge('FTC = pCSAs · FTE = Nebula / GSCD', 'tint-info')}
       </div>
-      <div class="governance-list">
+      <div class="record-grid">
+        <div class="record-card">
+          <div class="record-label">FTC resources</div>
+          <div class="record-value">${resourceSummary.FTC}</div>
+          <div class="record-foot">Partner-sourced pCSAs</div>
+        </div>
+        <div class="record-card">
+          <div class="record-label">FTE resources</div>
+          <div class="record-value">${resourceSummary.FTE}</div>
+          <div class="record-foot">Nebula / GSCD employees</div>
+        </div>
+      </div>
+      <div class="governance-list" style="margin-top: 16px;">
         ${governed.map(({ entity, owner, source, count }) => `
           <div class="governance-item">
             <div class="governance-meta">${esc(entity)}</div>

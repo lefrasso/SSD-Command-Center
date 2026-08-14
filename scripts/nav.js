@@ -5,14 +5,12 @@ const INNOVATION = ['ip-lead', 'adoption-lead'];
 const ALL = ['ww-lead', 'tz-lead', 'csa-manager', 'pod-lead', 'business-manager', 'csa', 'ip-lead', 'adoption-lead', 'partner-csa', 'sdm', 'operations-manager'];
 
 export const MODULES = [
-  { id: 'home', path: '/home', label: 'Platform Overview', icon: 'home', roles: ALL, built: true,
-    description: 'Delivery Cockpit — what needs me today.', ai: 'Auto-generated daily briefing and anomaly callouts.' },
   { id: 'pods', path: '/pods', label: 'POD Management', icon: 'people', roles: [...SSD_LEADERS, ...SSD_MGRS, 'operations-manager', 'sdm'], built: false,
     description: 'POD structure, capacity, utilization and skills.', ai: 'Capacity-balancing and skill-gap suggestions.' },
   { id: 'capacity', path: '/capacity', label: 'Capacity Management', icon: 'trending', roles: [...SSD_LEADERS, ...SSD_MGRS, 'operations-manager'], built: true,
     description: 'Planning, headcount mapping/assignment and coverage.', ai: 'Demand forecast and coverage-gap detection.' },
-  { id: 'lifecycle', path: '/lifecycle', label: 'pCSA Lifecycle', icon: 'personAdd', roles: [...SSD_LEADERS, ...SSD_MGRS, 'operations-manager'], built: false,
-    description: 'Sourcing → onboarding → active → offboarding.', ai: 'Onboarding readiness score and offboarding-risk flags.' },
+  { id: 'lifecycle', path: '/lifecycle', label: 'Resource Lifecycle', icon: 'personAdd', roles: [...SSD_LEADERS, ...SSD_MGRS, 'operations-manager'], built: false,
+    description: 'FTC and FTE resources from sourcing to active delivery through offboarding.', ai: 'Onboarding readiness score and offboarding-risk flags.' },
   { id: 'delivery-partners', path: '/delivery-partners', label: 'Delivery Partners', icon: 'building', roles: [...SSD_LEADERS, ...SSD_MGRS, 'operations-manager', 'sdm'], built: true,
     description: 'Provider/DP management, onboarding and profiles.', ai: 'Partner scorecards and onboarding tracking.' },
   { id: 'engagements', path: '/engagements', label: 'Engagement Dispatch', icon: 'send', roles: ALL, built: false,
@@ -39,6 +37,8 @@ export const MODULES = [
     description: 'The System of Records and data catalog.', ai: 'Natural-language record search and data-quality flags.' },
   { id: 'capabilities', path: '/capabilities', label: 'Capability Map', icon: 'grid', roles: ALL, built: true,
     description: 'The SSD delivery capability map.', ai: 'Coverage of delivery capabilities across Compass.' },
+  { id: 'home', path: '/home', label: 'Platform Overview', icon: 'home', roles: ALL, built: true,
+    description: 'Executive overview — operating model, resource health, and priorities.', ai: 'Auto-generated daily briefing and anomaly callouts.' },
 ];
 
 export function modulesForRole(role) {

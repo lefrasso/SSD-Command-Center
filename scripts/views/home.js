@@ -24,6 +24,11 @@ export function renderHome(container) {
   const k = computeKpis(d);
   const briefing = dailyBriefing(role, d);
   const sent = sentimentBreakdown(d);
+  const resourceMix = d.csas.reduce((acc, c) => {
+    const type = c.resourceType || (c.vendor === 'Nebula' || c.vendor === 'GSCD' ? 'FTE' : 'FTC');
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, { FTC: 0, FTE: 0 });
 
   const partnerOf = (csaId) => { const c = d.csas.find((x) => x.id === csaId); return c ? c.partnerId : ''; };
   const filteredEngs = d.engagements.filter((e) => (track === 'All' || e.track === track) && (partner === 'All' || partnerOf(e.assignedTo) === partner));
@@ -69,41 +74,38 @@ export function renderHome(container) {
 
   container.innerHTML = `
     ${pageHeader({
-      title: 'Delivery Cockpit',
-      description: `Welcome, ${esc(persona.name.split(' ')[0])}. Here's what needs your attention today.`,
+      title: 'Executive Overview',
+      description: `Welcome, ${esc(persona.name.split(' ')[0])}. This is the leadership view of delivery health, resources, and operating priorities.`,
       actions: `<select class="select" id="f-track" aria-label="Filter by family">${trackOpts}</select>
                 <select class="select" id="f-partner" aria-label="Filter by partner">${partnerOpts}</select>`,
     })}
 
-    <section class="framework-shell" aria-label="Platform framework overview">
-      <div class="framework-intake">
-        <div class="framework-intake-box">
-          <div class="framework-intake-list">
-            <span>Requests</span>
-            <span>Surveys</span>
-            <span>Labor Insights</span>
-            <span>Capacity Insights</span>
-            <span>Offerings</span>
-          </div>
-        </div>
+    <section class="card pad mb16" aria-label="Resource mix and platform overview">
+      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
+        <strong style="font-size:16px">Resource mix</strong>
+        ${badge('FTC = pCSAs · FTE = Nebula / GSCD', 'tint-info')}
       </div>
-
-      <div class="framework-center">
-        <div class="framework-band framework-band--green">POD Management (QC, Escalations, MOCK, Reports Pending, Shadowing, CPE, User Voice, Sentiment Analysis)</div>
-        <div class="framework-band framework-band--green">pCSA Lifecycle Management (Onboarding, Accreditations, Offboarding, Readiness, S500, PIP)</div>
-        <div class="framework-band framework-band--green">Capacity Management (Forecast, Hiring Tracking)</div>
-        <div class="framework-band framework-band--orange">Agentic delivery</div>
-        <div class="framework-platform">SSD Command Center Platform</div>
-        <div class="framework-service-box">Messaging - Actions</div>
-        <div class="framework-service-box">Data Model (People - Targets - KPIs) / Data Ontology / AI Harness</div>
-      </div>
-
-      <div class="framework-services">
-        <div class="framework-service-stack">
-          <div class="framework-cylinder">SSD IQ</div>
+      <div class="record-grid">
+        <div class="record-card">
+          <div class="record-label">FTC resources</div>
+          <div class="record-value">${resourceMix.FTC}</div>
+          <div class="record-foot">pCSAs / partner-sourced</div>
         </div>
-        <div class="framework-lower-box">Reporting</div>
-        <div class="framework-lower-box">Agents</div>
+        <div class="record-card">
+          <div class="record-label">FTE resources</div>
+          <div class="record-value">${resourceMix.FTE}</div>
+          <div class="record-foot">Nebula + GSCD employees</div>
+        </div>
+        <div class="record-card">
+          <div class="record-label">Active engagements</div>
+          <div class="record-value">${k.activeEngagements}</div>
+          <div class="record-foot">Delivery demand in flight</div>
+        </div>
+        <div class="record-card">
+          <div class="record-label">Open escalations</div>
+          <div class="record-value">${k.openEscalations}</div>
+          <div class="record-foot">SLA and issue watchlist</div>
+        </div>
       </div>
     </section>
 

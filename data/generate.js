@@ -142,13 +142,15 @@ function build() {
     const accreditations = pickN(trackPrograms, Math.min(trackPrograms.length, int(2, 5)));
     const tzLangs = TZ_LANGUAGES[pod.tz] || ALL_LANGUAGES;
     const languages = pickN(tzLangs, int(1, 3));
+    const resourceType = weighted([['FTC', 0.6], ['FTE', 0.4]]);
     const utilization = clamp(Math.round(84 + (rng() - 0.5) * 26), 62, 98);
     const cpe = round1(clamp(3.9 + rng() * 0.9, 1, 5));
     const quality = round1(clamp(3.7 + rng() * 1.1, 1, 5));
     const lifecycle = weighted([['active', 0.7], ['onboarding', 0.12], ['sourcing', 0.06], ['selection', 0.04], ['offboarding', 0.08]]);
+    const vendorName = resourceType === 'FTE' ? pick(['Nebula', 'GSCD']) : partner.name;
     csas.push({
-      id: `CSA${String(i + 1).padStart(3, '0')}`, name: fullName(usedNames), vendor: partner.name,
-      partnerId: partner.id, podId: pod.id, tracks, accreditations, languages, skills: pickN(SKILLS, int(3, 6)),
+      id: `CSA${String(i + 1).padStart(3, '0')}`, name: fullName(usedNames), vendor: vendorName,
+      resourceType, partnerId: partner.id, podId: pod.id, tracks, accreditations, languages, skills: pickN(SKILLS, int(3, 6)),
       capacity: int(3, 6), utilization, tenureMonths: int(2, 40), lifecycle, cpe, quality,
       sentiment: sentimentFromScore(cpe), ...gov('Operations'),
     });
