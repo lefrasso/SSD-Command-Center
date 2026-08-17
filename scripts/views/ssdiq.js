@@ -19,22 +19,30 @@ const CFG = [
     columns: [['id', 'ID'], ['name', 'Name'], ['region', 'Region'], ['leadName', 'Lead'], ['utilization', 'Util %']] },
   { key: 'engagements', name: 'Engagement', description: 'Dispatched delivery engagements.', source: 'Dispatch', icon: 'send', label: (r) => r.customer,
     columns: [['id', 'ID'], ['customer', 'Customer'], ['track', 'Family'], ['program', 'Program'], ['status', 'Status', (r) => statusPill(r.status)], ['dueDate', 'Due']] },
+  { key: 'successStories', name: 'Success Story', description: 'Customer outcomes linked to governed engagements.', source: 'SSD IQ', icon: 'star', label: (r) => r.title,
+    columns: [['id', 'ID'], ['title', 'Title'], ['engagementId', 'Customer', (r) => engCustomer(r.engagementId)], ['cpeId', 'VSAT'], ['ownerName', 'Owner'], ['status', 'Status', (r) => statusPill(r.status)], ['ltApproved', 'LT Approved', (r) => r.ltApproved ? badge('Yes', 'tint-info') : 'No']] },
   { key: 'escalations', name: 'Escalation', description: 'Delivery escalations tracked in ADO.', source: 'Azure DevOps', icon: 'warning', label: (r) => r.id,
     columns: [['id', 'ID'], ['engagementId', 'Customer', (r) => engCustomer(r.engagementId)], ['severity', 'Severity', (r) => severityPill(r.severity)], ['status', 'Status', (r) => statusPill(r.status)], ['ownerName', 'Owner'], ['opened', 'Opened']] },
   { key: 'actions', name: 'Action Item', description: 'Action items from escalations.', source: 'Azure DevOps', icon: 'flag', label: (r) => r.title,
     columns: [['id', 'ID'], ['title', 'Title'], ['ownerName', 'Owner'], ['due', 'Due'], ['status', 'Status', (r) => statusPill(r.status)]] },
   { key: 'cpe', name: 'CPE Feedback', description: 'Customer & Partner Experience scores.', source: 'CPE/Forms', icon: 'star', label: (r) => `${r.score} · ${r.track}`,
-    columns: [['id', 'ID'], ['engagementId', 'Customer', (r) => engCustomer(r.engagementId)], ['score', 'Score'], ['track', 'Track'], ['sentiment', 'Sentiment', (r) => sentimentPill(r.sentiment)]] },
+    columns: [['id', 'ID'], ['engagementId', 'Customer', (r) => engCustomer(r.engagementId)], ['score', 'Score'], ['class', 'Class'], ['track', 'Track'], ['sentiment', 'Sentiment', (r) => sentimentPill(r.sentiment)]] },
   { key: 'messages', name: 'Message', description: 'Threaded partner communications.', source: 'Teams', icon: 'chat', label: (r) => `${r.from} → ${r.to}`,
     columns: [['id', 'ID'], ['threadId', 'Thread'], ['from', 'From'], ['to', 'To'], ['sentiment', 'Sentiment', (r) => sentimentPill(r.sentiment)]] },
   { key: 'pips', name: 'PIP', description: 'Performance Improvement Plans (confidential).', source: 'Confidential/HR', icon: 'lock', label: (r) => r.id,
     columns: [['id', 'ID'], ['csaId', 'CSA', (r) => csaName(r.csaId)], ['status', 'Status', (r) => statusPill(r.status)], ['outcome', 'Outcome']] },
   { key: 'sentiment', name: 'Sentiment Rollup', description: 'AI sentiment aggregates.', source: 'AI Services', icon: 'emoji', label: (r) => `${r.scope} · ${r.period}`,
     columns: [['id', 'ID'], ['scope', 'Scope'], ['period', 'Period'], ['net', 'Net']] },
+  { key: 'sentimentSignals', name: 'Sentiment Signal', description: 'Interaction-level seven-intensity sentiment with alerts.', source: 'AI Services', icon: 'emoji', label: (r) => `${r.customer} · ${r.level}`,
+    columns: [['id', 'ID'], ['customer', 'Customer'], ['channel', 'Channel'], ['level', 'Intensity'], ['score', 'Score'], ['confidence', 'Confidence'], ['language', 'Language'], ['alertStatus', 'Alert'], ['timestamp', 'Timestamp']] },
   { key: 'deliveries', name: 'Delivery', description: 'Completed deliveries.', source: 'Power BI', icon: 'check', label: (r) => r.type,
     columns: [['id', 'ID'], ['engagementId', 'Customer', (r) => engCustomer(r.engagementId)], ['type', 'Type'], ['completedDate', 'Completed'], ['track', 'Family']] },
   { key: 'hiring', name: 'Requisition', description: 'HC consolidation — hiring requisitions (Active & Future).', source: 'HC Consolidation', icon: 'personAdd', label: (r) => `${r.family} · ${r.stage}`,
     columns: [['id', 'ID'], ['family', 'Family'], ['partnerId', 'Partner', (r) => (store.data.partners.find((p) => p.id === r.partnerId) || {}).name || r.partnerId], ['tz', 'TZ'], ['type', 'Type'], ['stage', 'Stage'], ['targetStart', 'Target start']] },
+  { key: 'financials', name: 'Financial', description: 'MBR budget, actual, forecast and variance records.', source: 'Finance / Power BI', icon: 'report', label: (r) => `${r.scope} · ${r.category}`,
+    columns: [['id', 'ID'], ['period', 'Period'], ['scope', 'Scope'], ['category', 'Category'], ['budget', 'Budget'], ['actual', 'Actual'], ['variance', 'Variance'], ['status', 'Status']] },
+  { key: 'initiatives', name: 'Strategy / IP Initiative', description: 'Offerings, roadmap, IP and platform initiatives.', source: 'Portfolio Management', icon: 'grid', label: (r) => r.name,
+    columns: [['id', 'ID'], ['name', 'Initiative'], ['type', 'Type'], ['area', 'Area'], ['stage', 'Stage'], ['ownerName', 'Owner'], ['targetRelease', 'Target'], ['status', 'Status']] },
 ];
 
 let selectedEntity = 'partners';
@@ -124,7 +132,7 @@ function renderContent() {
     <div class="row wrap mb16" style="gap:10px">
       <div class="input-wrap flex1" style="max-width:520px">
         <span class="in-ico">${icon('search', 18)}</span>
-        <input class="input" id="ssd-search" placeholder="Natural-language record search (e.g. “Avanade”, “sev1”, “ENG012”, “landing zone”)" value="${esc(query)}" style="width:100%"/>
+        <input class="input" id="ssd-search" placeholder="Natural-language record search (e.g. “Avanade”, “success story”, “ENG012”)" value="${esc(query)}" style="width:100%"/>
       </div>
       <button class="btn ${showFlags ? 'primary' : ''}" id="dq-btn">${icon('sparkle', 16)} Data-quality flags (${flags.length})</button>
     </div>
@@ -167,7 +175,7 @@ function openRecord(key, id) {
   const r = store.data[key].find((x) => String(x.id) === String(id)); if (!r) return;
   const rels = relationshipsFor(key, r);
   const audit = r.audit || [];
-  const skip = new Set(['id', 'audit', 'sourceOfTruth', 'updatedAt', 'actionIds', 'podIds']);
+  const skip = new Set(['id', 'audit', 'sourceOfTruth', 'updatedAt', 'actionIds', 'podIds', 'customerLogoDataUrl']);
 
   const dr = host.querySelector('#drawer');
   dr.innerHTML = `
@@ -200,6 +208,7 @@ function renderValue(key, v) {
   if (key === 'outreach' && v && typeof v === 'object') return Object.entries(v).map(([day, done]) => `${day.toUpperCase()} ${done ? '✓' : '—'}`).join('  ');
   if (key === 'milestones' && Array.isArray(v)) return esc(v.map((m) => `${m.label} (${m.done ? 'done' : m.due})`).join(', '));
   if (key === 'checkIns' && Array.isArray(v)) return esc(v.map((c) => `${c.date}: ${c.note}`).join(' · '));
+  if (key === 'reviewHistory' && Array.isArray(v)) return esc(v.map((review) => `${review.stage}: ${review.decision} by ${review.by}${review.comment ? ` (${review.comment})` : ''}`).join(' · '));
   if (Array.isArray(v)) return esc(v.join(', '));
   if (v && typeof v === 'object') return esc(JSON.stringify(v));
   return esc(v);
@@ -228,6 +237,13 @@ function relationshipsFor(key, r) {
         { label: 'Escalations', items: d.escalations.filter((e) => e.engagementId === r.id).map((e) => ({ key: 'escalations', id: e.id, label: e.id })) },
         { label: 'CPE feedback', items: d.cpe.filter((c) => c.engagementId === r.id).map((c) => ({ key: 'cpe', id: c.id, label: `CPE ${c.score}` })) },
         { label: 'Deliveries', items: d.deliveries.filter((x) => x.engagementId === r.id).map((x) => ({ key: 'deliveries', id: x.id, label: x.type })) },
+        { label: 'Success stories', items: d.successStories.filter((story) => story.engagementIds.includes(r.id)).map((story) => ({ key: 'successStories', id: story.id, label: story.title })) },
+      ];
+    case 'successStories':
+      return [
+        { label: 'Engagements', items: r.engagementIds.map((engagementId) => ({ key: 'engagements', id: engagementId, label: engCustomer(engagementId) })) },
+        { label: 'VSAT / CPE evidence', items: r.cpeId ? [{ key: 'cpe', id: r.cpeId, label: r.cpeId }] : [] },
+        { label: 'Follow-up actions', items: d.actions.filter((action) => action.successStoryId === r.id || (r.cpeId && action.cpeId === r.cpeId)).map((action) => ({ key: 'actions', id: action.id, label: action.title })) },
       ];
     case 'escalations':
       return [
@@ -235,11 +251,25 @@ function relationshipsFor(key, r) {
         { label: 'Action items', items: r.actionIds.map((id) => ({ key: 'actions', id, label: lk(d.actions, id, (a) => a.title) })) },
       ];
     case 'actions':
-      return [{ label: 'Escalation', items: [{ key: 'escalations', id: r.escalationId, label: r.escalationId }] }];
+      return [
+        { label: 'Escalation', items: r.escalationId ? [{ key: 'escalations', id: r.escalationId, label: r.escalationId }] : [] },
+        { label: 'VSAT / CPE evidence', items: r.cpeId ? [{ key: 'cpe', id: r.cpeId, label: r.cpeId }] : [] },
+        { label: 'Success story', items: r.successStoryId ? [{ key: 'successStories', id: r.successStoryId, label: r.successStoryId }] : [] },
+        { label: 'Sentiment signal', items: r.sentimentSignalId ? [{ key: 'sentimentSignals', id: r.sentimentSignalId, label: r.sentimentSignalId }] : [] },
+      ];
     case 'cpe':
-      return [{ label: 'Engagement', items: [{ key: 'engagements', id: r.engagementId, label: engCustomer(r.engagementId) }] }];
+      return [
+        { label: 'Engagement', items: [{ key: 'engagements', id: r.engagementId, label: engCustomer(r.engagementId) }] },
+        { label: 'Success stories', items: d.successStories.filter((story) => story.cpeId === r.id || story.engagementIds.includes(r.engagementId)).map((story) => ({ key: 'successStories', id: story.id, label: story.title })) },
+      ];
     case 'messages':
       return [{ label: 'Engagement', items: r.engagementId ? [{ key: 'engagements', id: r.engagementId, label: engCustomer(r.engagementId) }] : [] }];
+    case 'sentimentSignals':
+      return [
+        { label: 'Engagement', items: r.engagementId ? [{ key: 'engagements', id: r.engagementId, label: engCustomer(r.engagementId) }] : [] },
+        { label: 'Partner', items: r.partnerId ? [{ key: 'partners', id: r.partnerId, label: lk(d.partners, r.partnerId, (partner) => partner.name) }] : [] },
+        { label: 'Follow-up actions', items: d.actions.filter((action) => action.sentimentSignalId === r.id).map((action) => ({ key: 'actions', id: action.id, label: action.title })) },
+      ];
     case 'pips':
       return [{ label: 'CSA', items: [{ key: 'csas', id: r.csaId, label: csaName(r.csaId) }] }];
     case 'deliveries':

@@ -33,7 +33,9 @@ const qcSubmissions = [];
 const seedOf = (id) => [...id].reduce((a, ch) => a + ch.charCodeAt(0), 0);
 
 export function renderQuality(container) {
-  const tabs = [['cpe', 'CPE & Trends'], ['qc', 'Quality Checks'], ['mock', 'Mock Deliveries']];
+  const tabs = [['cpe', 'CPE & Trends'], ['qc', 'Quality Checks'], ['mock', 'Mock Deliveries']]
+    .filter(([key]) => key !== 'qc' || store.role !== 'partner-csa');
+  if (!tabs.some(([key]) => key === tab)) tab = 'cpe';
   const governed = canonicalEntityMap(store.data).filter((x) => ['Quality', 'Engagements', 'People', 'Messages', 'Actions'].includes(x.entity));
   container.innerHTML = `
     ${pageHeader({ title: 'Quality & CPE', description: 'Quality signals are captured against the engagement record in SSD IQ and rolled up to delivery quality, action follow-through, and customer sentiment.' })}

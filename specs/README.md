@@ -72,6 +72,7 @@ Each capability has a stable ID (`CAP-NN`). Requirements inside are numbered
 | CAP-15 | Sentiment | Quality & Risk | P2 | [file](capabilities/CAP-15-sentiment.md) |
 | CAP-16 | Messages Console | Comms & Insight | P1 | [file](capabilities/CAP-16-messages-console.md) |
 | CAP-17 | Reporting, Territory & MBR | Comms & Insight | P1 | [file](capabilities/CAP-17-reporting-and-mbr.md) |
+| CAP-19 | Success Stories | Comms & Insight | P2 | [file](capabilities/CAP-19-success-stories.md) |
 
 ---
 

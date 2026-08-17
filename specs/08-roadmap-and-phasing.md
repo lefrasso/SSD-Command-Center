@@ -49,6 +49,7 @@ The pilot is "done" when, for 1–2 PODs on **real data**:
 | CAP-14 Performance & PIPs | **P2** | Confidential (HR integration) |
 | CAP-15 Sentiment | **P2** | NLP across channels |
 | CAP-18 Compass Copilot | **P2** | Grounded assistant |
+| CAP-19 Success Stories | **P2** | Governed customer-outcome publishing |
 | CAP-06 Agentic Delivery | **P3** | Agent-generated deliverables |
 | Predictive at-risk / capacity optimization / closed-loop CPE | **P3** | Intelligence layer |
 

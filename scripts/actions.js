@@ -20,7 +20,9 @@ export function actionOwners(eng) {
 
 function sourceMeta(a) {
   if (a.escalationId) return ['Escalation', 'tint-warn'];
+  if (a.sentimentSignalId) return ['Sentiment', 'tint-warn'];
   if (a.threadId) return ['Message', 'tint-info'];
+  if (a.cpeId) return ['Success story', 'tint-info'];
   return ['Action', 'outline'];
 }
 
@@ -56,7 +58,7 @@ const threadForEngagement = (engId) => { const m = store.data.messages.find((x) 
 // Open the "Assign action" drawer. Pass an engagement/thread to lock context
 // (Messages), or omit to let the user pick an engagement (Home). prefillTitle
 // seeds the description (e.g. from a specific message).
-export function openAssignActionDrawer({ engagementId = null, threadId = null, prefillTitle = '', onCreated } = {}) {
+export function openAssignActionDrawer({ engagementId = null, threadId = null, sentimentSignalId = null, source = null, prefillTitle = '', onCreated } = {}) {
   const d = store.data;
   const engs = d.engagements.filter((e) => e.status !== 'complete');
   const lockedEng = engagementId ? d.engagements.find((e) => e.id === engagementId) : null;
@@ -100,7 +102,9 @@ export function openAssignActionDrawer({ engagementId = null, threadId = null, p
       if (!eng) return;
       addAction({
         engagementId: eng.id,
-        threadId: threadId || threadForEngagement(eng.id),
+        threadId: source === 'sentiment' ? null : (threadId || threadForEngagement(eng.id)),
+        sentimentSignalId,
+        source,
         title: dr.querySelector('#a-title').value.trim(),
         ownerName: dr.querySelector('#a-owner').value,
         due: dr.querySelector('#a-due').value,

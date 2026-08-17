@@ -53,7 +53,8 @@
   can't use.
 - **AC:**
   - Given I sign in as a Partner CSA, When the nav renders, Then confidential and leadership-only
-    modules (Performance & PIPs, Escalations, Reporting, Sentiment, Capacity, Lifecycle, PODs) are absent.
+    modules (Performance & PIPs, Escalations, Reporting, Sentiment, Capacity, Lifecycle, PODs, SSD IQ,
+    Capability Map) are absent, and Quality & CPE does not expose the Quality Checks tab.
   - Given I am a Partner CSA, When I open a deep link to `#/performance`, Then access is denied and the
     attempt is logged.
 

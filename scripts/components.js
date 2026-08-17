@@ -26,7 +26,11 @@ const STATUS = {
   sourcing: [COLORS.neutral, 'clock', 'Sourcing'], selection: [COLORS.neutral, 'clock', 'Selection'],
   onboarding: [COLORS.info, 'clock', 'Onboarding'], active: [COLORS.positive, 'check', 'Active'],
   offboarding: [COLORS.warning, 'clock', 'Offboarding'], exiting: [COLORS.warning, 'clock', 'Exiting'],
-  draft: [COLORS.neutral, 'clock', 'Draft'], closed: [COLORS.neutral, 'check', 'Closed'],
+  draft: [COLORS.neutral, 'clock', 'Draft'], 'sdm-review': [COLORS.warning, 'clock', 'SDM review'],
+  'pod-review': [COLORS.warning, 'clock', 'POD Lead review'], 'leadership-review': [COLORS.info, 'clock', 'Leadership review'],
+  approved: [COLORS.positive, 'check', 'Approved'], published: [COLORS.positive, 'check', 'Published'],
+  archived: [COLORS.neutral, 'lock', 'Archived'],
+  closed: [COLORS.neutral, 'check', 'Closed'],
 };
 export function statusPill(status) {
   const [c, ic, label] = STATUS[status] || [COLORS.neutral, 'clock', status];

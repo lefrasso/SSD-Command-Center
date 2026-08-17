@@ -33,16 +33,20 @@ The prototype is **feature-complete** across all modules (no dead ends):
   SSD Leadership org and POD health tiles.
 - **Delivery** — Engagements & Dispatch (best-fit CSA + Day 0–3 outreach), Reports Pending / T-3W
   proactive tracking, Agentic Delivery (AI-drafted deliverables + IP library).
-- **Workforce & partners** — PODs & People (org hierarchy WW→TZ→CSA Manager→POD Lead), Capacity &
+- **Workforce & partners** — PODs & People (202 FTC records; 34 POD Leads — ATZ 15, EMEA 12, ASIA 7;
+  org hierarchy WW→TZ→CSA Manager→POD Lead), Capacity &
   Forecasting (forecast, coverage, **HC Tracking** and **Hiring Progress**), Partner CSA Lifecycle,
   Delivery Partners, Enablement (accreditations, Service Catalogue, S500, SDM onboarding, User Voice,
   shadowing).
 - **Quality & risk** — Quality & CPE (checks + mock deliveries), Escalations & Actions, Performance &
-  PIPs (confidential), Sentiment.
-- **Comms & insight** — Messages Console, Reporting (Executive, Territory/OU Ops, partner + internal
-  MBRs, ask-your-data).
+  PIPs (confidential), D365-inspired seven-level Sentiment monitoring with topics and supervisor alerts.
+- **Comms & insight** — Messages Console, engagement/VSAT-linked **Success Stories** with official
+  SDM/POD/leadership review, SharePoint metadata, LT approval and PowerPoint-template export,
+  Reporting (1,300 delivered engagements across the latest five months; native SSD MBR health
+  scorecard, execution/readiness/quality/financials/strategy,
+  Territory/OU Ops, partner + internal MBRs, ask-your-data).
 - **SSD IQ — System of Records** — catalog of all governed entities (partners, PODs, CSAs, engagements,
-  deliveries, escalations, actions, CPE, messages, PIPs, sentiment, hiring requisitions) with record
+  success stories, deliveries, escalations, actions, CPE, messages, PIPs, sentiment, hiring requisitions) with record
   drawers, relationships, source-of-truth badges, audit trail, NL search and data-quality flags.
 - **Capabilities** — a live map of delivery capabilities and their coverage.
 

@@ -10,6 +10,8 @@ let podFilter = 'All';
 export function renderPods(container) {
   const d = store.data;
   const active = d.csas.filter((c) => c.lifecycle === 'active');
+  const ftcs = d.csas.filter((c) => c.resourceType === 'FTC');
+  const podLeadsByTz = Object.fromEntries(Object.keys(TZ_MAP).map((timeZone) => [timeZone, new Set(d.pods.filter((pod) => pod.tz === timeZone).map((pod) => pod.leadName)).size]));
 
   const podsByTz = (region) => Object.entries(TZ_MAP).find(([, i]) => i.regions.includes(region))?.[0] || 'Global';
   const pods = d.pods.filter((p) => (tz === 'All' || p.tz === tz));
@@ -49,7 +51,7 @@ export function renderPods(container) {
   container.innerHTML = `
     ${pageHeader({
       title: 'PODs & People',
-      description: 'POD structure, capacity, utilization and skills — rolled up by time zone.',
+      description: 'POD structure, FTC workforce, capacity, utilization and skills — rolled up by time zone.',
       actions: `<select class="select" id="f-tz">${tzOpts}</select><select class="select" id="f-pod">${podOpts}</select>`,
     })}
 
@@ -71,9 +73,10 @@ export function renderPods(container) {
     </section>
 
     <div class="kpi-grid">
+      ${kpiCard({ label: 'FTC workforce', value: ftcs.length, iconName: 'people', hint: 'All lifecycle stages' })}
       ${kpiCard({ label: 'Active Partner CSAs', value: active.length, iconName: 'people' })}
       ${kpiCard({ label: 'Avg utilization', value: avgUtil + '%', iconName: 'trending', tone: utilColor(avgUtil), hint: 'Healthy 80–90%' })}
-      ${kpiCard({ label: 'PODs', value: d.pods.length, iconName: 'database' })}
+      ${kpiCard({ label: 'POD Leads', value: d.pods.length, iconName: 'database', hint: Object.entries(podLeadsByTz).map(([timeZone, count]) => `${timeZone} ${count}`).join(' · ') })}
       ${kpiCard({ label: 'Delivery Partners', value: d.partners.length, iconName: 'building' })}
     </div>
 
@@ -87,7 +90,7 @@ export function renderPods(container) {
       <div class="muted mb8" style="font-size:12px">${esc(LEADERSHIP.wwLead)} · Worldwide Lead</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px">
         ${tzGroups.map((g) => `<div class="card pad" style="background:var(--bg-2)">
-          <div style="font-weight:600">${esc(g.tz)} · TZ Lead ${esc(g.lead)}</div>
+          <div style="font-weight:600">${esc(g.tz)} · TZ Lead ${esc(g.lead)} · ${g.managers.reduce((sum, manager) => sum + manager.leads.length, 0)} POD Leads</div>
           ${g.managers.map((mm) => `<div class="mt8"><div style="font-size:13px;font-weight:600">${esc(mm.m)} <span class="muted" style="font-weight:400">· CSA Manager</span></div><div class="muted" style="font-size:12px">POD Leads: ${esc(mm.leads.join(', '))}</div></div>`).join('')}
         </div>`).join('')}
       </div>
@@ -112,10 +115,11 @@ export function renderPods(container) {
         <div class="section-title">Roster (${roster.length})</div>
         <div class="table-wrap">
           <table class="grid">
-            <thead><tr><th>Name</th><th>Vendor</th><th>POD</th><th>Families</th><th>Utilization</th><th>Tenure</th><th>Status</th></tr></thead>
+            <thead><tr><th>Name</th><th>Type</th><th>Vendor</th><th>POD</th><th>Families</th><th>Utilization</th><th>Tenure</th><th>Status</th></tr></thead>
             <tbody>
               ${roster.map((c) => { const pod = d.pods.find((p) => p.id === c.podId); return `<tr>
                 <td><strong>${esc(c.name)}</strong></td>
+                <td>${badge(c.resourceType, c.resourceType === 'FTC' ? 'tint-info' : 'outline')}</td>
                 <td>${esc(c.vendor)}</td>
                 <td>${esc(pod ? pod.name : '—')}</td>
                 <td>${esc(c.tracks.join(', '))}</td>

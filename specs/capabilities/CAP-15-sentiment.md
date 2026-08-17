@@ -1,7 +1,7 @@
 # Capability: Sentiment `CAP-15`
 
-> Cross-channel sentiment over messages, CPE verbatims and escalation notes — theme-clustered and
-> correlated with CPE and escalations for actionable **early warnings**.
+> D365-inspired, cross-channel sentiment over messages, CPE verbatims and escalation notes — scored
+> on seven intensity levels with supervisor monitoring, topic drivers and actionable alerts.
 
 ## Summary
 
@@ -18,23 +18,41 @@
 ## 1. Problem & outcome
 
 - **Problem:** Experience problems show up as sentiment before they hit CPE, but signals are scattered.
-- **Outcome:** Aggregated sentiment, theme clusters, and early warnings correlated with CPE/escalations.
+- **Outcome:** Interaction-level sentiment, trend/intensity, topic drivers, multilingual metadata and
+  supervisor alerts correlated with engagements, CPE and escalations.
 - **Value:** Act before a dip becomes a bad survey.
 
 ## 2. Functional requirements
 
-- **FR-SEN-1** — Show KPIs: net sentiment, positive signals, negative signals.
-- **FR-SEN-2** — Show charts: sentiment mix, net trend, net by partner, net by track.
-- **FR-SEN-3** — Show **theme clusters** and **negative signals to review** (verbatims).
-- **FR-SEN-4** — Provide AI **early-warning** on negative-sentiment concentration.
-- **FR-SEN-5** — Real **NLP sentiment + topic modelling** across channels (production).
-- **FR-SEN-6** — **Correlate** sentiment ↔ CPE ↔ escalations with drill-through and **alerting** (production).
+- **FR-SEN-1** — Score each eligible interaction with a normalized score (-1..1), confidence and one of
+  seven levels: Very positive, Positive, Slightly positive, Neutral, Slightly negative, Negative,
+  Very negative.
+- **FR-SEN-2** — Show KPIs for sentiment index, negative engagements, open alerts, scored interactions,
+  average confidence and translated signals.
+- **FR-SEN-3** — **Overview:** seven-level distribution, trend, channel comparison, supervisor early
+  warning and conversations needing attention.
+- **FR-SEN-4** — **Live monitor:** latest signal per engagement with intensity, direction/delta, channel,
+  partner, language/translation, confidence, topics and alert status.
+- **FR-SEN-5** — **Topics & drivers:** volume, impacted engagements, sentiment index, negative share and
+  strength/monitor/negative-driver classification.
+- **FR-SEN-6** — **Alerts:** open/critical/acknowledged counts, rapid declines and a prioritized queue.
+- **FR-SEN-7** — Signal detail shall show source, score/confidence, topics and interaction timeline, with
+  supervisor actions to acknowledge, assign an action or open the engagement.
+- **FR-SEN-8** — Analysis policy shall identify enabled channels, translation behavior, unsupported
+  languages and profanity override.
+- **FR-SEN-9** — Expose signals and engagement/partner relationships in SSD IQ and global search.
 
 ## 3. Business rules
 
-- **BR-SEN-1** — Net sentiment (live) = (positive − negative) / total × 100 over messages + CPE.
-- **BR-SEN-2** — Sentiment from CPE score: ≥4.3 positive, ≥3.6 neutral, else negative.
-- **BR-SEN-3** — Early warning = largest negative cluster by track.
+- **BR-SEN-1** — Sentiment index = mean(signal score) × 100 for the selected filter context.
+- **BR-SEN-2** — Intensity boundaries: ≥0.75 Very positive; ≥0.4 Positive; ≥0.15 Slightly positive;
+  (-0.15,0.15) Neutral; ≤-0.15 Slightly negative; ≤-0.4 Negative; ≤-0.75 Very negative.
+- **BR-SEN-3** — Open alerts are created at score ≤-0.55; score ≤-0.75 is Critical.
+- **BR-SEN-4** — Trend compares the latest two signals for an engagement; delta beyond ±8 points is
+  rising/falling, otherwise flat. A decline beyond 35 points contributes to early warning.
+- **BR-SEN-5** — Non-English supported interactions are translated before scoring and labelled;
+  unsupported languages remain unscored. English profanity forces Negative/Very negative.
+- **BR-SEN-6** — Acknowledgement records actor/time and does not alter the underlying score.
 
 ## 4. User stories & acceptance criteria
 
@@ -45,19 +63,21 @@
 
 ## 5. Data & system of record
 
-**Sentiment Rollup** (AI Services SoT); live breakdown from **Message** + **CPE** sentiment.
+**Sentiment Signal** and **Sentiment Rollup** (AI Services SoT), related to Engagement, Partner and
+source Message/CPE/Escalation records.
 
 ## 6. AI touchpoints
 
 | AI feature | Input | Output | Guardrail | Ref |
 |---|---|---|---|---|
-| Sentiment scoring | text signals | pos/neu/neg | labelled | [05](../05-ai-and-copilot-platform.md) |
-| Theme clustering | text | top themes | labelled | [05](../05-ai-and-copilot-platform.md) |
-| Early warning | negatives | concentration alert | advisory | [05](../05-ai-and-copilot-platform.md) |
+| Sentiment scoring | text + language/channel | seven-level score + confidence | labelled, unsupported explicit | [05](../05-ai-and-copilot-platform.md) |
+| Theme clustering | scored text | topics, volume, negative share | labelled | [05](../05-ai-and-copilot-platform.md) |
+| Early warning | negative intensity + trend | prioritized supervisor alert | advisory, human acknowledgement | [05](../05-ai-and-copilot-platform.md) |
 
 ## 7. Integrations
 
-NLP/sentiment service; Teams (messages), CPE/Forms (verbatims), ADO (escalation notes). See [03](../03-integrations.md).
+Azure AI Language/approved sentiment service; Translator for supported non-English interactions; Teams
+(messages), CPE/Forms (verbatims), ADO (escalation notes), Azure DevOps/SSD IQ (actions). See [03](../03-integrations.md).
 
 ## 8. NFR & security notes
 
@@ -66,9 +86,13 @@ drift monitoring; explainable warnings.
 
 ## 9. KPIs
 
-Net sentiment (≥0, rising), negative signals (down), early warnings open (→0).
+Sentiment index (≥0, rising), negative-engagement count (down), alert acknowledgement time, open
+critical alerts (→0), scoring coverage/confidence, negative-driver share.
 
 ## 10. Open questions & assumptions
 
 - **Q:** Which channels first? **A (assumption):** Teams messages + CPE verbatims, then escalation notes.
 - **Q:** Privacy stance on message analysis? **A:** per workplace data-use policy.
+
+Design reference: Microsoft Learn, [Configure sentiment analysis for emails](https://learn.microsoft.com/en-us/dynamics365/customer-service/administer/configure-sentiment-analysis)
+(seven intensity levels, multilingual translation/scoring, unsupported-language behavior and profanity override).

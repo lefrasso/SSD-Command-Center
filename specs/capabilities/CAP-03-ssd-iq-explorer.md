@@ -9,7 +9,7 @@
 |---|---|
 | Capability ID | `CAP-03` |
 | Area | Foundation |
-| Primary personas | All (PIP records gated by `view:pip`) |
+| Primary personas | All except Partner CSA (PIP records additionally gated by `view:pip`) |
 | Priority | Must |
 | Target phase | P1 |
 | Prototype reference | `scripts/views/ssdiq.js`, `scripts/ai.js` (`nlSearch`, `dataQualityFlags`) |
@@ -32,6 +32,7 @@
   from the global command-bar search.
 - **FR-IQ-5** — Present **data-quality flags** with severity and a resolve/assign workflow (production).
 - **FR-IQ-6** — Gate the `pips` entity behind `view:pip`.
+- **FR-IQ-7** — Deny Partner CSA navigation and deep-link access to the SSD IQ Explorer.
 
 ## 3. Business rules
 

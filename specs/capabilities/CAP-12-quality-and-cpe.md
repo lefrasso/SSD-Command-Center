@@ -39,6 +39,8 @@
 - **FR-QUALITY-7** — **Quality Check log:** record QCs with reviewer/CSA alias, **creation date**, **MS
   quarter**, **title** and a **QC URL** (evidence link); a QC may be flagged **MOCK** (excluded from
   coverage). Target coverage is **≥ 1 QC per active CSA per month**.
+- **FR-QUALITY-8** — Partner CSAs may view CPE/Trends and Mock Deliveries but shall not see or deep-link
+  to the Quality Checks form/reporting tab.
 
 ## 3. Business rules
 

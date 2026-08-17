@@ -50,10 +50,15 @@ const LAST = ['Rossi','Kaur','Novak','García','Müller','Silva','Haddad','Chen'
 const CUSTOMERS = ['Northwind Traders','Contoso','Fabrikam','Adventure Works','Tailwind Traders','Wingtip Toys','Proseware','Litware','Fourth Coffee','Graphic Design Institute','Alpine Ski House','Coho Vineyard','Lucerne Publishing',"Margie's Travel",'Trey Research','VanArsdel','WideWorld Importers','Blue Yonder','Woodgrove Bank','Relecloud'];
 const CSAMS = ['Julia Meyer','Tom Baker','Sara Lind','Marcus Webb','Elif Demir','Paulo Neto','Hannah Ross','Ken Adachi','Bea Fontana','Ivan Petrov'];
 const SDMS = ['Priya Nair','Kenji Watanabe','Laura Bianchi','Mohammed Ali','Grace Park','Tomás Herrera'];
-const POD_LEADS = ['Nils Berg','Amara Blake','Viktor Petrov','Rosa Mendes','Daniel Kim','Chiara Romano','Felix Wagner','Nadia Hassan','Oscar Lund','Meera Shah'];
+const POD_LEADS = [
+  'Nils Berg','Amara Blake','Viktor Petrov','Rosa Mendes','Daniel Kim','Chiara Romano','Felix Wagner','Nadia Hassan','Oscar Lund','Meera Shah',
+  'Maya Chen','Ethan Brooks','Leila Haddad','Tomas Silva','Ingrid Novak','Kenji Mori','Amina Yusuf','Luca Bianchi','Sofia Alvarez','Noah Fischer',
+  'Priya Desai','Hugo Martin','Elena Popov','Marcus Lee','Freya Olsen','Ravi Menon','Chloe Laurent','Diego Santos','Nina Kowalski','Omar Farouk',
+  'Yuki Tanaka','Pablo Costa','Lena Schmidt','Sami Rahman',
+];
 // CSA Managers sit between the TZ Lead and the POD Leads; multiple POD Leads report to a Manager per time zone.
 const TZ_MANAGERS = {
-  Americas: ['Devin Cole', 'Hana Kim'],
+  ATZ: ['Devin Cole', 'Hana Kim'],
   EMEA: ['Bruno Alves', 'Greta Roth'],
   ASIA: ['Amir Khan', 'Lena Vogt'],
 };
@@ -61,7 +66,7 @@ const SKILLS = ['Azure Migrate','Landing Zones','FinOps','Security Copilot','Sen
 const REGIONS = ['Iberia','UKI','DACH','Nordics','France','Italy','North America','LATAM','India','ANZ'];
 // SSD leadership org — fictional vanity names for the prototype. Regions roll up to time zones.
 export const TZ_MAP = {
-  Americas: { lead: 'Morgan Reyes', regions: ['North America', 'LATAM'] },
+  ATZ: { lead: 'Morgan Reyes', regions: ['North America', 'LATAM'] },
   EMEA: { lead: 'Alex Navarro', regions: ['Iberia', 'UKI', 'DACH', 'Nordics', 'France', 'Italy'] },
   ASIA: { lead: 'Kai Lin', regions: ['India', 'ANZ'] },
 };
@@ -69,7 +74,7 @@ export const LEADERSHIP = {
   wwLead: 'Jordan Pierce',
   businessManager: 'Robin Ellis',
   timeZones: [
-    { tz: 'Americas', lead: 'Morgan Reyes' },
+    { tz: 'ATZ', lead: 'Morgan Reyes' },
     { tz: 'EMEA', lead: 'Alex Navarro' },
     { tz: 'ASIA', lead: 'Kai Lin' },
   ],
@@ -80,7 +85,7 @@ export function tzForRegion(region) {
 }
 // Delivery languages supported per time zone. A CSA can deliver in any territory; language is the real constraint.
 export const TZ_LANGUAGES = {
-  Americas: ['English', 'Spanish', 'Portuguese', 'French'],
+  ATZ: ['English', 'Spanish', 'Portuguese', 'French'],
   EMEA: ['English', 'Spanish', 'Portuguese', 'French', 'Arabic', 'German'],
   ASIA: ['English', 'Japanese', 'Mandarin', 'Korean'],
 };
@@ -97,6 +102,7 @@ const VERBATIMS = {
   neutral: ['Solid delivery, a few scheduling hiccups.','Good outcome; communication could be tighter.','Met expectations overall.','Competent work, nothing exceptional.'],
   negative: ['Delays in outreach set the project back.','Expected deeper technical depth for the track.','Follow-up was slow during the engagement.','Hand-offs were unclear and cost us time.'],
 };
+const DSAT_ROOT_CAUSES = ['DP preparedness / execution', 'Time allocation / scheduling', 'Data accuracy / results quality', 'Communication / expectation alignment'];
 const ESC_SUMMARIES = ['Customer stakeholder unavailable; milestone at risk.','Technical blocker on landing-zone deployment.','Scope creep beyond the agreed SOW.','CPE dip flagged by the CSAM.','Access and permissions blocking delivery.','Partner resourcing gap mid-engagement.','Security assessment findings need re-review.'];
 const ACTION_TITLES = ['Schedule stakeholder sync','Escalate access request to IT','Re-baseline the milestone plan','Prepare mitigation options','Draft customer communication','Assign a backup CSA','Review SOW boundaries','Book architecture review'];
 const THEMES = ['responsiveness','technical depth','scheduling','communication','onboarding pace','tooling access','proactivity','documentation','stakeholder alignment'];
@@ -104,12 +110,41 @@ const MSG_POD = ['Please confirm Day 1 outreach is complete for this account.','
 const MSG_CSA = ['Day 1 outreach done — customer is engaged and responsive.','Milestone 2 is on track; migration sprint starts Monday.','Following up with the stakeholder now, will update by EOD.','Artifacts uploaded to the workspace, ready for review.','Hit a permissions blocker; raising an escalation.'];
 const PIP_OBJECTIVES = ['Raise rolling CPE to 4.4 within two periods.','Complete Day 0–3 outreach on 100% of dispatches.','Close all open action items within SLA.','Attend Landing Zone enablement bootcamp.','Improve documentation quality on delivery artifacts.'];
 const PIP_NOTES = ['Check-in held; outreach cadence improving.','Two engagements recovered to on-track.','CPE trend flat; agreed coaching focus.','Completed enablement module; applying on live account.'];
+const STORY_IMPACTS = [
+  'Reduced the delivery timeline by three weeks while keeping the agreed scope intact.',
+  'Established a repeatable operating model and transferred ownership to the customer team.',
+  'Removed a critical technical blocker and accelerated the path to production.',
+  'Improved platform resilience and gave stakeholders a prioritized action plan.',
+  'Converted discovery findings into measurable adoption milestones for the next quarter.',
+];
+export const SUCCESS_STORY_INDUSTRIES = ['Financial Services', 'Manufacturing', 'Retail & Consumer Goods', 'Healthcare', 'Government', 'Education', 'Energy', 'Telecommunication', 'Media & Entertainment', 'Automotive', 'Professional Services', 'Real Estate'];
+export const SUCCESS_STORY_SEGMENTS = ['Enterprise', 'Corporate Account', 'Small, Medium, Corporate', 'Public Sector', 'Global Account', 'Strategic / Top Account'];
+const REGION_COUNTRIES = {
+  Iberia: 'Spain', UKI: 'United Kingdom', DACH: 'Germany', Nordics: 'Sweden', France: 'France', Italy: 'Italy',
+  'North America': 'United States - US-OGE', LATAM: 'Brazil', India: 'India', ANZ: 'Australia',
+};
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+function fiscalYear(dateValue) {
+  const date = new Date(`${dateValue}T00:00:00Z`);
+  const year = date.getUTCFullYear() + (date.getUTCMonth() >= 6 ? 1 : 0);
+  return `FY${String(year).slice(-2)}`;
+}
 
 function fullName(used) {
   for (let i = 0; i < 50; i++) { const n = `${pick(FIRST)} ${pick(LAST)}`; if (!used.has(n)) { used.add(n); return n; } }
   return `${pick(FIRST)} ${pick(LAST)} ${used.size}`;
 }
 function sentimentFromScore(score) { return score >= 4.3 ? 'positive' : score >= 3.6 ? 'neutral' : 'negative'; }
+function sentimentLevel(score) {
+  if (score >= 0.75) return 'very-positive';
+  if (score >= 0.4) return 'positive';
+  if (score >= 0.15) return 'slightly-positive';
+  if (score > -0.15) return 'neutral';
+  if (score > -0.4) return 'slightly-negative';
+  if (score > -0.75) return 'negative';
+  return 'very-negative';
+}
 
 function build() {
   const PARTNER_DEFS = [
@@ -117,14 +152,22 @@ function build() {
     { name: 'Cognizant' }, { name: 'Penta' }, { name: 'HCL' },
   ];
 
-  const pods = REGIONS.map((region, i) => {
-    const { tz, lead: tzLead } = tzForRegion(region);
-    const mgrs = TZ_MANAGERS[tz] || [tzLead];
-    return {
-      id: `POD${i + 1}`, name: `POD ${region}`, leadName: POD_LEADS[i % POD_LEADS.length], csaManager: mgrs[i % mgrs.length], region, tz, tzLead,
-      tracks: pickN(TRACKS, int(2, 3)), capacity: int(24, 40), utilization: int(76, 92), ...gov('SSD IQ'),
-    };
-  });
+  const podTargets = { ATZ: 15, EMEA: 12, ASIA: 7 };
+  const pods = [];
+  for (const [tz, count] of Object.entries(podTargets)) {
+    const { lead: tzLead, regions } = TZ_MAP[tz];
+    const managers = TZ_MANAGERS[tz];
+    for (let i = 0; i < count; i++) {
+      const podIndex = pods.length;
+      const region = regions[i % regions.length];
+      const podNumber = Math.floor(i / regions.length) + 1;
+      pods.push({
+        id: `POD${String(podIndex + 1).padStart(2, '0')}`, name: `POD ${region} ${String(podNumber).padStart(2, '0')}`,
+        leadName: POD_LEADS[podIndex], csaManager: managers[i % managers.length], region, tz, tzLead,
+        tracks: pickN(TRACKS, int(2, 3)), capacity: int(24, 40), utilization: int(76, 92), ...gov('SSD IQ'),
+      });
+    }
+  }
 
   const partners = PARTNER_DEFS.map((def, i) => ({
     id: `P${i + 1}`, name: def.name, type: 'Delivery Partner', region: pick(REGIONS),
@@ -134,7 +177,9 @@ function build() {
 
   const usedNames = new Set();
   const csas = [];
-  for (let i = 0; i < 48; i++) {
+  const FTC_COUNT = 202;
+  const FTE_COUNT = 24;
+  for (let i = 0; i < FTC_COUNT + FTE_COUNT; i++) {
     const partner = pick(partners);
     const pod = pick(pods);
     const tracks = pickN(pod.tracks, int(1, pod.tracks.length));
@@ -142,7 +187,7 @@ function build() {
     const accreditations = pickN(trackPrograms, Math.min(trackPrograms.length, int(2, 5)));
     const tzLangs = TZ_LANGUAGES[pod.tz] || ALL_LANGUAGES;
     const languages = pickN(tzLangs, int(1, 3));
-    const resourceType = weighted([['FTC', 0.6], ['FTE', 0.4]]);
+    const resourceType = i < FTC_COUNT ? 'FTC' : 'FTE';
     const utilization = clamp(Math.round(84 + (rng() - 0.5) * 26), 62, 98);
     const cpe = round1(clamp(3.9 + rng() * 0.9, 1, 5));
     const quality = round1(clamp(3.7 + rng() * 1.1, 1, 5));
@@ -172,9 +217,11 @@ function build() {
   const csasForTrack = (t) => activeCsas.filter((c) => c.tracks.includes(t));
 
   const engagements = [];
-  for (let i = 0; i < 82; i++) {
+  const COMPLETED_ENGAGEMENTS = 1300;
+  const PIPELINE_ENGAGEMENTS = 120;
+  for (let i = 0; i < COMPLETED_ENGAGEMENTS + PIPELINE_ENGAGEMENTS; i++) {
     const track = pick(TRACKS);
-    const status = weighted([['new', 0.15], ['assigned', 0.2], ['in-delivery', 0.4], ['complete', 0.25]]);
+    const status = i < COMPLETED_ENGAGEMENTS ? 'complete' : weighted([['new', 0.25], ['assigned', 0.3], ['in-delivery', 0.45]]);
     const pool = csasForTrack(track);
     const assignee = status === 'new' || pool.length === 0 ? null : pick(pool);
     const dispatchStage = status === 'new' ? 'Day 0' : status === 'assigned' ? pick(['Day 0', 'Day 1', 'Day 2', 'Day 3']) : 'engaged';
@@ -186,7 +233,7 @@ function build() {
       day3: engaged ? chance(0.85) : dispatchStage === 'Day 3' && chance(0.4),
     };
     const complete = status === 'complete';
-    const dueOffset = complete ? -int(1, 40) : int(-6, 55);
+    const dueOffset = complete ? -((i % 135) + 7) : int(-6, 55);
     const atRisk = !complete && status !== 'new' && (dueOffset < 0 || (!outreach.day1 && !outreach.day2) || chance(0.12));
     const milestoneCount = int(2, 4);
     const milestones = Array.from({ length: milestoneCount }, (_, m) => ({
@@ -209,6 +256,14 @@ function build() {
     const completedDate = new Date(base + (onTime ? -1 : 1) * int(1, 6) * 864e5).toISOString().slice(0, 10);
     deliveries.push({ id: `DLV${String(dIdx++).padStart(3, '0')}`, engagementId: e.id, type: e.program, completedDate, track: e.track, ...gov('Power BI') });
   }
+  const engagementById = new Map(engagements.map((engagement) => [engagement.id, engagement]));
+  const partnerByCsa = new Map(csas.map((csa) => [csa.id, csa.partnerId]));
+  const deliveryCountByPartner = new Map(partners.map((partner) => [partner.id, 0]));
+  deliveries.forEach((delivery) => {
+    const partnerId = partnerByCsa.get(engagementById.get(delivery.engagementId)?.assignedTo);
+    if (partnerId) deliveryCountByPartner.set(partnerId, deliveryCountByPartner.get(partnerId) + 1);
+  });
+  partners.forEach((partner) => { partner.deliveries = deliveryCountByPartner.get(partner.id); });
 
   const escSource = engagements.filter((e) => e.status === 'in-delivery' || e.atRisk);
   const escalations = [];
@@ -247,10 +302,89 @@ function build() {
   let cIdx = 1;
   for (const eng of cpeSource) {
     if (chance(0.25)) continue;
-    const score = round1(clamp(3.8 + rng() * 1.3, 1, 5));
+    const id = `CPE${String(cIdx).padStart(3, '0')}`;
+    const score = cIdx % 14 === 0 ? 2 : cIdx % 4 !== 1 ? 5 : round1(clamp(3.8 + rng() * 1.3, 1, 5));
+    cIdx++;
     const sentiment = sentimentFromScore(score);
-    cpe.push({ id: `CPE${String(cIdx++).padStart(3, '0')}`, engagementId: eng.id, score, track: eng.track, verbatim: pick(VERBATIMS[sentiment]), date: daysAgo(int(1, 60)), sentiment, ...gov('CPE/Forms') });
+    const feedbackClass = score === 5 ? 'VSAT' : score < 3.6 ? 'DSAT' : 'neutral';
+    const feedbackDate = feedbackClass === 'DSAT'
+      ? (id === 'CPE014' ? daysAgo(12) : id === 'CPE028' ? daysAgo(40) : daysAgo(50))
+      : daysAgo(int(1, 60));
+    cpe.push({
+      id, engagementId: eng.id, score, class: feedbackClass, surveyStatus: 'Completed', track: eng.track,
+      verbatim: pick(VERBATIMS[sentiment]), rootCauseCategory: feedbackClass === 'DSAT' ? DSAT_ROOT_CAUSES[cIdx % DSAT_ROOT_CAUSES.length] : null,
+      rootCauseAction: feedbackClass === 'DSAT' ? pick(['POD Lead coaching and delivery-plan review', 'Re-baseline scope and stakeholder expectations', 'Validate source data and repeat the findings review', 'Assign follow-up action with the CSAM']) : null,
+      date: feedbackDate, sentiment, ...gov('CPE/Forms'),
+    });
   }
+
+  const vsatFeedback = cpe.filter((item) => item.class === 'VSAT');
+  const vsatStoryInputs = vsatFeedback.slice(0, 7).map((feedback) => ({ feedback, eng: engagements.find((item) => item.id === feedback.engagementId) }));
+  const linkedIds = new Set(vsatStoryInputs.map(({ eng }) => eng.id));
+  const otherStoryInputs = engagements.filter((eng) => eng.status === 'complete' && !linkedIds.has(eng.id)).slice(0, 5).map((eng) => ({ feedback: null, eng }));
+  const storyInputs = [...vsatStoryInputs, ...otherStoryInputs];
+  const storyStatuses = ['published', 'published', 'published', 'published', 'approved', 'approved', 'leadership-review', 'leadership-review', 'pod-review', 'sdm-review', 'draft', 'draft'];
+  const successStories = storyInputs.map(({ eng, feedback }, i) => {
+    const csa = csas.find((c) => c.id === eng.assignedTo);
+    const pod = csa ? pods.find((item) => item.id === csa.podId) : null;
+    const partner = csa ? partners.find((item) => item.id === csa.partnerId) : null;
+    const related = engagements.find((item) => item.id !== eng.id && item.customer === eng.customer && item.status === 'complete');
+    const engagementIds = related && i % 4 === 0 ? [eng.id, related.id] : [eng.id];
+    const status = storyStatuses[i];
+    const published = status === 'published';
+    const approved = published || status === 'approved';
+    const month = MONTH_NAMES[new Date(`${eng.dueDate}T00:00:00Z`).getUTCMonth()];
+    const reviewHistory = [];
+    if (['pod-review', 'leadership-review', 'approved', 'published'].includes(status)) reviewHistory.push({ at: daysAgo(18), by: 'Priya Nair', stage: 'SDM review', decision: 'approved', comment: 'Written evidence and quotes reviewed.' });
+    if (['leadership-review', 'approved', 'published'].includes(status)) reviewHistory.push({ at: daysAgo(12), by: pod?.leadName ?? 'POD Lead', stage: 'POD Lead review', decision: 'approved', comment: 'Delivery quality and mandatory metadata confirmed.' });
+    if (['approved', 'published'].includes(status)) reviewHistory.push({ at: daysAgo(8), by: 'Jordan Pierce', stage: 'SSD Leadership approval', decision: 'approved', comment: 'Approved to demonstrate Success Program value.' });
+    if (published) reviewHistory.push({ at: daysAgo(5), by: pod?.leadName ?? 'POD Lead', stage: 'SharePoint publication', decision: 'approved', comment: 'Uploaded to the SSD Success Stories library.' });
+    return {
+      id: `SS${String(i + 1).padStart(3, '0')}`,
+      engagementId: eng.id,
+      engagementIds,
+      cpeId: feedback?.id ?? null,
+      feedbackSource: feedback ? 'VSAT survey' : i % 2 ? 'CSAM / account team feedback' : 'Impactful delivery',
+      title: `${eng.customer}: accelerating ${eng.program}`,
+      headline: 'Partner-led delivery driving executive trust and actionable outcomes',
+      summary: `${eng.customer} partnered with Success Services Delivery across ${engagementIds.length > 1 ? 'multiple Success Program events' : `the ${eng.program} engagement`} to create a practical roadmap with clear owners and measurable next steps.`,
+      keyOutcomes: `${STORY_IMPACTS[i % STORY_IMPACTS.length]}\nPrioritized the highest-value actions with accountable owners.\nDelivered a reusable roadmap for phased execution.`,
+      insights: `Customer priorities became clearer when recommendations were tied to business outcomes.\nThe POD model kept delivery quality and stakeholder alignment consistent.\nThe approach can be reused across similar ${eng.track} engagements.`,
+      impact: `${STORY_IMPACTS[(i + 2) % STORY_IMPACTS.length]}\nIncreased customer confidence through documented decisions and next steps.\nIdentified follow-on value opportunities for the account team.`,
+      customerQuote: feedback?.verbatim ?? 'The engagement gave our team clarity, momentum, and a plan we can execute.',
+      customerQuoteAttribution: `${eng.customer} stakeholder`,
+      csamQuote: 'The structured delivery translated technical findings into clear customer outcomes and follow-on actions.',
+      tags: [eng.track, ...engagementIds.map((engagementId) => engagements.find((item) => item.id === engagementId)?.program).filter(Boolean)],
+      family: eng.track,
+      eventNames: engagementIds.map((engagementId) => engagements.find((item) => item.id === engagementId)?.program).filter(Boolean),
+      timeZone: pod?.tz ?? 'Global',
+      area: pod?.region ?? 'Global',
+      country: REGION_COUNTRIES[pod?.region] ?? pod?.region ?? 'Not specified',
+      industry: SUCCESS_STORY_INDUSTRIES[i % SUCCESS_STORY_INDUSTRIES.length],
+      segment: SUCCESS_STORY_SEGMENTS[i % SUCCESS_STORY_SEGMENTS.length],
+      fiscalYear: fiscalYear(eng.dueDate),
+      month,
+      csamName: eng.csamName,
+      podLeadName: pod?.leadName ?? 'Unassigned',
+      partnerName: partner?.name ?? csa?.vendor ?? 'Unassigned',
+      partnerCsaName: csa?.name ?? 'Unassigned',
+      status,
+      ownerName: csa?.name ?? eng.csamName,
+      reviewHistory,
+      featured: published && i < 2,
+      ltApproved: published && i < 2,
+      ltApprovedBy: published && i < 2 ? 'Jordan Pierce' : null,
+      ltApprovedAt: published && i < 2 ? daysAgo(int(1, 8)) : null,
+      sharePointStatus: published ? 'uploaded' : 'not-uploaded',
+      sharePointUrl: published ? `https://microsoft.sharepoint.com/sites/SuccessServicesDelivery/success-stories/SS${String(i + 1).padStart(3, '0')}` : null,
+      publishDate: published ? daysAgo(int(3, 55)) : null,
+      approvedAt: approved ? daysAgo(int(4, 30)) : null,
+      customerLogoDataUrl: null,
+      customerLogoName: null,
+      createdAt: daysAgo(int(45, 100)),
+      ...gov('SSD IQ'),
+    };
+  });
 
   const messages = [];
   let mIdx = 1;
@@ -269,6 +403,49 @@ function build() {
         body: fromPod ? pick(MSG_POD) : pick(MSG_CSA), timestamp: isoTime(-(n - k) - int(0, 6)), sentiment, ...gov('Teams'),
       });
     }
+  });
+
+  const sentimentSignals = [];
+  const addSignal = ({ engagementId, channel, timestamp, text, score, language, sourceId }) => {
+    const engagement = engagements.find((item) => item.id === engagementId);
+    const csa = engagement?.assignedTo ? csas.find((item) => item.id === engagement.assignedTo) : null;
+    const normalizedScore = Math.round(clamp(score, -1, 1) * 100) / 100;
+    const level = sentimentLevel(normalizedScore);
+    sentimentSignals.push({
+      id: `SIG${String(sentimentSignals.length + 1).padStart(4, '0')}`, engagementId, sourceId,
+      customer: engagement?.customer ?? 'Unknown customer', partnerId: csa?.partnerId ?? null,
+      channel, timestamp, text, score: normalizedScore, level,
+      confidence: Math.round((0.72 + rng() * 0.27) * 100) / 100,
+      language: language || 'English', translated: Boolean(language && language !== 'English'),
+      themes: pickN(THEMES, int(1, 3)),
+      alertStatus: normalizedScore <= -0.55 ? 'open' : 'none',
+      acknowledgedBy: null, acknowledgedAt: null,
+      ...gov('AI Services'),
+    });
+  };
+  cpe.forEach((item) => {
+    const engagement = engagements.find((candidate) => candidate.id === item.engagementId);
+    const csa = engagement?.assignedTo ? csas.find((candidate) => candidate.id === engagement.assignedTo) : null;
+    addSignal({
+      engagementId: item.engagementId, sourceId: item.id, channel: 'CPE Survey',
+      timestamp: `${item.date}T12:00:00Z`, text: item.verbatim,
+      score: (item.score - 3) / 2, language: csa?.languages?.[0] || 'English',
+    });
+  });
+  messages.forEach((item) => {
+    const engagement = engagements.find((candidate) => candidate.id === item.engagementId);
+    const csa = engagement?.assignedTo ? csas.find((candidate) => candidate.id === engagement.assignedTo) : null;
+    const positiveText = /great work|on track|done|uploaded|ready for review|responsive/i.test(item.body);
+    const negativeText = /blocker|concern|at risk|slow|delay|escalat|permissions/i.test(item.body);
+    const score = positiveText ? 0.4 + rng() * 0.55
+      : negativeText ? -(0.4 + rng() * 0.55)
+        : item.sentiment === 'positive' ? 0.25 + rng() * 0.45
+          : item.sentiment === 'negative' ? -(0.25 + rng() * 0.45) : (rng() - 0.5) * 0.24;
+    addSignal({ engagementId: item.engagementId, sourceId: item.id, channel: 'Teams', timestamp: item.timestamp, text: item.body, score, language: csa?.languages?.[0] || 'English' });
+  });
+  escalations.forEach((item) => {
+    const severityScore = { sev1: -0.95, sev2: -0.78, sev3: -0.56, sev4: -0.32 }[item.severity];
+    addSignal({ engagementId: item.engagementId, sourceId: item.id, channel: 'Escalation', timestamp: `${item.opened}T09:00:00Z`, text: item.summary, score: severityScore + (rng() - 0.5) * 0.08, language: 'English' });
   });
 
   const pipCandidates = [...activeCsas].sort((a, b) => a.quality - b.quality).slice(0, 4);
@@ -314,7 +491,34 @@ function build() {
     });
   }
 
-  return { partners, pods, csas, engagements, escalations, actions, cpe, messages, pips, sentiment, deliveries, hiring };
+  const financials = [];
+  const financialCategories = ['Delivery Partner spend', 'Program management', 'Platforms & tooling', 'Enablement & readiness'];
+  for (const period of ['2026-06', '2026-07']) {
+    for (const scope of ['Success Programs', 'Success Services']) {
+      financialCategories.forEach((category, i) => {
+        const scopeFactor = scope === 'Success Programs' ? 1 : 0.72;
+        const budget = Math.round((420000 - i * 65000) * scopeFactor);
+        const actual = Math.round(budget * (0.93 + rng() * 0.14));
+        financials.push({
+          id: `FIN${String(financials.length + 1).padStart(3, '0')}`, period, scope, category,
+          budget, actual, forecast: Math.round(actual * (1.01 + rng() * 0.04)),
+          variance: actual - budget, status: actual <= budget * 1.02 ? 'on-track' : actual <= budget * 1.08 ? 'watch' : 'over-plan',
+          ...gov('Finance / Power BI'),
+        });
+      });
+    }
+  }
+
+  const initiatives = [
+    { id: 'INI001', type: 'Offering', name: 'Cloud Modernization Event refresh', area: 'Cloud Deployment', stage: 'Pilot', ownerName: 'Elif Kaya', targetRelease: 'FY27 Q2', status: 'on-track', impact: 'Standardized modernization roadmap and reusable delivery assets.', nextStep: 'Complete two pilot deliveries.' },
+    { id: 'INI002', type: 'Offering', name: 'Secure Copilot capabilities review', area: 'AI Innovation', stage: 'Scale', ownerName: 'Diego Marín', targetRelease: 'FY27 Q1', status: 'on-track', impact: 'Accelerates secure adoption planning.', nextStep: 'Publish updated facilitator guide.' },
+    { id: 'INI003', type: 'Offering', name: 'Resiliency and Security briefing', area: 'Customer Health', stage: 'Design', ownerName: 'Morgan Reyes', targetRelease: 'FY27 Q2', status: 'watch', impact: 'Connects resilience findings to business continuity.', nextStep: 'Resolve content review dependencies.' },
+    { id: 'INI004', type: 'IP', name: 'Unified Foundations delivery kit', area: 'Foundations', stage: 'Build', ownerName: 'Elif Kaya', targetRelease: 'FY27 Q2', status: 'on-track', impact: 'Reusable preparation, discovery, and handover assets.', nextStep: 'Validate with POD Leads.' },
+    { id: 'INI005', type: 'Platform', name: 'NEBULA delivery agent', area: 'Agentic Delivery', stage: 'MVP', ownerName: 'Diego Marín', targetRelease: 'FY27 Q3', status: 'watch', impact: 'Drafts evidence-linked delivery artifacts.', nextStep: 'Complete groundedness evaluation.' },
+    { id: 'INI006', type: 'Platform', name: 'SSD IQ reporting semantic model', area: 'Reporting', stage: 'Pilot', ownerName: 'Robin Ellis', targetRelease: 'FY27 Q2', status: 'on-track', impact: 'Reconciles MBR metrics and enables governed drill-through.', nextStep: 'Reconcile Power BI measures.' },
+  ].map((initiative) => ({ ...initiative, ...gov('Portfolio Management') }));
+
+  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, sentimentSignals, pips, sentiment, deliveries, hiring, financials, initiatives };
 }
 
 export const dataset = build();

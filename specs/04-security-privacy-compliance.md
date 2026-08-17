@@ -44,7 +44,7 @@ modules; **deep links** to unpermitted routes are also blocked. See [CAP-01](cap
 |---|---|---|
 | **Confidential (personnel)** | PIPs, performance scorecards, coaching logs | `view:pip` only (POD Lead + HR-equivalent); access-logged; least exposure; not on shared surfaces. |
 | **MOSA / NDA (partner)** | Partner contracts, CSA identities, utilization | Access-controlled per MOSA/NDA; federated from Operations; no unnecessary duplication. |
-| **Customer** | Customer names, CPE verbatims, messages | Governed by workplace + customer data policy; minimise + mask where possible. |
+| **Customer** | Customer names/logos, CPE verbatims, written quotes, messages, draft success stories | Governed by workplace + customer data policy; minimise + mask where possible; require editorial approval before a success story is published; never synthesize a customer quote from recordings. |
 | **Operational** | Engagements, escalations, KPIs | Role-scoped; standard controls. |
 
 ## 4. Auditing
@@ -71,6 +71,8 @@ AI is woven throughout Compass but always **in a supporting role**:
 
 - **Minimise PII**; mask where feasible; encrypt in transit and at rest.
 - **Purpose limitation** for message/verbatim analysis (sentiment) per workplace data-use policy.
+- Sentiment translation/scoring must not retain unnecessary translated text; preserve source language,
+  confidence and model provenance, and expose unsupported/unscored states rather than fabricating a score.
 - **Retention** policies per data class; right-to-be-forgotten handling for personnel data.
 - **No real personal data of Partner CSAs** in non-production; illustrative names are fictional (the
   prototype uses vanity names — see [ADR-005](09-design-decisions-and-learnings.md)).

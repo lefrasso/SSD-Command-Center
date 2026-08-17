@@ -13,8 +13,11 @@ derive from the **HC Consolidation** dataset (`data/generate.js → hiring`, POD
 | KPI | Definition / formula | Target |
 |---|---|---|
 | **Global deliveries completed** | Count of completed deliveries per partner/period | Growth period-over-period |
+| **Five-month delivered engagements** | Count of completed engagements/deliveries in the latest five calendar months | Prototype baseline 1,300 |
 | **On-time delivery %** | deliveries with `completedDate ≤ dueDate` / total deliveries | ≥ 90% |
 | **Rolling CPE** | mean(`cpe.score`), 1 dp | ≥ 4.4 / 5 |
+| **VSAT rate** | CPE responses classified VSAT / completed CPE responses | ≥ 75% |
+| **DSAT rate** | CPE responses classified DSAT / completed CPE responses | ≤ 5% |
 | **Active engagements** | count(status ∈ {assigned, in-delivery}) | — (volume) |
 | **Open escalations** | count(status ≠ resolved) | Trending down |
 | **SLA breaches** | open escalations where `hoursSince(opened) > slaHours` | 0 |
@@ -22,6 +25,9 @@ derive from the **HC Consolidation** dataset (`data/generate.js → hiring`, POD
 | **Open actions** | Action items with status ≠ done (overdue = `due < today`) | Trend down |
 | **Utilization** | mean(active CSA `utilization`) | 80–90% band |
 | **Net sentiment** | mean(net) of partner sentiment rollups (period) | ≥ 0 and rising |
+| **Interaction sentiment index** | mean(`SentimentSignal.score`) × 100 in filter context | ≥ 0 and rising |
+| **Open critical sentiment alerts** | count(score ≤ -0.75 and `alertStatus = open`) | 0 |
+| **Sentiment alert acknowledgement time** | mean(`acknowledgedAt` − signal/alert timestamp) | Within supervisor SLA |
 | **Onboarding time-to-productive** | onboarding start → readiness sign-off | Trending down |
 | **Proactive coverage (T-3W)** | in-window engagements with outreach started / in-window | ≥ 80% |
 | **QC pass rate** | QCs ≥ 4/5 / total QCs | ≥ 80% |
@@ -34,6 +40,14 @@ derive from the **HC Consolidation** dataset (`data/generate.js → hiring`, POD
 | **Fill rate** | hired / all requisitions | Increase |
 | **Avg time-to-hire** | mean(hiredDate − opened), days | Decrease |
 | **Planned starts (90d)** | open reqs with targetStart within 90 days | Meet ramp plan |
+| **Accreditation coverage** | active resources with ≥1 accreditation / active resources | ≥ 95% |
+| **Budget variance %** | (`actual` − `budget`) / `budget` | within ±2%; watch at ±2–8%; red beyond ±8% |
+| **Forecast variance %** | (`forecast` − `budget`) / `budget` | within approved plan |
+| **MBR overall health** | worst state across Execution, Readiness, Quality, Budget | Green |
+| **VSAT story coverage** | VSAT engagements with a linked success story / all VSAT engagements | Increase |
+| **Success-story operating coverage** | partner × time-zone combinations with ≥1 story / active combinations | 100% |
+| **Stories awaiting review** | count(status ∈ {sdm-review, pod-review, leadership-review}) | Review within agreed SLA |
+| **LT-approved stories** | count(`ltApproved = true`) | Leadership-selected |
 | **Requests completed** | Count of completed delivery requests (period) | Growth |
 | **Requests upcoming** | Count of scheduled, not-yet-delivered requests | Healthy pipeline |
 | **Reports pending** | Requests overdue for their delivery report (with labor logged / *Has Labor*) | Trend to 0 |

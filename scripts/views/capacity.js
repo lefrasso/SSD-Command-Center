@@ -40,6 +40,7 @@ function renderForecast(tc) {
   clearCharts();
   const d = store.data;
   const active = d.csas.filter((c) => c.lifecycle === 'active');
+  const ftcs = d.csas.filter((c) => c.resourceType === 'FTC');
   const open = d.engagements.filter((e) => e.status !== 'complete');
 
   const rows = TRACKS.map((t) => {
@@ -65,6 +66,7 @@ function renderForecast(tc) {
 
   tc.innerHTML = `
     <div class="kpi-grid">
+      ${kpiCard({ label: 'FTC workforce', value: ftcs.length, iconName: 'people', hint: 'Target operating population' })}
       ${kpiCard({ label: 'Active CSAs', value: active.length, iconName: 'people' })}
       ${kpiCard({ label: 'Avg utilization', value: avgUtil + '%', iconName: 'trending', tone: utilColor(avgUtil) })}
       ${kpiCard({ label: 'Headcount gap', value: totalGap, iconName: 'personAdd', tone: totalGap ? COLORS.negative : COLORS.positive, hint: 'to meet demand' })}

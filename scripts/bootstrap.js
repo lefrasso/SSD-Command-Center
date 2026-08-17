@@ -16,6 +16,7 @@ import { renderEnablement } from './views/enablement.js';
 import { renderPods } from './views/pods.js';
 import { renderLifecycle } from './views/lifecycle.js';
 import { renderEngagements } from './views/engagements.js';
+import { renderSuccessStories } from './views/successstories.js';
 import { renderReportsPending } from './views/reportspending.js';
 import { renderMessages } from './views/messages.js';
 import { renderQuality } from './views/quality.js';
@@ -41,7 +42,7 @@ function renderCommandBar() {
   cb.innerHTML = `
     <button class="icon-btn" id="nav-toggle" aria-label="Toggle navigation">${icon('menu', 20)}</button>
     <div class="brand"><img src="assets/compass.svg" width="28" height="28" alt=""/><div><div class="brand-name">Compass</div><div class="brand-sub">SSD Delivery Console</div></div></div>
-    <div class="cmd-search"><span class="search-ico">${icon('search', 18)}</span><input id="global-search" aria-label="Search SSD IQ" placeholder="Search SSD IQ — partners, CSAs, engagements, escalations…"/></div>
+    <div class="cmd-search"><span class="search-ico">${icon('search', 18)}</span><input id="global-search" aria-label="Search SSD IQ" placeholder="Search SSD IQ — partners, engagements, success stories…"/></div>
     <div class="cmd-spacer"></div>
     <div class="cmd-right">
       <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">${icon(currentTheme() === 'dark' ? 'sun' : 'moon', 20)}</button>
@@ -77,7 +78,7 @@ function renderNav() {
   const groups = [
     { title: 'Platform', ids: ['home', 'ssdiq', 'capabilities'] },
     { title: 'Operations', ids: ['pods', 'lifecycle', 'capacity', 'engagements', 'enablement', 'reports-pending'] },
-    { title: 'Delivery', ids: ['agentic', 'messages', 'quality', 'escalations', 'reporting', 'sentiment'] },
+    { title: 'Delivery', ids: ['agentic', 'success-stories', 'messages', 'quality', 'escalations', 'reporting', 'sentiment'] },
     { title: 'People', ids: ['delivery-partners', 'performance'] },
   ];
 
@@ -128,13 +129,14 @@ function renderView() {
     case 'pods': renderPods(view); break;
     case 'lifecycle': renderLifecycle(view); break;
     case 'engagements': renderEngagements(view); break;
+    case 'success-stories': renderSuccessStories(view, params.get('q')); break;
     case 'reports-pending': renderReportsPending(view); break;
     case 'messages': renderMessages(view, params.get('thread') || params.get('q') || ''); break;
     case 'quality': renderQuality(view); break;
     case 'escalations': renderEscalations(view); break;
     case 'performance': can(store.role, 'view:pip') ? renderPerformance(view) : renderPlaceholder(view, mod, true); break;
     case 'reporting': renderReporting(view); break;
-    case 'sentiment': renderSentiment(view); break;
+    case 'sentiment': renderSentiment(view, params.get('tab')); break;
     case 'ssdiq': renderSsdIq(view, params.get('q') || ''); break;
     case 'capabilities': renderCapabilities(view); break;
     case 'agentic': renderAgentic(view); break;

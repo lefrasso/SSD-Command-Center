@@ -51,13 +51,23 @@ Each contract specifies: **entities**, **operations**, **auth**, **sync pattern*
 - **Pattern:** write-through on change; poll/webhook to pull external updates. **Bi-directional.**
 
 ### Power BI
-- **Operations:** embed reports/tiles; read datasets for executive/territory views.
+- **Operations:** embed reports/tiles; read the SSD MBR semantic model for executive health, execution,
+  readiness, quality, financial, strategy and territory views; reconcile native Compass measures to
+  the published report.
 - **Auth:** embed token; row-level security aligned to Compass RBAC/TZ/OU scope.
-- **Pattern:** embedded + dataset refresh cadence.
+- **Pattern:** embedded + dataset refresh cadence; retain dataset refresh timestamp and measure
+  reconciliation status so stale or divergent MBR figures are explicit.
 
 ### Microsoft Forms
 - **Operations:** ingest intake + CPE responses → Escalation/CPE entities.
 - **Pattern:** webhook/polling on new responses.
+
+### SharePoint (SSD Success Stories + SPS Internal Hub)
+- **Entities:** approved success-story presentation, mandatory metadata, publication status, LT Approved.
+- **Operations:** upload the generated official PowerPoint and metadata to the SSD library; when
+  `ltApproved = true`, promote/synchronize the approved story to the SPS Internal Hub.
+- **Auth:** delegated upload for the POD Lead; app permission for governed LT-approved promotion.
+- **Pattern:** write-through on publication and LT-approval changes, with URL/etag retained in SSD IQ.
 
 ### MOSA / Operations
 - **Operations:** ingest partner + CSA master data, contract refs, utilization, lifecycle.
@@ -67,6 +77,13 @@ Each contract specifies: **entities**, **operations**, **auth**, **sync pattern*
 - **Operations:** read/write PIP records + outcomes; read tenure/SDM roster.
 - **Auth:** restricted service identity; access-logged; classification enforced.
 - **Pattern:** on-demand, gated by `view:pip`.
+
+### Azure AI Language + Translator
+- **Operations:** score eligible CPE/Teams/escalation text on the seven-level sentiment scale, return
+  confidence and topics, detect language, and translate supported non-English content before scoring.
+- **Controls:** unsupported languages remain unscored; translated text is minimized; source language,
+  model/version and confidence are retained; alerts remain advisory.
+- **Pattern:** event-driven on new/updated interaction, with governed reprocessing after model changes.
 
 ### Azure OpenAI + retrieval
 - **Operations:** chat/completions + embeddings; retrieval over SSD IQ; content safety.
