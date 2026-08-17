@@ -51,9 +51,12 @@ Each contract specifies: **entities**, **operations**, **auth**, **sync pattern*
 - **Pattern:** write-through on change; poll/webhook to pull external updates. **Bi-directional.**
 
 ### Power BI
-- **Operations:** embed reports/tiles; read datasets for executive/territory views.
+- **Operations:** embed reports/tiles; read the SSD MBR semantic model for executive health, execution,
+  readiness, quality, financial, strategy and territory views; reconcile native Compass measures to
+  the published report.
 - **Auth:** embed token; row-level security aligned to Compass RBAC/TZ/OU scope.
-- **Pattern:** embedded + dataset refresh cadence.
+- **Pattern:** embedded + dataset refresh cadence; retain dataset refresh timestamp and measure
+  reconciliation status so stale or divergent MBR figures are explicit.
 
 ### Microsoft Forms
 - **Operations:** ingest intake + CPE responses → Escalation/CPE entities.

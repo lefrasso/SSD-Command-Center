@@ -15,6 +15,8 @@ derive from the **HC Consolidation** dataset (`data/generate.js → hiring`, POD
 | **Global deliveries completed** | Count of completed deliveries per partner/period | Growth period-over-period |
 | **On-time delivery %** | deliveries with `completedDate ≤ dueDate` / total deliveries | ≥ 90% |
 | **Rolling CPE** | mean(`cpe.score`), 1 dp | ≥ 4.4 / 5 |
+| **VSAT rate** | CPE responses classified VSAT / completed CPE responses | ≥ 75% |
+| **DSAT rate** | CPE responses classified DSAT / completed CPE responses | ≤ 5% |
 | **Active engagements** | count(status ∈ {assigned, in-delivery}) | — (volume) |
 | **Open escalations** | count(status ≠ resolved) | Trending down |
 | **SLA breaches** | open escalations where `hoursSince(opened) > slaHours` | 0 |
@@ -34,6 +36,10 @@ derive from the **HC Consolidation** dataset (`data/generate.js → hiring`, POD
 | **Fill rate** | hired / all requisitions | Increase |
 | **Avg time-to-hire** | mean(hiredDate − opened), days | Decrease |
 | **Planned starts (90d)** | open reqs with targetStart within 90 days | Meet ramp plan |
+| **Accreditation coverage** | active resources with ≥1 accreditation / active resources | ≥ 95% |
+| **Budget variance %** | (`actual` − `budget`) / `budget` | within ±2%; watch at ±2–8%; red beyond ±8% |
+| **Forecast variance %** | (`forecast` − `budget`) / `budget` | within approved plan |
+| **MBR overall health** | worst state across Execution, Readiness, Quality, Budget | Green |
 | **VSAT story coverage** | VSAT engagements with a linked success story / all VSAT engagements | Increase |
 | **Success-story operating coverage** | partner × time-zone combinations with ≥1 story / active combinations | 100% |
 | **Stories awaiting review** | count(status ∈ {sdm-review, pod-review, leadership-review}) | Review within agreed SLA |

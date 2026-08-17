@@ -35,6 +35,8 @@ Every record carries the **governance envelope**: `sourceOfTruth`, `updatedAt`, 
 | **PIP** (confidential) | `PIP###` | `csaId`, `status`, `opened`, `objectives[]`, `checkIns[]`, `outcome` | Confidential / HR |
 | **Sentiment Rollup** | `SEN###` | `scope`, `scopeType` (partner/track), `period`, `net`, `positive`, `neutral`, `negative`, `themes[]` | AI Services |
 | **Requisition** (hiring) | `REQ###` | `family`, `partnerId`, `podId`, `region`, `tz`, `type` (Growth/Backfill), `stage` (Sourcing→Screening→Interview→Offer→Hired), `opened`, `targetStart`, `hiredDate`, `source` | HC Consolidation (Power BI) |
+| **Financial** | `FIN###` | `period`, `scope` (Success Programs/Success Services), `category`, `budget`, `actual`, `forecast`, `variance`, `status` | Finance / Power BI |
+| **Strategy / IP Initiative** | `INI###` | `type` (Offering/IP/Platform), `name`, `area`, `stage`, `ownerName`, `targetRelease`, `status`, `impact`, `nextStep` | Portfolio Management |
 
 ### Reference / master data
 - **Families (Tracks) & Programs (service catalogue):** a **Track = Family**; a **Program = service /

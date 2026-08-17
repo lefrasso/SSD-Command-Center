@@ -12,7 +12,7 @@
 | Primary personas | WW/TZ Lead, Business Manager, CSA Manager, POD Lead, SDM, Operations Manager, IP/Adoption Lead (MBR requires `run:mbr`) |
 | Priority | Must |
 | Target phase | P1 |
-| Prototype reference | `scripts/views/reporting.js`, `scripts/ai.js` (`execSummary`, `mbrNarrative`, `askData`) |
+| Prototype reference | `scripts/views/reporting.js`, `scripts/views/mbrscorecard.js`, `scripts/ai.js` (`execSummary`, `mbrNarrative`, `askData`) |
 | Depends on | [07 KPIs](../07-kpis-and-reporting.md), [05 AI](../05-ai-and-copilot-platform.md), [03 Integrations](../03-integrations.md) |
 
 ## 1. Problem & outcome
@@ -43,6 +43,22 @@
   specified in [07 §2.6](../07-kpis-and-reporting.md); surfaces the operational KPIs (requests
   completed/upcoming, reports-pending aging, delivered hours/events, VSAT/DSAT, off-strategy, S500
   readiness, ESXP gaps, 8-week pipeline).
+- **FR-REPORT-9** — **SSD MBR health scorecard:** RAG status for Execution, Readiness, Quality, Budget,
+  and Overall with the reason for every state and shared Period / TZ / Partner filters.
+- **FR-REPORT-10** — **Execution:** demand created/dispatched/completed, reports-pending aging, delivery
+  mix by Family, performance/contribution by geography, and MoM comparisons.
+- **FR-REPORT-11** — **Readiness:** active resources, utilization, open roles/aging, attrition pressure,
+  partner staffing, accreditation rate/count, Program-level coverage, and hiring funnel.
+- **FR-REPORT-12** — **Quality:** CPE responses, VSAT/DSAT rates and trend, average score, DSAT
+  root-cause/action table, QC pass/average, and criteria deep dive.
+- **FR-REPORT-13** — **Financials:** Success Programs / Success Services budget, actual, variance,
+  forecast, category status, and vendor/headcount allocation with source/assumption labels.
+- **FR-REPORT-14** — **Strategy & actions:** offering/roadmap/IP/platform pipeline, priorities, risks,
+  LT-approved stories, and accountable open actions.
+- **FR-REPORT-15** — Every MBR section shall support print/PDF and drill through to the owning
+  operational capability.
+- **FR-REPORT-16** — Show source, dataset refresh, and measure-reconciliation status; never present
+  derived prototype QC or allocated spend as authoritative actuals.
 
 ## 3. Business rules
 
@@ -54,6 +70,14 @@
 - **BR-REPORT-6** — **POD Lead Report** fixed-window visuals (rolling 3-month, 8-week pipeline) ignore the
   date filter by design; **RMOT status** is eventually-consistent (it trails the source datasource
   refresh), so pending/complete counts may briefly lag reality and must not be treated as real-time.
+- **BR-REPORT-7** — MBR RAG rules: Budget green within ±2%, amber within ±8%, red beyond ±8%; Quality
+  green when VSAT ≥75%, DSAT ≤5%, and CPE ≥4.4; Readiness green when accreditation coverage ≥95% and
+  utilization is 75–92%; Execution degrades with negative delivery trend or pending-report pressure.
+- **BR-REPORT-8** — Overall MBR health is the worst pillar state; every non-green state includes a
+  leadership action or drill-through.
+- **BR-REPORT-9** — Current/previous comparisons use identical filter context and source refresh.
+- **BR-REPORT-10** — DSAT verbatims remain PII-redacted; root-cause category and action owner are
+  governed fields, not unreviewed AI inference.
 
 ## 4. User stories & acceptance criteria
 
@@ -73,8 +97,8 @@
 
 ## 5. Data & system of record
 
-Read-only aggregates over SSD IQ + Power BI (executive dataset). MBR outputs persisted with provenance
-(production).
+Read-only aggregates over SSD IQ + Power BI (executive dataset), including Financial and Strategy/IP
+Initiative entities. MBR outputs and decisions are persisted with provenance in production.
 
 ## 6. AI touchpoints
 
@@ -87,8 +111,8 @@ Read-only aggregates over SSD IQ + Power BI (executive dataset). MBR outputs per
 
 ## 7. Integrations
 
-Power BI (embedded exec/territory, RLS aligned to RBAC/TZ/OU), SSD IQ (aggregates), Office/Graph (MBR
-export). See [03](../03-integrations.md).
+Power BI (MBR semantic model, embedded exec/territory, RLS aligned to RBAC/TZ/OU), SSD IQ (aggregates),
+Finance, Portfolio Management, and Office/Graph (MBR export). See [03](../03-integrations.md).
 
 ## 8. NFR & security notes
 

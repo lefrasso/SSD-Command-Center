@@ -4,9 +4,10 @@ import { pageHeader, kpiCard, aiChip, esc, badge, clearCharts, bar, donut, line,
 import { icon } from '../icons.js';
 import { mbrNarrative, askData, execSummary } from '../ai.js';
 import { TRACKS, TZ_MAP } from '../../data/generate.js';
+import { renderMbrScorecard } from './mbrscorecard.js';
 
 const PERIODS = ['2026-04', '2026-05', '2026-06', '2026-07'];
-let tab = 'exec';
+let tab = 'scorecard';
 let selPartner = null;
 let selPeriod = '2026-07';
 let mbrType = 'partner';
@@ -19,8 +20,8 @@ let fPartner = 'All';
 let fStatus = 'All';
 
 export function renderReporting(container) {
-  const tabs = [['exec', 'Executive View'], ['territory', 'Territory Ops'], ['mbr', 'MBR Builder'], ['ask', 'Ask-your-data']];
-  const governed = canonicalEntityMap(store.data).filter((x) => ['Engagements', 'Quality', 'Escalations', 'Actions', 'Capacity', 'People'].includes(x.entity));
+  const tabs = [['scorecard', 'SSD MBR Scorecard'], ['exec', 'Executive View'], ['territory', 'Territory Ops'], ['mbr', 'MBR Builder'], ['ask', 'Ask-your-data']];
+  const governed = canonicalEntityMap(store.data).filter((x) => ['Engagements', 'Quality', 'Escalations', 'Actions', 'Capacity', 'People', 'Financials', 'Strategy & IP'].includes(x.entity));
   container.innerHTML = `
     ${pageHeader({ title: 'Reporting & AI', description: 'Executive reporting is derived from SSD IQ — the canonical source for engagement, quality, action, and capacity signals used in AI and MBRs.' })}
     <section class="card pad mb16" aria-label="Canonical operating model">
@@ -43,7 +44,8 @@ export function renderReporting(container) {
     <div id="tabc"></div>`;
   container.querySelectorAll('[data-tab]').forEach((el) => el.addEventListener('click', () => { tab = el.getAttribute('data-tab'); renderReporting(container); }));
   const tc = container.querySelector('#tabc');
-  if (tab === 'exec') renderExec(tc);
+  if (tab === 'scorecard') renderMbrScorecard(tc);
+  else if (tab === 'exec') renderExec(tc);
   else if (tab === 'territory') renderTerritory(tc);
   else if (tab === 'mbr') renderMbrBuilder(tc);
   else renderAsk(tc);

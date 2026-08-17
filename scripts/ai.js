@@ -129,6 +129,8 @@ export function nlSearch(query, d = store.data) {
     const searchable = `${story.id} ${story.title} ${story.summary} ${story.keyOutcomes} ${story.insights} ${story.impact} ${story.ownerName} ${story.partnerName} ${story.eventNames.join(' ')} ${story.industry} ${story.segment} ${story.country} ${story.tags.join(' ')} ${engagement?.customer || ''}`;
     if (m(searchable)) hits.push({ entity: 'Success Story', key: 'successStories', id: story.id, label: story.title, snippet: `${engagement?.customer || story.engagementId} · ${story.status}${story.cpeId ? ' · VSAT' : ''}` });
   });
+  d.financials.forEach((item) => m(`${item.id} ${item.period} ${item.scope} ${item.category} ${item.status}`) && hits.push({ entity: 'Financial', key: 'financials', id: item.id, label: `${item.scope} · ${item.category}`, snippet: `${item.period} · ${item.status}` }));
+  d.initiatives.forEach((item) => m(`${item.id} ${item.name} ${item.type} ${item.area} ${item.stage} ${item.ownerName} ${item.status} ${item.impact} ${item.nextStep}`) && hits.push({ entity: 'Strategy / IP', key: 'initiatives', id: item.id, label: item.name, snippet: `${item.type} · ${item.stage} · ${item.status}` }));
   d.escalations.forEach((e) => m(`${e.id} ${e.summary} ${e.adoRef} ${e.severity}`) && hits.push({ entity: 'Escalation', key: 'escalations', id: e.id, label: e.id, snippet: `${e.severity} · ${e.summary}` }));
   return hits.slice(0, 25);
 }
@@ -140,6 +142,8 @@ export function dataQualityFlags(d = store.data) {
   d.csas.filter((c) => c.lifecycle === 'active' && c.utilization > 95).forEach((c) => flags.push({ severity: 'medium', message: `${c.name} is over-utilized at ${c.utilization}%.`, ref: c.id }));
   d.successStories.filter((story) => story.status === 'published' && (!story.publishDate || !story.customerQuote)).forEach((story) => flags.push({ severity: 'medium', message: `Published success story ${story.id} is missing publication evidence.`, ref: story.id }));
   d.cpe.filter((item) => item.class === 'VSAT' && !d.successStories.some((story) => story.cpeId === item.id || story.engagementIds.includes(item.engagementId))).forEach((item) => flags.push({ severity: 'medium', message: `VSAT ${item.id} has no success story or linked story record.`, ref: item.id }));
+  d.financials.filter((item) => item.status === 'over-plan').forEach((item) => flags.push({ severity: 'medium', message: `${item.scope} ${item.category} is over plan for ${item.period}.`, ref: item.id }));
+  d.initiatives.filter((item) => item.status === 'watch').forEach((item) => flags.push({ severity: 'low', message: `Initiative ${item.name} is on watch (${item.targetRelease}).`, ref: item.id }));
   d.partners.filter((p) => p.podIds.length === 0).forEach((p) => flags.push({ severity: 'low', message: `Partner ${p.name} has no PODs mapped.`, ref: p.id }));
   return flags;
 }

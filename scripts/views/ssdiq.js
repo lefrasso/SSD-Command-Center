@@ -37,6 +37,10 @@ const CFG = [
     columns: [['id', 'ID'], ['engagementId', 'Customer', (r) => engCustomer(r.engagementId)], ['type', 'Type'], ['completedDate', 'Completed'], ['track', 'Family']] },
   { key: 'hiring', name: 'Requisition', description: 'HC consolidation — hiring requisitions (Active & Future).', source: 'HC Consolidation', icon: 'personAdd', label: (r) => `${r.family} · ${r.stage}`,
     columns: [['id', 'ID'], ['family', 'Family'], ['partnerId', 'Partner', (r) => (store.data.partners.find((p) => p.id === r.partnerId) || {}).name || r.partnerId], ['tz', 'TZ'], ['type', 'Type'], ['stage', 'Stage'], ['targetStart', 'Target start']] },
+  { key: 'financials', name: 'Financial', description: 'MBR budget, actual, forecast and variance records.', source: 'Finance / Power BI', icon: 'report', label: (r) => `${r.scope} · ${r.category}`,
+    columns: [['id', 'ID'], ['period', 'Period'], ['scope', 'Scope'], ['category', 'Category'], ['budget', 'Budget'], ['actual', 'Actual'], ['variance', 'Variance'], ['status', 'Status']] },
+  { key: 'initiatives', name: 'Strategy / IP Initiative', description: 'Offerings, roadmap, IP and platform initiatives.', source: 'Portfolio Management', icon: 'grid', label: (r) => r.name,
+    columns: [['id', 'ID'], ['name', 'Initiative'], ['type', 'Type'], ['area', 'Area'], ['stage', 'Stage'], ['ownerName', 'Owner'], ['targetRelease', 'Target'], ['status', 'Status']] },
 ];
 
 let selectedEntity = 'partners';

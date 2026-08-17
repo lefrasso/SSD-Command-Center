@@ -97,6 +97,7 @@ const VERBATIMS = {
   neutral: ['Solid delivery, a few scheduling hiccups.','Good outcome; communication could be tighter.','Met expectations overall.','Competent work, nothing exceptional.'],
   negative: ['Delays in outreach set the project back.','Expected deeper technical depth for the track.','Follow-up was slow during the engagement.','Hand-offs were unclear and cost us time.'],
 };
+const DSAT_ROOT_CAUSES = ['DP preparedness / execution', 'Time allocation / scheduling', 'Data accuracy / results quality', 'Communication / expectation alignment'];
 const ESC_SUMMARIES = ['Customer stakeholder unavailable; milestone at risk.','Technical blocker on landing-zone deployment.','Scope creep beyond the agreed SOW.','CPE dip flagged by the CSAM.','Access and permissions blocking delivery.','Partner resourcing gap mid-engagement.','Security assessment findings need re-review.'];
 const ACTION_TITLES = ['Schedule stakeholder sync','Escalate access request to IT','Re-baseline the milestone plan','Prepare mitigation options','Draft customer communication','Assign a backup CSA','Review SOW boundaries','Book architecture review'];
 const THEMES = ['responsiveness','technical depth','scheduling','communication','onboarding pace','tooling access','proactivity','documentation','stakeholder alignment'];
@@ -268,11 +269,19 @@ function build() {
   for (const eng of cpeSource) {
     if (chance(0.25)) continue;
     const id = `CPE${String(cIdx).padStart(3, '0')}`;
-    const score = cIdx % 4 === 0 ? 5 : round1(clamp(3.8 + rng() * 1.3, 1, 5));
+    const score = cIdx % 14 === 0 ? 2 : cIdx % 4 !== 1 ? 5 : round1(clamp(3.8 + rng() * 1.3, 1, 5));
     cIdx++;
     const sentiment = sentimentFromScore(score);
     const feedbackClass = score === 5 ? 'VSAT' : score < 3.6 ? 'DSAT' : 'neutral';
-    cpe.push({ id, engagementId: eng.id, score, class: feedbackClass, surveyStatus: 'Completed', track: eng.track, verbatim: pick(VERBATIMS[sentiment]), date: daysAgo(int(1, 60)), sentiment, ...gov('CPE/Forms') });
+    const feedbackDate = feedbackClass === 'DSAT'
+      ? (id === 'CPE014' ? daysAgo(12) : id === 'CPE028' ? daysAgo(40) : daysAgo(50))
+      : daysAgo(int(1, 60));
+    cpe.push({
+      id, engagementId: eng.id, score, class: feedbackClass, surveyStatus: 'Completed', track: eng.track,
+      verbatim: pick(VERBATIMS[sentiment]), rootCauseCategory: feedbackClass === 'DSAT' ? DSAT_ROOT_CAUSES[cIdx % DSAT_ROOT_CAUSES.length] : null,
+      rootCauseAction: feedbackClass === 'DSAT' ? pick(['POD Lead coaching and delivery-plan review', 'Re-baseline scope and stakeholder expectations', 'Validate source data and repeat the findings review', 'Assign follow-up action with the CSAM']) : null,
+      date: feedbackDate, sentiment, ...gov('CPE/Forms'),
+    });
   }
 
   const vsatFeedback = cpe.filter((item) => item.class === 'VSAT');
@@ -405,7 +414,34 @@ function build() {
     });
   }
 
-  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, pips, sentiment, deliveries, hiring };
+  const financials = [];
+  const financialCategories = ['Delivery Partner spend', 'Program management', 'Platforms & tooling', 'Enablement & readiness'];
+  for (const period of ['2026-06', '2026-07']) {
+    for (const scope of ['Success Programs', 'Success Services']) {
+      financialCategories.forEach((category, i) => {
+        const scopeFactor = scope === 'Success Programs' ? 1 : 0.72;
+        const budget = Math.round((420000 - i * 65000) * scopeFactor);
+        const actual = Math.round(budget * (0.93 + rng() * 0.14));
+        financials.push({
+          id: `FIN${String(financials.length + 1).padStart(3, '0')}`, period, scope, category,
+          budget, actual, forecast: Math.round(actual * (1.01 + rng() * 0.04)),
+          variance: actual - budget, status: actual <= budget * 1.02 ? 'on-track' : actual <= budget * 1.08 ? 'watch' : 'over-plan',
+          ...gov('Finance / Power BI'),
+        });
+      });
+    }
+  }
+
+  const initiatives = [
+    { id: 'INI001', type: 'Offering', name: 'Cloud Modernization Event refresh', area: 'Cloud Deployment', stage: 'Pilot', ownerName: 'Elif Kaya', targetRelease: 'FY27 Q2', status: 'on-track', impact: 'Standardized modernization roadmap and reusable delivery assets.', nextStep: 'Complete two pilot deliveries.' },
+    { id: 'INI002', type: 'Offering', name: 'Secure Copilot capabilities review', area: 'AI Innovation', stage: 'Scale', ownerName: 'Diego Marín', targetRelease: 'FY27 Q1', status: 'on-track', impact: 'Accelerates secure adoption planning.', nextStep: 'Publish updated facilitator guide.' },
+    { id: 'INI003', type: 'Offering', name: 'Resiliency and Security briefing', area: 'Customer Health', stage: 'Design', ownerName: 'Morgan Reyes', targetRelease: 'FY27 Q2', status: 'watch', impact: 'Connects resilience findings to business continuity.', nextStep: 'Resolve content review dependencies.' },
+    { id: 'INI004', type: 'IP', name: 'Unified Foundations delivery kit', area: 'Foundations', stage: 'Build', ownerName: 'Elif Kaya', targetRelease: 'FY27 Q2', status: 'on-track', impact: 'Reusable preparation, discovery, and handover assets.', nextStep: 'Validate with POD Leads.' },
+    { id: 'INI005', type: 'Platform', name: 'NEBULA delivery agent', area: 'Agentic Delivery', stage: 'MVP', ownerName: 'Diego Marín', targetRelease: 'FY27 Q3', status: 'watch', impact: 'Drafts evidence-linked delivery artifacts.', nextStep: 'Complete groundedness evaluation.' },
+    { id: 'INI006', type: 'Platform', name: 'SSD IQ reporting semantic model', area: 'Reporting', stage: 'Pilot', ownerName: 'Robin Ellis', targetRelease: 'FY27 Q2', status: 'on-track', impact: 'Reconciles MBR metrics and enables governed drill-through.', nextStep: 'Reconcile Power BI measures.' },
+  ].map((initiative) => ({ ...initiative, ...gov('Portfolio Management') }));
+
+  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, pips, sentiment, deliveries, hiring, financials, initiatives };
 }
 
 export const dataset = build();
