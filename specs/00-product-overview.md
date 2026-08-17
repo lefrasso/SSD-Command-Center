@@ -100,7 +100,7 @@ Compass is delivered as the capabilities catalogued in the [README](README.md). 
 - **Workforce & Partners:** PODs & People, Capacity & Forecasting (incl. HC tracking & hiring),
   Partner CSA Lifecycle, Delivery Partners, Enablement.
 - **Quality & Risk:** Quality & CPE, Escalations & Actions, Performance & PIPs, Sentiment.
-- **Comms & Insight:** Messages Console, Reporting/Territory/MBR.
+- **Comms & Insight:** Messages Console, Success Stories, Reporting/Territory/MBR.
 
 ## 7. Scope
 

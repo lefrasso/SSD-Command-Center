@@ -104,6 +104,26 @@ const MSG_POD = ['Please confirm Day 1 outreach is complete for this account.','
 const MSG_CSA = ['Day 1 outreach done — customer is engaged and responsive.','Milestone 2 is on track; migration sprint starts Monday.','Following up with the stakeholder now, will update by EOD.','Artifacts uploaded to the workspace, ready for review.','Hit a permissions blocker; raising an escalation.'];
 const PIP_OBJECTIVES = ['Raise rolling CPE to 4.4 within two periods.','Complete Day 0–3 outreach on 100% of dispatches.','Close all open action items within SLA.','Attend Landing Zone enablement bootcamp.','Improve documentation quality on delivery artifacts.'];
 const PIP_NOTES = ['Check-in held; outreach cadence improving.','Two engagements recovered to on-track.','CPE trend flat; agreed coaching focus.','Completed enablement module; applying on live account.'];
+const STORY_IMPACTS = [
+  'Reduced the delivery timeline by three weeks while keeping the agreed scope intact.',
+  'Established a repeatable operating model and transferred ownership to the customer team.',
+  'Removed a critical technical blocker and accelerated the path to production.',
+  'Improved platform resilience and gave stakeholders a prioritized action plan.',
+  'Converted discovery findings into measurable adoption milestones for the next quarter.',
+];
+export const SUCCESS_STORY_INDUSTRIES = ['Financial Services', 'Manufacturing', 'Retail & Consumer Goods', 'Healthcare', 'Government', 'Education', 'Energy', 'Telecommunication', 'Media & Entertainment', 'Automotive', 'Professional Services', 'Real Estate'];
+export const SUCCESS_STORY_SEGMENTS = ['Enterprise', 'Corporate Account', 'Small, Medium, Corporate', 'Public Sector', 'Global Account', 'Strategic / Top Account'];
+const REGION_COUNTRIES = {
+  Iberia: 'Spain', UKI: 'United Kingdom', DACH: 'Germany', Nordics: 'Sweden', France: 'France', Italy: 'Italy',
+  'North America': 'United States - US-OGE', LATAM: 'Brazil', India: 'India', ANZ: 'Australia',
+};
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+function fiscalYear(dateValue) {
+  const date = new Date(`${dateValue}T00:00:00Z`);
+  const year = date.getUTCFullYear() + (date.getUTCMonth() >= 6 ? 1 : 0);
+  return `FY${String(year).slice(-2)}`;
+}
 
 function fullName(used) {
   for (let i = 0; i < 50; i++) { const n = `${pick(FIRST)} ${pick(LAST)}`; if (!used.has(n)) { used.add(n); return n; } }
@@ -247,10 +267,81 @@ function build() {
   let cIdx = 1;
   for (const eng of cpeSource) {
     if (chance(0.25)) continue;
-    const score = round1(clamp(3.8 + rng() * 1.3, 1, 5));
+    const id = `CPE${String(cIdx).padStart(3, '0')}`;
+    const score = cIdx % 4 === 0 ? 5 : round1(clamp(3.8 + rng() * 1.3, 1, 5));
+    cIdx++;
     const sentiment = sentimentFromScore(score);
-    cpe.push({ id: `CPE${String(cIdx++).padStart(3, '0')}`, engagementId: eng.id, score, track: eng.track, verbatim: pick(VERBATIMS[sentiment]), date: daysAgo(int(1, 60)), sentiment, ...gov('CPE/Forms') });
+    const feedbackClass = score === 5 ? 'VSAT' : score < 3.6 ? 'DSAT' : 'neutral';
+    cpe.push({ id, engagementId: eng.id, score, class: feedbackClass, surveyStatus: 'Completed', track: eng.track, verbatim: pick(VERBATIMS[sentiment]), date: daysAgo(int(1, 60)), sentiment, ...gov('CPE/Forms') });
   }
+
+  const vsatFeedback = cpe.filter((item) => item.class === 'VSAT');
+  const vsatStoryInputs = vsatFeedback.slice(0, 7).map((feedback) => ({ feedback, eng: engagements.find((item) => item.id === feedback.engagementId) }));
+  const linkedIds = new Set(vsatStoryInputs.map(({ eng }) => eng.id));
+  const otherStoryInputs = engagements.filter((eng) => eng.status === 'complete' && !linkedIds.has(eng.id)).slice(0, 5).map((eng) => ({ feedback: null, eng }));
+  const storyInputs = [...vsatStoryInputs, ...otherStoryInputs];
+  const storyStatuses = ['published', 'published', 'published', 'published', 'approved', 'approved', 'leadership-review', 'leadership-review', 'pod-review', 'sdm-review', 'draft', 'draft'];
+  const successStories = storyInputs.map(({ eng, feedback }, i) => {
+    const csa = csas.find((c) => c.id === eng.assignedTo);
+    const pod = csa ? pods.find((item) => item.id === csa.podId) : null;
+    const partner = csa ? partners.find((item) => item.id === csa.partnerId) : null;
+    const related = engagements.find((item) => item.id !== eng.id && item.customer === eng.customer && item.status === 'complete');
+    const engagementIds = related && i % 4 === 0 ? [eng.id, related.id] : [eng.id];
+    const status = storyStatuses[i];
+    const published = status === 'published';
+    const approved = published || status === 'approved';
+    const month = MONTH_NAMES[new Date(`${eng.dueDate}T00:00:00Z`).getUTCMonth()];
+    const reviewHistory = [];
+    if (['pod-review', 'leadership-review', 'approved', 'published'].includes(status)) reviewHistory.push({ at: daysAgo(18), by: 'Priya Nair', stage: 'SDM review', decision: 'approved', comment: 'Written evidence and quotes reviewed.' });
+    if (['leadership-review', 'approved', 'published'].includes(status)) reviewHistory.push({ at: daysAgo(12), by: pod?.leadName ?? 'POD Lead', stage: 'POD Lead review', decision: 'approved', comment: 'Delivery quality and mandatory metadata confirmed.' });
+    if (['approved', 'published'].includes(status)) reviewHistory.push({ at: daysAgo(8), by: 'Jordan Pierce', stage: 'SSD Leadership approval', decision: 'approved', comment: 'Approved to demonstrate Success Program value.' });
+    if (published) reviewHistory.push({ at: daysAgo(5), by: pod?.leadName ?? 'POD Lead', stage: 'SharePoint publication', decision: 'approved', comment: 'Uploaded to the SSD Success Stories library.' });
+    return {
+      id: `SS${String(i + 1).padStart(3, '0')}`,
+      engagementId: eng.id,
+      engagementIds,
+      cpeId: feedback?.id ?? null,
+      feedbackSource: feedback ? 'VSAT survey' : i % 2 ? 'CSAM / account team feedback' : 'Impactful delivery',
+      title: `${eng.customer}: accelerating ${eng.program}`,
+      headline: 'Partner-led delivery driving executive trust and actionable outcomes',
+      summary: `${eng.customer} partnered with Success Services Delivery across ${engagementIds.length > 1 ? 'multiple Success Program events' : `the ${eng.program} engagement`} to create a practical roadmap with clear owners and measurable next steps.`,
+      keyOutcomes: `${STORY_IMPACTS[i % STORY_IMPACTS.length]}\nPrioritized the highest-value actions with accountable owners.\nDelivered a reusable roadmap for phased execution.`,
+      insights: `Customer priorities became clearer when recommendations were tied to business outcomes.\nThe POD model kept delivery quality and stakeholder alignment consistent.\nThe approach can be reused across similar ${eng.track} engagements.`,
+      impact: `${STORY_IMPACTS[(i + 2) % STORY_IMPACTS.length]}\nIncreased customer confidence through documented decisions and next steps.\nIdentified follow-on value opportunities for the account team.`,
+      customerQuote: feedback?.verbatim ?? 'The engagement gave our team clarity, momentum, and a plan we can execute.',
+      customerQuoteAttribution: `${eng.customer} stakeholder`,
+      csamQuote: 'The structured delivery translated technical findings into clear customer outcomes and follow-on actions.',
+      tags: [eng.track, ...engagementIds.map((engagementId) => engagements.find((item) => item.id === engagementId)?.program).filter(Boolean)],
+      family: eng.track,
+      eventNames: engagementIds.map((engagementId) => engagements.find((item) => item.id === engagementId)?.program).filter(Boolean),
+      timeZone: pod?.tz ?? 'Global',
+      area: pod?.region ?? 'Global',
+      country: REGION_COUNTRIES[pod?.region] ?? pod?.region ?? 'Not specified',
+      industry: SUCCESS_STORY_INDUSTRIES[i % SUCCESS_STORY_INDUSTRIES.length],
+      segment: SUCCESS_STORY_SEGMENTS[i % SUCCESS_STORY_SEGMENTS.length],
+      fiscalYear: fiscalYear(eng.dueDate),
+      month,
+      csamName: eng.csamName,
+      podLeadName: pod?.leadName ?? 'Unassigned',
+      partnerName: partner?.name ?? csa?.vendor ?? 'Unassigned',
+      partnerCsaName: csa?.name ?? 'Unassigned',
+      status,
+      ownerName: csa?.name ?? eng.csamName,
+      reviewHistory,
+      featured: published && i < 2,
+      ltApproved: published && i < 2,
+      ltApprovedBy: published && i < 2 ? 'Jordan Pierce' : null,
+      ltApprovedAt: published && i < 2 ? daysAgo(int(1, 8)) : null,
+      sharePointStatus: published ? 'uploaded' : 'not-uploaded',
+      sharePointUrl: published ? `https://microsoft.sharepoint.com/sites/SuccessServicesDelivery/success-stories/SS${String(i + 1).padStart(3, '0')}` : null,
+      publishDate: published ? daysAgo(int(3, 55)) : null,
+      approvedAt: approved ? daysAgo(int(4, 30)) : null,
+      customerLogoDataUrl: null,
+      customerLogoName: null,
+      createdAt: daysAgo(int(45, 100)),
+      ...gov('SSD IQ'),
+    };
+  });
 
   const messages = [];
   let mIdx = 1;
@@ -314,7 +405,7 @@ function build() {
     });
   }
 
-  return { partners, pods, csas, engagements, escalations, actions, cpe, messages, pips, sentiment, deliveries, hiring };
+  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, pips, sentiment, deliveries, hiring };
 }
 
 export const dataset = build();

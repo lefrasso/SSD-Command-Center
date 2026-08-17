@@ -39,10 +39,11 @@ The prototype is **feature-complete** across all modules (no dead ends):
   shadowing).
 - **Quality & risk** — Quality & CPE (checks + mock deliveries), Escalations & Actions, Performance &
   PIPs (confidential), Sentiment.
-- **Comms & insight** — Messages Console, Reporting (Executive, Territory/OU Ops, partner + internal
-  MBRs, ask-your-data).
+- **Comms & insight** — Messages Console, engagement/VSAT-linked **Success Stories** with official
+  SDM/POD/leadership review, SharePoint metadata, LT approval and PowerPoint-template export,
+  Reporting (Executive, Territory/OU Ops, partner + internal MBRs, ask-your-data).
 - **SSD IQ — System of Records** — catalog of all governed entities (partners, PODs, CSAs, engagements,
-  deliveries, escalations, actions, CPE, messages, PIPs, sentiment, hiring requisitions) with record
+  success stories, deliveries, escalations, actions, CPE, messages, PIPs, sentiment, hiring requisitions) with record
   drawers, relationships, source-of-truth badges, audit trail, NL search and data-quality flags.
 - **Capabilities** — a live map of delivery capabilities and their coverage.
 

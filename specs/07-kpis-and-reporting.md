@@ -34,6 +34,10 @@ derive from the **HC Consolidation** dataset (`data/generate.js → hiring`, POD
 | **Fill rate** | hired / all requisitions | Increase |
 | **Avg time-to-hire** | mean(hiredDate − opened), days | Decrease |
 | **Planned starts (90d)** | open reqs with targetStart within 90 days | Meet ramp plan |
+| **VSAT story coverage** | VSAT engagements with a linked success story / all VSAT engagements | Increase |
+| **Success-story operating coverage** | partner × time-zone combinations with ≥1 story / active combinations | 100% |
+| **Stories awaiting review** | count(status ∈ {sdm-review, pod-review, leadership-review}) | Review within agreed SLA |
+| **LT-approved stories** | count(`ltApproved = true`) | Leadership-selected |
 | **Requests completed** | Count of completed delivery requests (period) | Growth |
 | **Requests upcoming** | Count of scheduled, not-yet-delivered requests | Healthy pipeline |
 | **Reports pending** | Requests overdue for their delivery report (with labor logged / *Has Labor*) | Trend to 0 |

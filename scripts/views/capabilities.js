@@ -16,6 +16,7 @@ const CAPS = [
     { name: 'Planning', status: 'live', to: '/capacity', note: 'Demand & capacity planning.' },
     { name: 'Agentic Delivery', status: 'live', to: '/agentic', note: 'AI agents assist every engagement.' },
     { name: 'Delivery Agent', status: 'live', to: '/agentic', note: 'Per-engagement AI delivery agent.' },
+    { name: 'Success Story Management', status: 'live', to: '/success-stories', note: 'Engagement-linked capture, editorial review, publishing and archiving.' },
   ] },
   { group: 'Quality', items: [
     { name: 'Quality Management', status: 'live', to: '/quality', note: 'CPE & Recommended Practices scoring.' },

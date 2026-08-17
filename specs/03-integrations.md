@@ -59,6 +59,13 @@ Each contract specifies: **entities**, **operations**, **auth**, **sync pattern*
 - **Operations:** ingest intake + CPE responses → Escalation/CPE entities.
 - **Pattern:** webhook/polling on new responses.
 
+### SharePoint (SSD Success Stories + SPS Internal Hub)
+- **Entities:** approved success-story presentation, mandatory metadata, publication status, LT Approved.
+- **Operations:** upload the generated official PowerPoint and metadata to the SSD library; when
+  `ltApproved = true`, promote/synchronize the approved story to the SPS Internal Hub.
+- **Auth:** delegated upload for the POD Lead; app permission for governed LT-approved promotion.
+- **Pattern:** write-through on publication and LT-approval changes, with URL/etag retained in SSD IQ.
+
 ### MOSA / Operations
 - **Operations:** ingest partner + CSA master data, contract refs, utilization, lifecycle.
 - **Pattern:** scheduled sync + change feed; SoT for partner/CSA fields.

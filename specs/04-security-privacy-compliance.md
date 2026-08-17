@@ -44,7 +44,7 @@ modules; **deep links** to unpermitted routes are also blocked. See [CAP-01](cap
 |---|---|---|
 | **Confidential (personnel)** | PIPs, performance scorecards, coaching logs | `view:pip` only (POD Lead + HR-equivalent); access-logged; least exposure; not on shared surfaces. |
 | **MOSA / NDA (partner)** | Partner contracts, CSA identities, utilization | Access-controlled per MOSA/NDA; federated from Operations; no unnecessary duplication. |
-| **Customer** | Customer names, CPE verbatims, messages | Governed by workplace + customer data policy; minimise + mask where possible. |
+| **Customer** | Customer names/logos, CPE verbatims, written quotes, messages, draft success stories | Governed by workplace + customer data policy; minimise + mask where possible; require editorial approval before a success story is published; never synthesize a customer quote from recordings. |
 | **Operational** | Engagements, escalations, KPIs | Role-scoped; standard controls. |
 
 ## 4. Auditing

@@ -21,6 +21,7 @@ export function actionOwners(eng) {
 function sourceMeta(a) {
   if (a.escalationId) return ['Escalation', 'tint-warn'];
   if (a.threadId) return ['Message', 'tint-info'];
+  if (a.cpeId) return ['Success story', 'tint-info'];
   return ['Action', 'outline'];
 }
 

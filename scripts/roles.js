@@ -20,16 +20,16 @@ export const PERSONAS = {
 export const ROLE_ORDER = ['ww-lead', 'tz-lead', 'csa-manager', 'pod-lead', 'business-manager', 'csa', 'ip-lead', 'adoption-lead', 'partner-csa', 'sdm', 'operations-manager'];
 
 const ROLE_PERMISSIONS = {
-  'ww-lead': ['view:portfolio', 'view:allPartners', 'run:mbr'],
-  'tz-lead': ['view:portfolio', 'view:allPartners', 'run:mbr'],
-  'csa-manager': ['view:portfolio', 'view:pip', 'edit:pip', 'edit:dispatch', 'edit:escalation', 'edit:capacity', 'view:allPartners', 'run:mbr'],
-  'pod-lead': ['view:portfolio', 'view:pip', 'edit:pip', 'edit:dispatch', 'edit:escalation', 'edit:capacity', 'view:allPartners', 'run:mbr'],
-  'business-manager': ['view:portfolio', 'view:allPartners', 'run:mbr'],
-  csa: [],
-  'ip-lead': ['view:portfolio'],
-  'adoption-lead': ['view:portfolio'],
-  'partner-csa': [],
-  sdm: ['edit:escalation', 'view:allPartners', 'run:mbr'],
+  'ww-lead': ['view:portfolio', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:leadershipSuccessStories', 'approve:ltSuccessStories'],
+  'tz-lead': ['view:portfolio', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:leadershipSuccessStories', 'approve:ltSuccessStories'],
+  'csa-manager': ['view:portfolio', 'view:pip', 'edit:pip', 'edit:dispatch', 'edit:escalation', 'edit:capacity', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:podSuccessStories', 'publish:successStories', 'assign:successStoryActions'],
+  'pod-lead': ['view:portfolio', 'view:pip', 'edit:pip', 'edit:dispatch', 'edit:escalation', 'edit:capacity', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:podSuccessStories', 'publish:successStories', 'assign:successStoryActions'],
+  'business-manager': ['view:portfolio', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:leadershipSuccessStories', 'approve:ltSuccessStories'],
+  csa: ['edit:successStories'],
+  'ip-lead': ['view:portfolio', 'edit:successStories'],
+  'adoption-lead': ['view:portfolio', 'edit:successStories'],
+  'partner-csa': ['edit:successStories'],
+  sdm: ['edit:escalation', 'view:allPartners', 'run:mbr', 'review:successStories'],
   'operations-manager': ['edit:capacity', 'view:allPartners'],
 };
 

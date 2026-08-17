@@ -3,6 +3,7 @@ import { store, assignEngagement, canonicalEntityMap } from '../store.js';
 import { pageHeader, badge, statusPill, aiChip, esc, kanban, openDrawer, closeDrawer, COLORS } from '../components.js';
 import { icon } from '../icons.js';
 import { recommendCSA, draftOutreach } from '../ai.js';
+import { navigate } from '../router.js';
 
 const COLS = [['new', 'New'], ['assigned', 'Assigned'], ['in-delivery', 'In delivery'], ['complete', 'Complete']];
 
@@ -52,6 +53,7 @@ function openEngagement(id) {
   const e = d.engagements.find((x) => x.id === id);
   if (!e) return;
   const csa = d.csas.find((c) => c.id === e.assignedTo);
+  const stories = d.successStories.filter((story) => story.engagementIds.includes(e.id));
   const outreach = ['day0', 'day1', 'day2', 'day3'].map((k, i) => `<span class="badge ${e.outreach[k] ? 'tint-info' : 'outline'}">Day ${i} ${e.outreach[k] ? '✓' : '—'}</span>`).join(' ');
   const milestones = e.milestones.map((m) => `<div class="check-item"><span class="check-box ${m.done ? 'done' : ''}">${m.done ? icon('check', 12) : ''}</span><span>${esc(m.label)} <span class="muted">· ${m.done ? 'done' : 'due ' + m.due}</span></span></div>`).join('');
 
@@ -64,6 +66,8 @@ function openEngagement(id) {
     <div class="field"><span class="field-key">Due</span><span class="field-val">${esc(e.dueDate)}</span></div>
     <div class="section-title">Day 0–3 outreach</div><div class="row wrap" style="gap:6px">${outreach}</div>
     <div class="section-title">Milestones</div>${milestones}
+    <div class="section-title">Success stories</div>
+    ${stories.length ? `<div class="col-stack" style="gap:6px">${stories.map((story) => `<button class="btn" data-story-link="${story.id}" style="justify-content:space-between">${esc(story.title)} ${statusPill(story.status)}</button>`).join('')}</div>` : '<div class="muted">No success story is linked to this engagement.</div>'}
     <div class="section-title">AI dispatch</div>
     <div class="row wrap mb8" style="gap:6px">
       <button class="btn sm" id="rec">${icon('sparkle', 14)} Recommend best-fit CSA</button>
@@ -73,6 +77,10 @@ function openEngagement(id) {
 
   openDrawer(`${esc(e.customer)} · ${esc(e.id)}`, body, (dr) => {
     const out = dr.querySelector('#ai-out');
+    dr.querySelectorAll('[data-story-link]').forEach((button) => button.addEventListener('click', () => {
+      closeDrawer();
+      navigate(`/success-stories?q=${encodeURIComponent(button.getAttribute('data-story-link'))}`);
+    }));
     dr.querySelector('#rec').addEventListener('click', () => {
       const r = recommendCSA(e, d);
       out.innerHTML = `<div class="card pad" style="background:var(--bg-2)"><div class="row mb8">${aiChip()}</div><div>${esc(r.text)}</div>

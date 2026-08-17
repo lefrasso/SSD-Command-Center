@@ -124,6 +124,11 @@ export function nlSearch(query, d = store.data) {
   d.csas.forEach((c) => m(`${c.id} ${c.name} ${c.vendor} ${c.skills.join(' ')} ${c.tracks.join(' ')} ${(c.accreditations || []).join(' ')} ${(c.languages || []).join(' ')}`) && hits.push({ entity: 'CSA', key: 'csas', id: c.id, label: c.name, snippet: `${c.vendor} · ${c.tracks.join(', ')}` }));
   d.pods.forEach((p) => m(`${p.id} ${p.name} ${p.region} ${p.leadName}`) && hits.push({ entity: 'POD', key: 'pods', id: p.id, label: p.name, snippet: `${p.region} · lead ${p.leadName}` }));
   d.engagements.forEach((e) => m(`${e.id} ${e.customer} ${e.program} ${e.track} ${e.csamName}`) && hits.push({ entity: 'Engagement', key: 'engagements', id: e.id, label: e.customer, snippet: `${e.program} · ${e.status}` }));
+  d.successStories.forEach((story) => {
+    const engagement = d.engagements.find((item) => item.id === story.engagementId);
+    const searchable = `${story.id} ${story.title} ${story.summary} ${story.keyOutcomes} ${story.insights} ${story.impact} ${story.ownerName} ${story.partnerName} ${story.eventNames.join(' ')} ${story.industry} ${story.segment} ${story.country} ${story.tags.join(' ')} ${engagement?.customer || ''}`;
+    if (m(searchable)) hits.push({ entity: 'Success Story', key: 'successStories', id: story.id, label: story.title, snippet: `${engagement?.customer || story.engagementId} · ${story.status}${story.cpeId ? ' · VSAT' : ''}` });
+  });
   d.escalations.forEach((e) => m(`${e.id} ${e.summary} ${e.adoRef} ${e.severity}`) && hits.push({ entity: 'Escalation', key: 'escalations', id: e.id, label: e.id, snippet: `${e.severity} · ${e.summary}` }));
   return hits.slice(0, 25);
 }
@@ -133,6 +138,8 @@ export function dataQualityFlags(d = store.data) {
   d.engagements.filter((e) => e.status === 'in-delivery' && !e.assignedTo).forEach((e) => flags.push({ severity: 'high', message: `Engagement ${e.id} is in-delivery with no assigned CSA.`, ref: e.id }));
   d.escalations.filter((e) => e.status !== 'resolved' && hoursSince(e.opened) > e.slaHours).forEach((e) => flags.push({ severity: 'high', message: `Escalation ${e.id} is past its ${e.slaHours}h SLA.`, ref: e.id }));
   d.csas.filter((c) => c.lifecycle === 'active' && c.utilization > 95).forEach((c) => flags.push({ severity: 'medium', message: `${c.name} is over-utilized at ${c.utilization}%.`, ref: c.id }));
+  d.successStories.filter((story) => story.status === 'published' && (!story.publishDate || !story.customerQuote)).forEach((story) => flags.push({ severity: 'medium', message: `Published success story ${story.id} is missing publication evidence.`, ref: story.id }));
+  d.cpe.filter((item) => item.class === 'VSAT' && !d.successStories.some((story) => story.cpeId === item.id || story.engagementIds.includes(item.engagementId))).forEach((item) => flags.push({ severity: 'medium', message: `VSAT ${item.id} has no success story or linked story record.`, ref: item.id }));
   d.partners.filter((p) => p.podIds.length === 0).forEach((p) => flags.push({ severity: 'low', message: `Partner ${p.name} has no PODs mapped.`, ref: p.id }));
   return flags;
 }

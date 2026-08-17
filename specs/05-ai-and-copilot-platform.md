@@ -14,8 +14,8 @@
 
 ## 2. AI service catalog
 
-The capabilities the platform must expose (prototype implements each as a deterministic function in
-`scripts/ai.js`; production grounds them on SSD IQ via Azure OpenAI).
+The capabilities the platform must expose (the prototype implements current simulated services in
+`scripts/ai.js`; production seams are grounded on SSD IQ via Azure OpenAI).
 
 | Service | Purpose | Consuming capability |
 |---|---|---|
@@ -24,6 +24,7 @@ The capabilities the platform must expose (prototype implements each as a determ
 | Best-fit CSA recommendation | Rank CSAs for an engagement + rationale | [CAP-04 Dispatch](capabilities/CAP-04-engagements-and-dispatch.md) |
 | Draft outreach | Draft Day-1 outreach email | [CAP-04 Dispatch](capabilities/CAP-04-engagements-and-dispatch.md) |
 | Generate deliverable | Draft a sectioned delivery artifact | [CAP-06 Agentic](capabilities/CAP-06-agentic-delivery.md) |
+| Success-story draft | Draft outcomes/insights/impact from evidence; never generate attributed quotes | [CAP-19 Success Stories](capabilities/CAP-19-success-stories.md) |
 | Quality auto-score | Score vs CPE Recommended Practices | [CAP-12 Quality](capabilities/CAP-12-quality-and-cpe.md) |
 | Classify severity | Suggest escalation severity from text | [CAP-13 Escalations](capabilities/CAP-13-escalations-and-actions.md) |
 | Similar cases | Retrieve similar past escalations | [CAP-13 Escalations](capabilities/CAP-13-escalations-and-actions.md) |
@@ -55,6 +56,7 @@ The capabilities the platform must expose (prototype implements each as a determ
 | Groundedness | Reject/flag ungrounded claims; prefer "insufficient data" over fabrication. |
 | PII | Redact PII in prompts/logs; honour classification. |
 | Fairness | Performance/sentiment AI is advisory; fairness/explainability reviewed. |
+| Attribution | Never synthesize a customer/CSAM quote from recordings; attributed quotes require approved written source text. |
 
 ## 5. Copilot UX
 

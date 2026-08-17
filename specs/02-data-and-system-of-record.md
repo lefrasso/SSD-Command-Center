@@ -24,9 +24,10 @@ Every record carries the **governance envelope**: `sourceOfTruth`, `updatedAt`, 
 | **CSA** (Partner CSA) | `CSA###` | `name`, `alias` (`_DPalias` / `pfeAlias`), `vendor` (Supplier), `partnerId`, `podId`, `tracks[]` (Families), `accreditations[]` (Programs), `primarySkill`, `languages[]`, `skills[]`, `resourceType` (e.g. Contingent Staff), `resourceCitizenship`, `capacity`, `utilization`, `tenureMonths`, `lifecycle`, `esxpProfileCompletion`, `esxpUrl`, `s500Ready`, `s500Reconciled`, `cpe`, `quality`, `sentiment` | Operations / Graph |
 | **POD** | `POD#` | `name`, `leadName` (POD Lead), `csaManager`, `sdmName`, `region`, `tz`, `tzLead`, `tracks[]` (Families), `capacity`, `utilization`, `hcActive`, `hcTarget` | SSD IQ |
 | **Engagement / Request** | `ENG###` | `customer`, `csamName`, `track`, `program`, `deliveryProduct`, `requestTrackingId` (RMOT/SCOP), `rmotStatus`, `assignedTo`, `status`, `dispatchStage`, `outreach{day0..3}`, `milestones[]`, `dueDate`, `firstScheduledArrivalTime`, `laborHours`, `offStrategy`, `edeDeliveryLinkId`, `isTRAI`, `atRisk` | Dispatch / Graph |
+| **Success Story** | `SS###` | `engagementId` (primary), `engagementIds[]`, `cpeId` (optional VSAT), `feedbackSource`, `title`, `headline`, `summary`, `keyOutcomes`, `insights`, `impact`, customer/CSAM quotes + attribution, `family`, `eventNames[]`, `timeZone`, `area`, `country`, `industry`, `segment`, `fiscalYear`, `month`, delivery team, `status` (draft→SDM→POD→leadership→approved→published→archived), `reviewHistory[]`, `ltApproved`, SharePoint publication fields, optional customer logo | SSD IQ |
 | **Delivery** | `DLV###` | `engagementId`, `requestTrackingId`, `type`, `deliveryProduct`, `hours`, `completedDate`, `msQuarter`, `track` | Dispatch / Power BI |
 | **Escalation** | `ESC###` | `engagementId`, `severity` (sev1–4), `category` (Delivery / Quality / Technical / Compliance Issue), `eventName`, `status`, `ownerName`, `submittedByPodLead`, `sdmName`, `adoRef`, `opened`, `escalationDate`, `slaHours`, `actionIds[]`, `summary` | Azure DevOps |
-| **Action Item** | `ACT###` | `escalationId` *or* (`threadId` + `engagementId`), `source` (escalation / message), `title`, `ownerName`, `due`, `status` | Azure DevOps / SSD IQ |
+| **Action Item** | `ACT###` | `escalationId` *or* (`threadId` + `engagementId`) *or* (`cpeId` + `engagementId`), optional `successStoryId`, `source` (escalation / message / success-story), `title`, `ownerName`, `due`, `status` | Azure DevOps / SSD IQ |
 | **CPE Feedback** | `CPE###` | `engagementId`, `requestTrackingId` (RossID), `score` (satisfactionScore 1–5), `class` (VSAT / neutral / DSAT), `track`, `verbatim`, `pfeAlias`, `pfeFullName`, `companyName`, `esxpUrl`, `surveyStatus` (Completed / Unanswered), `date`, `sentiment` | CPE / Forms |
 | **Quality Check** | `QC###` | `podLead`, `csaAlias` (`_DPalias`), `qcCreationDate`, `msQuarter`, `title`, `qcUrl`, `score`, `pass`, `isMock` | SSD IQ (CES Design & Engagement) |
 | **Accreditation** | `ACR###` | `csaId`, `programName` (Professional Service Name), `primarySkill`, `rating` (0–5), `isActive` | Skilling |
@@ -88,6 +89,9 @@ erDiagram
   ESCALATION ||--o{ ACTION : has
   ENGAGEMENT ||--o{ CPE : receives
   ENGAGEMENT ||--o{ DELIVERY : produces
+  ENGAGEMENT ||--o{ SUCCESS_STORY : documents
+  CPE ||--o{ SUCCESS_STORY : "evidences (VSAT)"
+  CPE ||--o{ ACTION : "triggers follow-up"
   ENGAGEMENT ||--o{ MESSAGE : discusses
   ENGAGEMENT ||--o{ QC : "reviewed by"
   CSA ||--o{ ACCREDITATION : holds

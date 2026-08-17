@@ -15,6 +15,8 @@ export const MODULES = [
     description: 'Provider/DP management, onboarding and profiles.', ai: 'Partner scorecards and onboarding tracking.' },
   { id: 'engagements', path: '/engagements', label: 'Engagement Dispatch', icon: 'send', roles: ALL, built: false,
     description: 'Proactive Dispatch and engagement delivery.', ai: 'Best-fit CSA recommendation and outreach drafts.' },
+  { id: 'success-stories', path: '/success-stories', label: 'Success Stories', icon: 'star', roles: ALL, built: true,
+    description: 'Capture, review and publish customer outcomes linked to engagements.', ai: 'Outcome drafting and story-quality guidance.' },
   { id: 'reports-pending', path: '/reports-pending', label: 'Reports Pending', icon: 'clock', roles: ALL, built: true,
     description: 'Overdue delivery reports and T-3W proactive engagement tracking.', ai: 'Pending-report aging and proactive (T-3W) compliance insights.' },
   { id: 'agentic', path: '/agentic', label: 'Agentic Delivery', icon: 'sparkle', roles: ALL, built: true,
