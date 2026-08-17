@@ -78,6 +78,13 @@ Each contract specifies: **entities**, **operations**, **auth**, **sync pattern*
 - **Auth:** restricted service identity; access-logged; classification enforced.
 - **Pattern:** on-demand, gated by `view:pip`.
 
+### Azure AI Language + Translator
+- **Operations:** score eligible CPE/Teams/escalation text on the seven-level sentiment scale, return
+  confidence and topics, detect language, and translate supported non-English content before scoring.
+- **Controls:** unsupported languages remain unscored; translated text is minimized; source language,
+  model/version and confidence are retained; alerts remain advisory.
+- **Pattern:** event-driven on new/updated interaction, with governed reprocessing after model changes.
+
 ### Azure OpenAI + retrieval
 - **Operations:** chat/completions + embeddings; retrieval over SSD IQ; content safety.
 - **Pattern:** per-request via the AI Services seam. See [05](05-ai-and-copilot-platform.md).

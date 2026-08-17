@@ -27,12 +27,13 @@ Every record carries the **governance envelope**: `sourceOfTruth`, `updatedAt`, 
 | **Success Story** | `SS###` | `engagementId` (primary), `engagementIds[]`, `cpeId` (optional VSAT), `feedbackSource`, `title`, `headline`, `summary`, `keyOutcomes`, `insights`, `impact`, customer/CSAM quotes + attribution, `family`, `eventNames[]`, `timeZone`, `area`, `country`, `industry`, `segment`, `fiscalYear`, `month`, delivery team, `status` (draft→SDM→POD→leadership→approved→published→archived), `reviewHistory[]`, `ltApproved`, SharePoint publication fields, optional customer logo | SSD IQ |
 | **Delivery** | `DLV###` | `engagementId`, `requestTrackingId`, `type`, `deliveryProduct`, `hours`, `completedDate`, `msQuarter`, `track` | Dispatch / Power BI |
 | **Escalation** | `ESC###` | `engagementId`, `severity` (sev1–4), `category` (Delivery / Quality / Technical / Compliance Issue), `eventName`, `status`, `ownerName`, `submittedByPodLead`, `sdmName`, `adoRef`, `opened`, `escalationDate`, `slaHours`, `actionIds[]`, `summary` | Azure DevOps |
-| **Action Item** | `ACT###` | `escalationId` *or* (`threadId` + `engagementId`) *or* (`cpeId` + `engagementId`), optional `successStoryId`, `source` (escalation / message / success-story), `title`, `ownerName`, `due`, `status` | Azure DevOps / SSD IQ |
+| **Action Item** | `ACT###` | `escalationId` *or* (`threadId` + `engagementId`) *or* (`cpeId` + `engagementId`) *or* (`sentimentSignalId` + `engagementId`), optional `successStoryId`, `source` (escalation / message / success-story / sentiment), `title`, `ownerName`, `due`, `status` | Azure DevOps / SSD IQ |
 | **CPE Feedback** | `CPE###` | `engagementId`, `requestTrackingId` (RossID), `score` (satisfactionScore 1–5), `class` (VSAT / neutral / DSAT), `track`, `verbatim`, `pfeAlias`, `pfeFullName`, `companyName`, `esxpUrl`, `surveyStatus` (Completed / Unanswered), `date`, `sentiment` | CPE / Forms |
 | **Quality Check** | `QC###` | `podLead`, `csaAlias` (`_DPalias`), `qcCreationDate`, `msQuarter`, `title`, `qcUrl`, `score`, `pass`, `isMock` | SSD IQ (CES Design & Engagement) |
 | **Accreditation** | `ACR###` | `csaId`, `programName` (Professional Service Name), `primarySkill`, `rating` (0–5), `isActive` | Skilling |
 | **Message** | `MSG###` | `threadId`, `engagementId`, `from`, `to`, `body`, `timestamp`, `sentiment` | Graph / Teams |
 | **PIP** (confidential) | `PIP###` | `csaId`, `status`, `opened`, `objectives[]`, `checkIns[]`, `outcome` | Confidential / HR |
+| **Sentiment Signal** | `SIG####` | `engagementId`, `sourceId`, `customer`, `partnerId`, `channel`, `timestamp`, `text`, `score` (-1..1), `level` (seven intensities), `confidence`, `language`, `translated`, `themes[]`, `alertStatus`, acknowledgement metadata | AI Services |
 | **Sentiment Rollup** | `SEN###` | `scope`, `scopeType` (partner/track), `period`, `net`, `positive`, `neutral`, `negative`, `themes[]` | AI Services |
 | **Requisition** (hiring) | `REQ###` | `family`, `partnerId`, `podId`, `region`, `tz`, `type` (Growth/Backfill), `stage` (Sourcing→Screening→Interview→Offer→Hired), `opened`, `targetStart`, `hiredDate`, `source` | HC Consolidation (Power BI) |
 | **Financial** | `FIN###` | `period`, `scope` (Success Programs/Success Services), `category`, `budget`, `actual`, `forecast`, `variance`, `status` | Finance / Power BI |
@@ -47,12 +48,13 @@ Every record carries the **governance envelope**: `sourceOfTruth`, `updatedAt`, 
   - **Cloud Deployment:** MACC, AIR, Cloud Modernization, GitHub Copilot.
   - **Foundations:** UfP, UO — Onboarding, OU — DMIRP, OU — Capability Briefing AI Innovation, OU —
     Capability Briefing Resiliency and Security, OU — Capability Briefing Cloud Success.
-- **Delivery languages by time zone:** Americas — English, Spanish, Portuguese, French · EMEA — English,
+- **Delivery languages by time zone:** ATZ — English, Spanish, Portuguese, French · EMEA — English,
   Spanish, Portuguese, French, Arabic, German · ASIA — English, Japanese, Mandarin, Korean. A CSA can
   deliver in **any territory**; language (not location) is the coverage constraint.
 - **Org hierarchy:** WW Lead → TZ Lead → CSA Manager → POD Lead (multiple POD Leads per Territory/OU);
-  each POD has multiple Partner CSAs.
-- **Regions → Time Zones:** Americas (North America, LATAM) · EMEA (Iberia, UKI, DACH, Nordics, France,
+  each POD has multiple Partner CSAs. Prototype operating scale: **34 POD Leads/PODs** distributed
+  **ATZ 15, EMEA 12, ASIA 7**, with **202 FTC records** plus a small internal FTE cohort.
+- **Regions → Time Zones:** ATZ (North America, LATAM) · EMEA (Iberia, UKI, DACH, Nordics, France,
   Italy) · ASIA (India, ANZ). **US territories additionally roll up to OUs** (see [CAP-17](capabilities/CAP-17-reporting-and-mbr.md)).
 - **CSA lifecycle states:** sourcing → selection → onboarding → active → offboarding.
 - **Severity → SLA:** sev1 = 8h, sev2 = 24h, sev3 = 48h, sev4 = 72h.
@@ -94,6 +96,7 @@ erDiagram
   ENGAGEMENT ||--o{ SUCCESS_STORY : documents
   CPE ||--o{ SUCCESS_STORY : "evidences (VSAT)"
   CPE ||--o{ ACTION : "triggers follow-up"
+  ENGAGEMENT ||--o{ SENTIMENT_SIGNAL : "has scored interactions"
   ENGAGEMENT ||--o{ MESSAGE : discusses
   ENGAGEMENT ||--o{ QC : "reviewed by"
   CSA ||--o{ ACCREDITATION : holds

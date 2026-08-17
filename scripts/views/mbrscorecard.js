@@ -187,6 +187,8 @@ export function renderMbrScorecard(container) {
 function renderOverview(host, c) {
   const statuses = health(c);
   const activePartners = new Set(c.activeCsas.map((item) => item.partnerId)).size;
+  const recentPeriods = c.periods.slice(-5);
+  const fiveMonthDeliveries = c.d.deliveries.filter((item) => recentPeriods.includes(item.completedDate.slice(0, 7))).length;
   const insights = [
     c.deliveryChange == null ? `${c.currentDeliveries.length} deliveries completed in the selected period.` : `Delivery volume is ${trendText(c.deliveryChange)} with ${c.currentDeliveries.length} completed.`,
     c.vsatRate >= 75 ? `VSAT is above the 75% leadership target at ${c.vsatRate}%.` : `VSAT is ${c.vsatRate}% and needs a recovery plan toward the 75% target.`,
@@ -196,6 +198,7 @@ function renderOverview(host, c) {
     <div class="row wrap mb8" style="justify-content:space-between"><div><strong class="mbr-section-title">Executive Summary & SSD Scorecard</strong><div class="muted">Execution, readiness, quality, budget, and overall health.</div></div>${aiChip('Data-driven insights')}</div>
     <div class="mbr-rag-grid">${statuses.map((status) => `<div class="mbr-rag-card" style="border-top-color:${status.color}"><span class="mbr-rag-dot" style="background:${status.color}"></span><strong>${status.label}</strong><span style="color:${status.color};font-weight:700">${status.level.toUpperCase()}</span><small>${esc(status.detail)}</small></div>`).join('')}</div>
     <div class="kpi-grid">
+      ${kpiCard({ label: '5-month deliveries', value: fiveMonthDeliveries, iconName: 'check', hint: recentPeriods.map(periodLabel).join(' · ') })}
       ${kpiCard({ label: 'Active delivery partners', value: activePartners, iconName: 'building', hint: `${c.activeCsas.length} active resources` })}
       ${kpiCard({ label: 'CPE / VSAT', value: `${c.avgCpe.toFixed(2)} / ${c.vsatRate}%`, iconName: 'star', tone: scoreColor(c.avgCpe), hint: `${c.currentCpe.length} responses` })}
       ${kpiCard({ label: 'Accreditations', value: c.accreditationCount, iconName: 'flag', hint: `${c.accreditedRate}% of active resources accredited` })}
@@ -212,6 +215,9 @@ function renderOverview(host, c) {
 }
 
 function renderExecution(host, c) {
+  const recentPeriods = c.periods.slice(-5);
+  const recentDeliveryValues = recentPeriods.map((period) => c.d.deliveries.filter((item) => c.engagementIds.has(item.engagementId) && item.completedDate.startsWith(period)).length);
+  const fiveMonthDeliveries = recentDeliveryValues.reduce((sum, value) => sum + value, 0);
   const currentByTrack = TRACKS.map((track) => c.currentDeliveries.filter((item) => item.track === track).length);
   const previousByTrack = TRACKS.map((track) => c.previousDeliveries.filter((item) => item.track === track).length);
   const tzs = Object.keys(TZ_MAP);
@@ -230,9 +236,10 @@ function renderExecution(host, c) {
     <div class="kpi-grid">
       ${kpiCard({ label: 'Staffing requests', value: c.engagements.length, iconName: 'send', hint: 'Created demand in scope' })}
       ${kpiCard({ label: 'Dispatched', value: dispatched, iconName: 'check', hint: `${pct(dispatched, c.engagements.length)}% of requests` })}
-      ${kpiCard({ label: 'Completed this period', value: c.currentDeliveries.length, iconName: 'check', tone: c.deliveryChange != null && c.deliveryChange < 0 ? COLORS.warning : COLORS.positive, hint: trendText(c.deliveryChange) })}
+      ${kpiCard({ label: 'Completed this period', value: c.currentDeliveries.length, iconName: 'check', tone: c.deliveryChange != null && c.deliveryChange < 0 ? COLORS.warning : COLORS.positive, hint: `${trendText(c.deliveryChange)} · ${fiveMonthDeliveries} over 5 months` })}
       ${kpiCard({ label: 'Reports pending', value: c.pending.length, iconName: 'clock', tone: c.pending.length ? COLORS.negative : COLORS.positive, hint: `${overdue14} over 14 days` })}
     </div>
+    <div class="card chart-card mb16"><div class="chart-head"><strong>Engagements delivered — last 5 months</strong>${badge(`${fiveMonthDeliveries} total`, 'tint-info')}</div><div class="chart-holder" style="height:230px"><canvas id="mbr-ex-trend"></canvas></div></div>
     <div class="two-col">
       <div class="card chart-card"><div class="chart-head"><strong>Delivery mix by Family</strong></div><div class="chart-holder" style="height:230px"><canvas id="mbr-ex-family"></canvas></div></div>
       <div class="card chart-card"><div class="chart-head"><strong>Delivery performance by geography</strong></div><div class="chart-holder" style="height:230px"><canvas id="mbr-ex-geo"></canvas></div></div>
@@ -250,11 +257,14 @@ function renderExecution(host, c) {
         ${c.pending.slice().sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 10).map((engagement) => `<tr><td><strong>${esc(engagement.customer)}</strong></td><td>${esc(engagement.track)} · ${esc(engagement.program)}</td><td>${esc(metaOf(engagement).tz)}</td><td>${engagement.dueDate}</td><td class="${daysOverdue(engagement.dueDate) > 14 ? 'due-over' : ''}">${daysOverdue(engagement.dueDate)}d</td><td>${engagement.atRisk ? 'At-risk delivery' : 'Delivery running late'}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">No pending reports.</td></tr>'}
       </tbody></table></div>
     </div>`;
+  bar(host.querySelector('#mbr-ex-trend'), { labels: recentPeriods.map(periodLabel), values: recentDeliveryValues, color: COLORS.brand, label: 'Completed' });
   bar(host.querySelector('#mbr-ex-family'), { labels: TRACKS, values: currentByTrack, color: COLORS.brand, label: 'Completed' });
   bar(host.querySelector('#mbr-ex-geo'), { labels: tzs, values: currentByTz, color: '#6b69d6', label: 'Completed' });
 }
 
 function renderReadiness(host, c) {
+  const ftcCount = c.d.csas.filter((item) => item.resourceType === 'FTC').length;
+  const podLeadCounts = Object.fromEntries(Object.keys(TZ_MAP).map((timeZone) => [timeZone, new Set(c.d.pods.filter((pod) => pod.tz === timeZone).map((pod) => pod.leadName)).size]));
   const openAge = c.hiring.length ? Math.round(c.hiring.reduce((sum, item) => sum + daysOverdue(item.opened), 0) / c.hiring.length) : 0;
   const offboarding = c.d.csas.filter((item) => item.lifecycle === 'offboarding' && (selectedPartner === 'All' || item.partnerId === selectedPartner)).length;
   const partners = c.d.partners.map((partner) => {
@@ -274,6 +284,8 @@ function renderReadiness(host, c) {
   host.innerHTML = `
     <div class="row wrap mb8" style="justify-content:space-between"><div><strong class="mbr-section-title">Readiness</strong><div class="muted">Capacity, staffing, attrition, accreditation, and enablement coverage.</div></div><button class="btn sm" data-nav="/capacity">Capacity Management</button></div>
     <div class="kpi-grid">
+      ${kpiCard({ label: 'FTC workforce', value: ftcCount, iconName: 'people', hint: 'All lifecycle stages' })}
+      ${kpiCard({ label: 'POD Leads', value: c.d.pods.length, iconName: 'people', hint: Object.entries(podLeadCounts).map(([timeZone, count]) => `${timeZone} ${count}`).join(' · ') })}
       ${kpiCard({ label: 'Active resources', value: c.activeCsas.length, iconName: 'people', hint: `${partners.length} delivery partners` })}
       ${kpiCard({ label: 'Utilization', value: `${c.utilization}%`, iconName: 'trending', tone: utilColor(c.utilization), hint: 'Healthy band 80–90%' })}
       ${kpiCard({ label: 'Open roles', value: c.hiring.length, iconName: 'personAdd', hint: `Avg open age ${openAge}d` })}

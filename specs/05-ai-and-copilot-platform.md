@@ -33,6 +33,7 @@ The capabilities the platform must expose (the prototype implements current simu
 | Suggest reply / tone check / thread summary | Message assistance | [CAP-16 Messages](capabilities/CAP-16-messages-console.md) |
 | Performance summary (advisory) | Evidence-linked CSA summary | [CAP-14 Performance](capabilities/CAP-14-performance-and-pips.md) |
 | MBR narrative / executive summary | Partner + internal MBR text | [CAP-17 Reporting](capabilities/CAP-17-reporting-and-mbr.md) |
+| Seven-level sentiment scoring | Score interactions with intensity, confidence, language and themes | [CAP-15 Sentiment](capabilities/CAP-15-sentiment.md) |
 | Early warnings | Detect negative-sentiment concentration | [CAP-15 Sentiment](capabilities/CAP-15-sentiment.md) |
 | NL record search + data-quality flags | Search + integrity checks | [CAP-03 SSD IQ](capabilities/CAP-03-ssd-iq-explorer.md) |
 | Onboarding readiness / offboarding risk | Lifecycle insight | [CAP-09 Lifecycle](capabilities/CAP-09-partner-csa-lifecycle.md) |

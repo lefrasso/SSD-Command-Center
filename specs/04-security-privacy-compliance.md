@@ -71,6 +71,8 @@ AI is woven throughout Compass but always **in a supporting role**:
 
 - **Minimise PII**; mask where feasible; encrypt in transit and at rest.
 - **Purpose limitation** for message/verbatim analysis (sentiment) per workplace data-use policy.
+- Sentiment translation/scoring must not retain unnecessary translated text; preserve source language,
+  confidence and model provenance, and expose unsupported/unscored states rather than fabricating a score.
 - **Retention** policies per data class; right-to-be-forgotten handling for personnel data.
 - **No real personal data of Partner CSAs** in non-production; illustrative names are fictional (the
   prototype uses vanity names — see [ADR-005](09-design-decisions-and-learnings.md)).

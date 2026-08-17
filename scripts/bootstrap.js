@@ -136,7 +136,7 @@ function renderView() {
     case 'escalations': renderEscalations(view); break;
     case 'performance': can(store.role, 'view:pip') ? renderPerformance(view) : renderPlaceholder(view, mod, true); break;
     case 'reporting': renderReporting(view); break;
-    case 'sentiment': renderSentiment(view); break;
+    case 'sentiment': renderSentiment(view, params.get('tab')); break;
     case 'ssdiq': renderSsdIq(view, params.get('q') || ''); break;
     case 'capabilities': renderCapabilities(view); break;
     case 'agentic': renderAgentic(view); break;

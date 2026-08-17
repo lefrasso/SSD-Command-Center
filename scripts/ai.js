@@ -109,10 +109,25 @@ export function askData(question, d = store.data) {
 }
 
 export function earlyWarnings(d = store.data) {
-  const negative = d.cpe.filter((c) => c.sentiment === 'negative');
-  const byTrack = negative.reduce((acc, c) => { acc[c.track] = (acc[c.track] || 0) + 1; return acc; }, {});
-  const worst = Object.entries(byTrack).sort((a, b) => b[1] - a[1])[0];
-  return { text: worst ? `Early warning: negative sentiment concentrating in ${worst[0]} (${worst[1]} signals). Correlate with open escalations before it affects CPE.` : 'No negative sentiment concentrations detected this period.', sources: negative.slice(0, 3).map((c) => ({ id: c.id, label: c.engagementId })), generatedAt: now() };
+  const signals = d.sentimentSignals || [];
+  const negative = signals.filter((signal) => signal.score <= -0.4);
+  const themeCounts = negative.flatMap((signal) => signal.themes).reduce((acc, theme) => { acc[theme] = (acc[theme] || 0) + 1; return acc; }, {});
+  const worstTheme = Object.entries(themeCounts).sort((a, b) => b[1] - a[1])[0];
+  const byEngagement = new Map();
+  signals.forEach((signal) => {
+    const items = byEngagement.get(signal.engagementId) || [];
+    items.push(signal);
+    byEngagement.set(signal.engagementId, items);
+  });
+  const rapidDeclines = [...byEngagement.values()].filter((items) => {
+    const sorted = items.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    return sorted.length > 1 && sorted[0].score - sorted[1].score < -0.35;
+  }).length;
+  const critical = negative.filter((signal) => signal.score <= -0.75 && signal.alertStatus === 'open').length;
+  const text = negative.length
+    ? `Early warning: ${negative.length} negative/very-negative signals${worstTheme ? `, led by ${worstTheme[0]} (${worstTheme[1]})` : ''}. ${critical} critical alerts are open and ${rapidDeclines} engagements show a rapid decline.`
+    : 'No negative sentiment concentrations detected in the selected scope.';
+  return { text, sources: negative.slice(0, 3).map((signal) => ({ id: signal.id, label: signal.customer })), generatedAt: now() };
 }
 
 export function nlSearch(query, d = store.data) {
@@ -131,6 +146,7 @@ export function nlSearch(query, d = store.data) {
   });
   d.financials.forEach((item) => m(`${item.id} ${item.period} ${item.scope} ${item.category} ${item.status}`) && hits.push({ entity: 'Financial', key: 'financials', id: item.id, label: `${item.scope} · ${item.category}`, snippet: `${item.period} · ${item.status}` }));
   d.initiatives.forEach((item) => m(`${item.id} ${item.name} ${item.type} ${item.area} ${item.stage} ${item.ownerName} ${item.status} ${item.impact} ${item.nextStep}`) && hits.push({ entity: 'Strategy / IP', key: 'initiatives', id: item.id, label: item.name, snippet: `${item.type} · ${item.stage} · ${item.status}` }));
+  d.sentimentSignals.forEach((signal) => m(`${signal.id} ${signal.customer} ${signal.engagementId} ${signal.sourceId} ${signal.channel} ${signal.level} ${signal.language} ${signal.themes.join(' ')} ${signal.text}`) && hits.push({ entity: 'Sentiment Signal', key: 'sentimentSignals', id: signal.id, label: `${signal.customer} · ${signal.level}`, snippet: `${signal.channel} · ${signal.language} · ${signal.alertStatus}` }));
   d.escalations.forEach((e) => m(`${e.id} ${e.summary} ${e.adoRef} ${e.severity}`) && hits.push({ entity: 'Escalation', key: 'escalations', id: e.id, label: e.id, snippet: `${e.severity} · ${e.summary}` }));
   return hits.slice(0, 25);
 }
@@ -141,9 +157,12 @@ export function dataQualityFlags(d = store.data) {
   d.escalations.filter((e) => e.status !== 'resolved' && hoursSince(e.opened) > e.slaHours).forEach((e) => flags.push({ severity: 'high', message: `Escalation ${e.id} is past its ${e.slaHours}h SLA.`, ref: e.id }));
   d.csas.filter((c) => c.lifecycle === 'active' && c.utilization > 95).forEach((c) => flags.push({ severity: 'medium', message: `${c.name} is over-utilized at ${c.utilization}%.`, ref: c.id }));
   d.successStories.filter((story) => story.status === 'published' && (!story.publishDate || !story.customerQuote)).forEach((story) => flags.push({ severity: 'medium', message: `Published success story ${story.id} is missing publication evidence.`, ref: story.id }));
-  d.cpe.filter((item) => item.class === 'VSAT' && !d.successStories.some((story) => story.cpeId === item.id || story.engagementIds.includes(item.engagementId))).forEach((item) => flags.push({ severity: 'medium', message: `VSAT ${item.id} has no success story or linked story record.`, ref: item.id }));
+  const uncoveredVsats = d.cpe.filter((item) => item.class === 'VSAT' && !d.successStories.some((story) => story.cpeId === item.id || story.engagementIds.includes(item.engagementId)));
+  if (uncoveredVsats.length) flags.push({ severity: 'medium', message: `${uncoveredVsats.length} VSAT engagements have no linked success story.`, ref: uncoveredVsats[0].id });
   d.financials.filter((item) => item.status === 'over-plan').forEach((item) => flags.push({ severity: 'medium', message: `${item.scope} ${item.category} is over plan for ${item.period}.`, ref: item.id }));
   d.initiatives.filter((item) => item.status === 'watch').forEach((item) => flags.push({ severity: 'low', message: `Initiative ${item.name} is on watch (${item.targetRelease}).`, ref: item.id }));
+  const criticalSentiment = d.sentimentSignals.filter((signal) => signal.score <= -0.75 && signal.alertStatus === 'open');
+  if (criticalSentiment.length) flags.push({ severity: 'high', message: `${criticalSentiment.length} very-negative sentiment alerts require acknowledgement.`, ref: criticalSentiment[0].id });
   d.partners.filter((p) => p.podIds.length === 0).forEach((p) => flags.push({ severity: 'low', message: `Partner ${p.name} has no PODs mapped.`, ref: p.id }));
   return flags;
 }

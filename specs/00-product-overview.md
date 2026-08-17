@@ -44,7 +44,8 @@ console and an AI layer, all reading/writing a governed **SSD IQ**.
 The SSD delivery line is a **hierarchy**: **WW Lead → TZ Lead → CSA Manager → POD Lead**, with
 **multiple POD Leads per Territory/OU**. Each POD contains multiple **Partner CSAs** who deliver. A
 person in one POD can deliver in **any territory** — there is no territory restriction; language is the
-real constraint.
+real constraint. The prototype models **202 FTCs** and **34 POD Leads/PODs**: **ATZ 15, EMEA 12,
+ASIA 7**.
 
 Compass serves **eleven personas** across three orgs:
 
@@ -84,7 +85,7 @@ the service / event**; each Program maps 1:1 to an **accreditation**. Families a
 **Health** (ESA, Azure, M365, D365, Crisis Management — DMIRP / Azure Sim / M365 Sim / Security / D365
 Sim), **AI Innovation** (Adoption, Secure Copilot, Agents), **Cloud Deployment** (MACC, AIR, Cloud
 Modernization, GitHub Copilot), **Foundations** (UfP, UO — Onboarding, OU — DMIRP, OU — Capability
-Briefings). **Delivery languages by time zone:** Americas (ATZ) — English, Spanish, Portuguese, French;
+Briefings). **Delivery languages by time zone:** ATZ — English, Spanish, Portuguese, French;
 EMEA — + Arabic, German; ASIA — English, Japanese, Mandarin, Korean. Experience is measured through
 **CPE** (Customer & Partner Experience) with a Proactive Delivery **CPE Recommended Practices**
 checklist. The governance heartbeat is the **Delivery Partner MBR** (per partner, per period) plus the
@@ -138,7 +139,7 @@ Full catalog with formulas in [07 — KPIs & Reporting](07-kpis-and-reporting.md
 | SSD IQ | The governed System of Records — single source of truth. |
 | Partner CSA | Partner Cloud Solution Architect delivering engagements. |
 | POD | Managed group of Partner CSAs led by a POD Lead, mapped to region/TZ. |
-| Time Zone (TZ) | Americas / EMEA / ASIA — global rollup of regions. |
+| Time Zone (TZ) | ATZ / EMEA / ASIA — global rollup of regions. |
 | OU | US Organizational Unit — inclusive US territory grouping. |
 | Family (Track) | The family of services: Health, AI Innovation, Cloud Deployment, Foundations. |
 | Program | The service / event delivered (e.g. ESA, MACC, Adoption). Maps 1:1 to an accreditation. |

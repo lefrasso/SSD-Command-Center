@@ -3,7 +3,7 @@
 export const PERSONAS = {
   // SSD (Microsoft): WW Lead → TZ Lead → CSA Manager → POD Lead
   'ww-lead': { role: 'ww-lead', name: 'Jordan Pierce', title: 'Worldwide Lead · SSD', initials: 'JP', color: '#5c2e91', org: 'SSD', scope: 'Global portfolio, CPE & delivery trends, sentiment, MBR roll-ups.' },
-  'tz-lead': { role: 'tz-lead', name: 'Morgan Reyes', title: 'TZ Lead · Americas', initials: 'MR', color: '#0f6cbd', org: 'SSD', scope: 'Territory portfolio and operations across the time zone / OUs.' },
+  'tz-lead': { role: 'tz-lead', name: 'Morgan Reyes', title: 'TZ Lead · ATZ', initials: 'MR', color: '#0f6cbd', org: 'SSD', scope: 'Territory portfolio and operations across the time zone / OUs.' },
   'csa-manager': { role: 'csa-manager', name: 'Devin Cole', title: 'CSA Manager · EMEA', initials: 'DC', color: '#6b69d6', org: 'SSD', scope: 'Manages POD Leads; dispatch, capacity, escalations, performance.' },
   'pod-lead': { role: 'pod-lead', name: 'Sam Okoro', title: 'POD Lead · EMEA', initials: 'SO', color: '#2aa0a4', org: 'SSD', scope: 'Runs a POD, dispatches, coaches, owns escalations, PIPs & MBRs.' },
   'business-manager': { role: 'business-manager', name: 'Robin Ellis', title: 'Business Manager · SSD', initials: 'RE', color: '#bc4b09', org: 'SSD', scope: 'Business operations, planning and portfolio roll-ups.' },

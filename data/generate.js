@@ -50,10 +50,15 @@ const LAST = ['Rossi','Kaur','Novak','García','Müller','Silva','Haddad','Chen'
 const CUSTOMERS = ['Northwind Traders','Contoso','Fabrikam','Adventure Works','Tailwind Traders','Wingtip Toys','Proseware','Litware','Fourth Coffee','Graphic Design Institute','Alpine Ski House','Coho Vineyard','Lucerne Publishing',"Margie's Travel",'Trey Research','VanArsdel','WideWorld Importers','Blue Yonder','Woodgrove Bank','Relecloud'];
 const CSAMS = ['Julia Meyer','Tom Baker','Sara Lind','Marcus Webb','Elif Demir','Paulo Neto','Hannah Ross','Ken Adachi','Bea Fontana','Ivan Petrov'];
 const SDMS = ['Priya Nair','Kenji Watanabe','Laura Bianchi','Mohammed Ali','Grace Park','Tomás Herrera'];
-const POD_LEADS = ['Nils Berg','Amara Blake','Viktor Petrov','Rosa Mendes','Daniel Kim','Chiara Romano','Felix Wagner','Nadia Hassan','Oscar Lund','Meera Shah'];
+const POD_LEADS = [
+  'Nils Berg','Amara Blake','Viktor Petrov','Rosa Mendes','Daniel Kim','Chiara Romano','Felix Wagner','Nadia Hassan','Oscar Lund','Meera Shah',
+  'Maya Chen','Ethan Brooks','Leila Haddad','Tomas Silva','Ingrid Novak','Kenji Mori','Amina Yusuf','Luca Bianchi','Sofia Alvarez','Noah Fischer',
+  'Priya Desai','Hugo Martin','Elena Popov','Marcus Lee','Freya Olsen','Ravi Menon','Chloe Laurent','Diego Santos','Nina Kowalski','Omar Farouk',
+  'Yuki Tanaka','Pablo Costa','Lena Schmidt','Sami Rahman',
+];
 // CSA Managers sit between the TZ Lead and the POD Leads; multiple POD Leads report to a Manager per time zone.
 const TZ_MANAGERS = {
-  Americas: ['Devin Cole', 'Hana Kim'],
+  ATZ: ['Devin Cole', 'Hana Kim'],
   EMEA: ['Bruno Alves', 'Greta Roth'],
   ASIA: ['Amir Khan', 'Lena Vogt'],
 };
@@ -61,7 +66,7 @@ const SKILLS = ['Azure Migrate','Landing Zones','FinOps','Security Copilot','Sen
 const REGIONS = ['Iberia','UKI','DACH','Nordics','France','Italy','North America','LATAM','India','ANZ'];
 // SSD leadership org — fictional vanity names for the prototype. Regions roll up to time zones.
 export const TZ_MAP = {
-  Americas: { lead: 'Morgan Reyes', regions: ['North America', 'LATAM'] },
+  ATZ: { lead: 'Morgan Reyes', regions: ['North America', 'LATAM'] },
   EMEA: { lead: 'Alex Navarro', regions: ['Iberia', 'UKI', 'DACH', 'Nordics', 'France', 'Italy'] },
   ASIA: { lead: 'Kai Lin', regions: ['India', 'ANZ'] },
 };
@@ -69,7 +74,7 @@ export const LEADERSHIP = {
   wwLead: 'Jordan Pierce',
   businessManager: 'Robin Ellis',
   timeZones: [
-    { tz: 'Americas', lead: 'Morgan Reyes' },
+    { tz: 'ATZ', lead: 'Morgan Reyes' },
     { tz: 'EMEA', lead: 'Alex Navarro' },
     { tz: 'ASIA', lead: 'Kai Lin' },
   ],
@@ -80,7 +85,7 @@ export function tzForRegion(region) {
 }
 // Delivery languages supported per time zone. A CSA can deliver in any territory; language is the real constraint.
 export const TZ_LANGUAGES = {
-  Americas: ['English', 'Spanish', 'Portuguese', 'French'],
+  ATZ: ['English', 'Spanish', 'Portuguese', 'French'],
   EMEA: ['English', 'Spanish', 'Portuguese', 'French', 'Arabic', 'German'],
   ASIA: ['English', 'Japanese', 'Mandarin', 'Korean'],
 };
@@ -131,6 +136,15 @@ function fullName(used) {
   return `${pick(FIRST)} ${pick(LAST)} ${used.size}`;
 }
 function sentimentFromScore(score) { return score >= 4.3 ? 'positive' : score >= 3.6 ? 'neutral' : 'negative'; }
+function sentimentLevel(score) {
+  if (score >= 0.75) return 'very-positive';
+  if (score >= 0.4) return 'positive';
+  if (score >= 0.15) return 'slightly-positive';
+  if (score > -0.15) return 'neutral';
+  if (score > -0.4) return 'slightly-negative';
+  if (score > -0.75) return 'negative';
+  return 'very-negative';
+}
 
 function build() {
   const PARTNER_DEFS = [
@@ -138,14 +152,22 @@ function build() {
     { name: 'Cognizant' }, { name: 'Penta' }, { name: 'HCL' },
   ];
 
-  const pods = REGIONS.map((region, i) => {
-    const { tz, lead: tzLead } = tzForRegion(region);
-    const mgrs = TZ_MANAGERS[tz] || [tzLead];
-    return {
-      id: `POD${i + 1}`, name: `POD ${region}`, leadName: POD_LEADS[i % POD_LEADS.length], csaManager: mgrs[i % mgrs.length], region, tz, tzLead,
-      tracks: pickN(TRACKS, int(2, 3)), capacity: int(24, 40), utilization: int(76, 92), ...gov('SSD IQ'),
-    };
-  });
+  const podTargets = { ATZ: 15, EMEA: 12, ASIA: 7 };
+  const pods = [];
+  for (const [tz, count] of Object.entries(podTargets)) {
+    const { lead: tzLead, regions } = TZ_MAP[tz];
+    const managers = TZ_MANAGERS[tz];
+    for (let i = 0; i < count; i++) {
+      const podIndex = pods.length;
+      const region = regions[i % regions.length];
+      const podNumber = Math.floor(i / regions.length) + 1;
+      pods.push({
+        id: `POD${String(podIndex + 1).padStart(2, '0')}`, name: `POD ${region} ${String(podNumber).padStart(2, '0')}`,
+        leadName: POD_LEADS[podIndex], csaManager: managers[i % managers.length], region, tz, tzLead,
+        tracks: pickN(TRACKS, int(2, 3)), capacity: int(24, 40), utilization: int(76, 92), ...gov('SSD IQ'),
+      });
+    }
+  }
 
   const partners = PARTNER_DEFS.map((def, i) => ({
     id: `P${i + 1}`, name: def.name, type: 'Delivery Partner', region: pick(REGIONS),
@@ -155,7 +177,9 @@ function build() {
 
   const usedNames = new Set();
   const csas = [];
-  for (let i = 0; i < 48; i++) {
+  const FTC_COUNT = 202;
+  const FTE_COUNT = 24;
+  for (let i = 0; i < FTC_COUNT + FTE_COUNT; i++) {
     const partner = pick(partners);
     const pod = pick(pods);
     const tracks = pickN(pod.tracks, int(1, pod.tracks.length));
@@ -163,7 +187,7 @@ function build() {
     const accreditations = pickN(trackPrograms, Math.min(trackPrograms.length, int(2, 5)));
     const tzLangs = TZ_LANGUAGES[pod.tz] || ALL_LANGUAGES;
     const languages = pickN(tzLangs, int(1, 3));
-    const resourceType = weighted([['FTC', 0.6], ['FTE', 0.4]]);
+    const resourceType = i < FTC_COUNT ? 'FTC' : 'FTE';
     const utilization = clamp(Math.round(84 + (rng() - 0.5) * 26), 62, 98);
     const cpe = round1(clamp(3.9 + rng() * 0.9, 1, 5));
     const quality = round1(clamp(3.7 + rng() * 1.1, 1, 5));
@@ -193,9 +217,11 @@ function build() {
   const csasForTrack = (t) => activeCsas.filter((c) => c.tracks.includes(t));
 
   const engagements = [];
-  for (let i = 0; i < 82; i++) {
+  const COMPLETED_ENGAGEMENTS = 1300;
+  const PIPELINE_ENGAGEMENTS = 120;
+  for (let i = 0; i < COMPLETED_ENGAGEMENTS + PIPELINE_ENGAGEMENTS; i++) {
     const track = pick(TRACKS);
-    const status = weighted([['new', 0.15], ['assigned', 0.2], ['in-delivery', 0.4], ['complete', 0.25]]);
+    const status = i < COMPLETED_ENGAGEMENTS ? 'complete' : weighted([['new', 0.25], ['assigned', 0.3], ['in-delivery', 0.45]]);
     const pool = csasForTrack(track);
     const assignee = status === 'new' || pool.length === 0 ? null : pick(pool);
     const dispatchStage = status === 'new' ? 'Day 0' : status === 'assigned' ? pick(['Day 0', 'Day 1', 'Day 2', 'Day 3']) : 'engaged';
@@ -207,7 +233,7 @@ function build() {
       day3: engaged ? chance(0.85) : dispatchStage === 'Day 3' && chance(0.4),
     };
     const complete = status === 'complete';
-    const dueOffset = complete ? -int(1, 40) : int(-6, 55);
+    const dueOffset = complete ? -((i % 135) + 7) : int(-6, 55);
     const atRisk = !complete && status !== 'new' && (dueOffset < 0 || (!outreach.day1 && !outreach.day2) || chance(0.12));
     const milestoneCount = int(2, 4);
     const milestones = Array.from({ length: milestoneCount }, (_, m) => ({
@@ -230,6 +256,14 @@ function build() {
     const completedDate = new Date(base + (onTime ? -1 : 1) * int(1, 6) * 864e5).toISOString().slice(0, 10);
     deliveries.push({ id: `DLV${String(dIdx++).padStart(3, '0')}`, engagementId: e.id, type: e.program, completedDate, track: e.track, ...gov('Power BI') });
   }
+  const engagementById = new Map(engagements.map((engagement) => [engagement.id, engagement]));
+  const partnerByCsa = new Map(csas.map((csa) => [csa.id, csa.partnerId]));
+  const deliveryCountByPartner = new Map(partners.map((partner) => [partner.id, 0]));
+  deliveries.forEach((delivery) => {
+    const partnerId = partnerByCsa.get(engagementById.get(delivery.engagementId)?.assignedTo);
+    if (partnerId) deliveryCountByPartner.set(partnerId, deliveryCountByPartner.get(partnerId) + 1);
+  });
+  partners.forEach((partner) => { partner.deliveries = deliveryCountByPartner.get(partner.id); });
 
   const escSource = engagements.filter((e) => e.status === 'in-delivery' || e.atRisk);
   const escalations = [];
@@ -371,6 +405,49 @@ function build() {
     }
   });
 
+  const sentimentSignals = [];
+  const addSignal = ({ engagementId, channel, timestamp, text, score, language, sourceId }) => {
+    const engagement = engagements.find((item) => item.id === engagementId);
+    const csa = engagement?.assignedTo ? csas.find((item) => item.id === engagement.assignedTo) : null;
+    const normalizedScore = Math.round(clamp(score, -1, 1) * 100) / 100;
+    const level = sentimentLevel(normalizedScore);
+    sentimentSignals.push({
+      id: `SIG${String(sentimentSignals.length + 1).padStart(4, '0')}`, engagementId, sourceId,
+      customer: engagement?.customer ?? 'Unknown customer', partnerId: csa?.partnerId ?? null,
+      channel, timestamp, text, score: normalizedScore, level,
+      confidence: Math.round((0.72 + rng() * 0.27) * 100) / 100,
+      language: language || 'English', translated: Boolean(language && language !== 'English'),
+      themes: pickN(THEMES, int(1, 3)),
+      alertStatus: normalizedScore <= -0.55 ? 'open' : 'none',
+      acknowledgedBy: null, acknowledgedAt: null,
+      ...gov('AI Services'),
+    });
+  };
+  cpe.forEach((item) => {
+    const engagement = engagements.find((candidate) => candidate.id === item.engagementId);
+    const csa = engagement?.assignedTo ? csas.find((candidate) => candidate.id === engagement.assignedTo) : null;
+    addSignal({
+      engagementId: item.engagementId, sourceId: item.id, channel: 'CPE Survey',
+      timestamp: `${item.date}T12:00:00Z`, text: item.verbatim,
+      score: (item.score - 3) / 2, language: csa?.languages?.[0] || 'English',
+    });
+  });
+  messages.forEach((item) => {
+    const engagement = engagements.find((candidate) => candidate.id === item.engagementId);
+    const csa = engagement?.assignedTo ? csas.find((candidate) => candidate.id === engagement.assignedTo) : null;
+    const positiveText = /great work|on track|done|uploaded|ready for review|responsive/i.test(item.body);
+    const negativeText = /blocker|concern|at risk|slow|delay|escalat|permissions/i.test(item.body);
+    const score = positiveText ? 0.4 + rng() * 0.55
+      : negativeText ? -(0.4 + rng() * 0.55)
+        : item.sentiment === 'positive' ? 0.25 + rng() * 0.45
+          : item.sentiment === 'negative' ? -(0.25 + rng() * 0.45) : (rng() - 0.5) * 0.24;
+    addSignal({ engagementId: item.engagementId, sourceId: item.id, channel: 'Teams', timestamp: item.timestamp, text: item.body, score, language: csa?.languages?.[0] || 'English' });
+  });
+  escalations.forEach((item) => {
+    const severityScore = { sev1: -0.95, sev2: -0.78, sev3: -0.56, sev4: -0.32 }[item.severity];
+    addSignal({ engagementId: item.engagementId, sourceId: item.id, channel: 'Escalation', timestamp: `${item.opened}T09:00:00Z`, text: item.summary, score: severityScore + (rng() - 0.5) * 0.08, language: 'English' });
+  });
+
   const pipCandidates = [...activeCsas].sort((a, b) => a.quality - b.quality).slice(0, 4);
   const pips = pipCandidates.map((csa, i) => {
     const status = weighted([['active', 0.6], ['draft', 0.2], ['closed', 0.2]]);
@@ -441,7 +518,7 @@ function build() {
     { id: 'INI006', type: 'Platform', name: 'SSD IQ reporting semantic model', area: 'Reporting', stage: 'Pilot', ownerName: 'Robin Ellis', targetRelease: 'FY27 Q2', status: 'on-track', impact: 'Reconciles MBR metrics and enables governed drill-through.', nextStep: 'Reconcile Power BI measures.' },
   ].map((initiative) => ({ ...initiative, ...gov('Portfolio Management') }));
 
-  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, pips, sentiment, deliveries, hiring, financials, initiatives };
+  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, sentimentSignals, pips, sentiment, deliveries, hiring, financials, initiatives };
 }
 
 export const dataset = build();

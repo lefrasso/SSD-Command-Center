@@ -48,7 +48,7 @@
 - **NFR-I18N-1** — UI localisable; externalised strings.
 - **NFR-I18N-2** — **Language** is a first-class delivery attribute (coverage requires ≥1 CSA per
   program, per language, per TZ — see [CAP-08](capabilities/CAP-08-capacity-and-forecasting.md)).
-- **NFR-I18N-3** — Locale-aware dates/numbers; time-zone-aware displays (Americas/EMEA/ASIA + US OUs).
+- **NFR-I18N-3** — Locale-aware dates/numbers; time-zone-aware displays (ATZ/EMEA/ASIA + US OUs).
 
 ## 7. Observability (`NFR-OBS`)
 

@@ -13,6 +13,7 @@ derive from the **HC Consolidation** dataset (`data/generate.js → hiring`, POD
 | KPI | Definition / formula | Target |
 |---|---|---|
 | **Global deliveries completed** | Count of completed deliveries per partner/period | Growth period-over-period |
+| **Five-month delivered engagements** | Count of completed engagements/deliveries in the latest five calendar months | Prototype baseline 1,300 |
 | **On-time delivery %** | deliveries with `completedDate ≤ dueDate` / total deliveries | ≥ 90% |
 | **Rolling CPE** | mean(`cpe.score`), 1 dp | ≥ 4.4 / 5 |
 | **VSAT rate** | CPE responses classified VSAT / completed CPE responses | ≥ 75% |
@@ -24,6 +25,9 @@ derive from the **HC Consolidation** dataset (`data/generate.js → hiring`, POD
 | **Open actions** | Action items with status ≠ done (overdue = `due < today`) | Trend down |
 | **Utilization** | mean(active CSA `utilization`) | 80–90% band |
 | **Net sentiment** | mean(net) of partner sentiment rollups (period) | ≥ 0 and rising |
+| **Interaction sentiment index** | mean(`SentimentSignal.score`) × 100 in filter context | ≥ 0 and rising |
+| **Open critical sentiment alerts** | count(score ≤ -0.75 and `alertStatus = open`) | 0 |
+| **Sentiment alert acknowledgement time** | mean(`acknowledgedAt` − signal/alert timestamp) | Within supervisor SLA |
 | **Onboarding time-to-productive** | onboarding start → readiness sign-off | Trending down |
 | **Proactive coverage (T-3W)** | in-window engagements with outreach started / in-window | ≥ 80% |
 | **QC pass rate** | QCs ≥ 4/5 / total QCs | ≥ 80% |
