@@ -1,7 +1,7 @@
 // AI Services layer — SIMULATED. Deterministic, data-driven mocks.
 // Every consumer stamps output with an "AI-generated" chip. Production seam:
 // swap these for Azure OpenAI grounded over SSD IQ (see azureOpenAiStub.js).
-import { computeKpis, hoursSince, store } from './store.js';
+import { computeKpis, hoursSince, computePodPerformance, computePartnerPerformance, ipKitStats, store } from './store.js';
 import { QC_CRITERIA, PROGRAMS, TZ_LANGUAGES } from '../data/generate.js';
 
 const now = () => new Date().toISOString();
@@ -272,6 +272,76 @@ export function execSummary(d = store.data) {
     `${k.openEscalations} escalations open (${k.slaBreaches} breaching SLA); utilization ${k.utilization}% and net sentiment ${k.netSentiment > 0 ? '+' + k.netSentiment : k.netSentiment}. ` +
     `${k.slaBreaches > 0 ? 'Priority: clear SLA-breaching escalations and protect at-risk engagements.' : 'Operations are within healthy bands.'}`;
   return { text, sources: [], generatedAt: now() };
+}
+
+// ---- POD performance summary (Reporting → POD Performance) ----
+export function podPerformanceSummary(d = store.data) {
+  const perf = computePodPerformance(d);
+  const ranked = [...perf].sort((a, b) => b.score - a.score);
+  const top = ranked[0];
+  const needsAttention = ranked.filter((p) => p.tier === 'Needs attention');
+  const avgScore = ranked.length ? Math.round(ranked.reduce((s, p) => s + p.score, 0) / ranked.length) : 0;
+  const text =
+    `Across ${ranked.length} PODs, composite performance averages ${avgScore}/100 (blending CPE, quality, utilization, escalations and sentiment). ` +
+    `${top ? `${top.name} leads at ${top.score}/100 (CPE ${top.avgCpe.toFixed(1)}, utilization ${top.util}%). ` : ''}` +
+    `${needsAttention.length ? `${needsAttention.length} POD(s) need attention: ${needsAttention.map((p) => p.name).join(', ')}.` : 'No PODs are currently flagged as needing attention.'} ` +
+    `This is an advisory read — POD Leads and the CSA Manager should validate before acting.`;
+  return { text, sources: ranked.slice(0, 5).map((p) => ({ id: p.id, label: p.name })), generatedAt: now() };
+}
+
+// ---- IP Feedback summary (Reporting → IP Feedback) ----
+export function ipFeedbackSummary(d = store.data) {
+  const stats = ipKitStats(d);
+  const rated = stats.filter((s) => s.avgRating != null);
+  const ranked = [...rated].sort((a, b) => b.avgRating - a.avgRating);
+  const top = ranked[0];
+  const needsAttention = stats.filter((s) => s.needsAttention > 0).sort((a, b) => b.needsAttention - a.needsAttention);
+  const totalFeedback = stats.reduce((s, a) => s + a.feedbackCount, 0);
+  const avgRating = rated.length ? Math.round((rated.reduce((s, a) => s + a.avgRating, 0) / rated.length) * 10) / 10 : 0;
+  const text =
+    `${totalFeedback} feedback submission(s) across ${stats.length} IP Kits (one per engagement Program), averaging ${avgRating.toFixed(1)}/5. ` +
+    `${top ? `${top.name} is the highest-rated (${top.avgRating.toFixed(1)}/5, ${top.feedbackCount} submissions). ` : ''}` +
+    `${needsAttention.length ? `Prioritize a refresh for: ${needsAttention.map((s) => `${s.name} (${s.needsAttention} flagged)`).join(', ')}.` : 'No Kits are currently flagged for a refresh.'} ` +
+    `This is advisory — the IP Lead should confirm before retiring or updating a Kit.`;
+  return { text, sources: stats.filter((s) => s.feedbackCount).map((s) => ({ id: s.id, label: s.name })), generatedAt: now() };
+}
+
+// ---- Attrition summary (Capacity & Forecasting → Attrition Analysis) ----
+export function attritionSummary(d = store.data) {
+  const events = d.attrition;
+  const activeCsas = d.csas.filter((c) => c.lifecycle === 'active').length;
+  const rate = activeCsas ? Math.round((events.length / (activeCsas + events.length)) * 1000) / 10 : 0;
+  const voluntary = events.filter((a) => a.exitType === 'Voluntary').length;
+  const voluntaryPct = events.length ? Math.round((voluntary / events.length) * 100) : 0;
+  const regretted = events.filter((a) => a.regretted);
+  const byFamily = {};
+  events.forEach((a) => { byFamily[a.family] = (byFamily[a.family] || 0) + 1; });
+  const topFamily = Object.entries(byFamily).sort((a, b) => b[1] - a[1])[0];
+  const backfilled = events.filter((a) => a.backfillReqId).length;
+  const text =
+    `${events.length} exits in the trailing 12 months (${rate}% attrition rate), ${voluntaryPct}% voluntary. ` +
+    `${regretted.length ? `${regretted.length} were regrettable (high CPE/quality performers leaving) — worth a retention review. ` : 'No regrettable exits flagged in this window. '}` +
+    `${topFamily ? `${topFamily[0]} has the most exits (${topFamily[1]}). ` : ''}` +
+    `${backfilled} of ${events.length} exits already have a matched backfill requisition in progress. ` +
+    `This is advisory — POD Leads and Operations should validate before acting on retention or backfill priorities.`;
+  return { text, sources: regretted.slice(0, 5).map((a) => ({ id: a.id, label: a.name })), generatedAt: now() };
+}
+
+// ---- Partner performance summary (Delivery Partners / Reporting → Partner Performance) ----
+export function partnerPerformanceSummary(d = store.data) {
+  const perf = computePartnerPerformance(d);
+  const ranked = [...perf].sort((a, b) => b.score - a.score);
+  const top = ranked[0];
+  const needsAttention = ranked.filter((p) => p.tier === 'Needs attention');
+  const avgScore = ranked.length ? Math.round(ranked.reduce((s, p) => s + p.score, 0) / ranked.length) : 0;
+  const totalFlags = perf.reduce((s, p) => s + p.s500Flags, 0);
+  const text =
+    `Across ${ranked.length} Delivery Partners, composite performance averages ${avgScore}/100 (blending CPE, quality, utilization, escalations and sentiment). ` +
+    `${top ? `${top.name} leads at ${top.score}/100 (CPE ${top.avgCpe.toFixed(1)}, S500-ready ${top.s500ReadyPct}%). ` : ''}` +
+    `${needsAttention.length ? `${needsAttention.length} partner(s) need attention: ${needsAttention.map((p) => p.name).join(', ')}. ` : 'No partners are currently flagged as needing attention. '}` +
+    `${totalFlags ? `${totalFlags} S500 customer engagement(s) are served by a non-ready CSA — a governance flag to close (target: 0).` : 'No S500 customers are served by a non-ready CSA.'} ` +
+    `This is an advisory read — Operations and DPSMs should validate before acting.`;
+  return { text, sources: ranked.slice(0, 5).map((p) => ({ id: p.id, label: p.name })), generatedAt: now() };
 }
 
 // ---- Agentic Delivery: AI-generated deliverable ----

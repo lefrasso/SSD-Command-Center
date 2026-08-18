@@ -48,6 +48,8 @@ function gov(source, who = 'a.navarro') {
 const FIRST = ['Marco','Ana','Liam','Sofia','Noah','Emma','Lucas','Mia','Diego','Chloe','Hugo','Aisha','Ravi','Yuki','Omar','Nina','Pablo','Elena','Tariq','Freya','Iker','Lena','Sami','Zoe'];
 const LAST = ['Rossi','Kaur','Novak','García','Müller','Silva','Haddad','Chen','Okafor','Ivanova','Costa','Dubois','Nguyen','Almeida','Kowalski','Reyes','Bianchi','Andersson','Fischer','Popescu'];
 const CUSTOMERS = ['Northwind Traders','Contoso','Fabrikam','Adventure Works','Tailwind Traders','Wingtip Toys','Proseware','Litware','Fourth Coffee','Graphic Design Institute','Alpine Ski House','Coho Vineyard','Lucerne Publishing',"Margie's Travel",'Trey Research','VanArsdel','WideWorld Importers','Blue Yonder','Woodgrove Bank','Relecloud'];
+// S500 = strategic/top-tier accounts; must be served by an S500-ready CSA (see Enablement & Delivery Partners).
+export const S500_CUSTOMERS = ['Contoso', 'Fabrikam', 'Northwind Traders', 'Woodgrove Bank', 'Relecloud'];
 export const CSAMS = ['Julia Meyer','Tom Baker','Sara Lind','Marcus Webb','Elif Demir','Paulo Neto','Hannah Ross','Ken Adachi','Bea Fontana','Ivan Petrov'];
 export const SDMS = ['Priya Nair','Kenji Watanabe','Laura Bianchi','Mohammed Ali','Grace Park','Tomás Herrera'];
 const POD_LEADS = [
@@ -100,6 +102,23 @@ export const PROGRAMS = {
   'AI Innovation': ['Adoption', 'Secure Copilot', 'Agents'],
   'Cloud Deployment': ['MACC', 'AIR', 'Cloud Modernization', 'Github Copilot'],
   Foundations: ['UfP', 'UO - Onboarding', 'OU - DMIRP', 'OU - Capability Briefing AI Innovation', 'OU - Capability Briefing Resiliency and Security', 'OU - Capability Briefing Cloud Success'],
+};
+// Reusable IP library surfaced on Agentic Delivery; PODs rate/tag each asset after use (POD - IP Feedback).
+export const IP_ASSETS = [
+  { id: 'IP001', name: 'Landing Zone Playbook', track: 'Cloud Deployment', type: 'Playbook' },
+  { id: 'IP002', name: 'Migration Runbook', track: 'Cloud Deployment', type: 'Runbook' },
+  { id: 'IP003', name: 'Expert Security Assessment Template', track: 'Health', type: 'Template' },
+  { id: 'IP004', name: 'Copilot Readiness Kit', track: 'AI Innovation', type: 'Kit' },
+  { id: 'IP005', name: 'AI Foundry Enablement Deck', track: 'AI Innovation', type: 'Deck' },
+  { id: 'IP006', name: 'Customer Health Scorecard', track: 'Health', type: 'Template' },
+  { id: 'IP007', name: 'Plan & Envision Workshop Deck', track: 'Foundations', type: 'Deck' },
+];
+export const IP_TAGS = ['Reusable as-is', 'Needs minor update', 'Needs major update', 'Outdated — retire'];
+const IP_FEEDBACK_COMMENTS = {
+  'Reusable as-is': ['Used as-is for the customer workshop — worked great.', 'Customer loved this — no changes needed.', 'Solid starting point; delivered without edits.', 'Great structure and pacing, kept it intact.'],
+  'Needs minor update': ['Needed a few tweaks to align with the latest portal UI.', 'Added our own appendix but the core held up well.', 'Pricing references were slightly stale.', 'Good bones — refresh the screenshots.'],
+  'Needs major update': ['Took extra time to align with the new pricing model.', 'Missing guidance for the newest platform features.', 'Structure is dated; needed a substantial rework before use.', 'Customer examples no longer resonate — needs new case studies.'],
+  'Outdated — retire': ['References a retired product; recommend retiring this asset.', 'Superseded by newer guidance — should be archived.', 'Customer flagged outdated screenshots throughout.', 'No longer matches the current delivery motion.'],
 };
 const VERBATIMS = {
   positive: ['Exceptional guidance — exceeded our expectations.','The CSA unblocked our migration in days.','Clear, proactive and deeply technical.','Best delivery experience we have had with Microsoft.','Outstanding follow-through on every action.'],
@@ -196,10 +215,15 @@ function build() {
     const quality = round1(clamp(3.7 + rng() * 1.1, 1, 5));
     const lifecycle = weighted([['active', 0.7], ['onboarding', 0.12], ['sourcing', 0.06], ['selection', 0.04], ['offboarding', 0.08]]);
     const vendorName = resourceType === 'FTE' ? pick(['Nebula', 'GSCD']) : partner.name;
+    const tenureMonths = int(2, 40);
+    // S500 readiness is marked independently (e.g. in SharePoint) and then reconciled against computed eligibility.
+    const s500Eligible = cpe >= 4.4 && quality >= 4.4 && tenureMonths >= 6;
+    const s500Ready = s500Eligible ? chance(0.85) : chance(0.08);
     csas.push({
       id: `CSA${String(i + 1).padStart(3, '0')}`, name: fullName(usedNames), vendor: vendorName,
       resourceType, partnerId: partner.id, podId: pod.id, tracks, accreditations, languages, skills: pickN(SKILLS, int(3, 6)),
-      capacity: int(3, 6), utilization, tenureMonths: int(2, 40), lifecycle, cpe, quality,
+      capacity: int(3, 6), utilization, tenureMonths, lifecycle, cpe, quality,
+      s500Ready, s500Reconciled: s500Ready === s500Eligible,
       sentiment: sentimentFromScore(cpe), ...gov('Operations'),
     });
   }
@@ -208,6 +232,7 @@ function build() {
     const own = csas.filter((c) => c.partnerId === p.id);
     p.podIds = [...new Set(own.map((c) => c.podId))];
     p.cpe = own.length ? round1(own.reduce((s, c) => s + c.cpe, 0) / own.length) : 4.3;
+    p.quality = own.length ? round1(own.reduce((s, c) => s + c.quality, 0) / own.length) : 4.1;
   }
 
   // Headcount consolidation targets per POD (Active & Future HC tracking).
@@ -244,10 +269,11 @@ function build() {
       due: isoDay(dueOffset - (milestoneCount - m) * 7),
       done: complete ? true : m < (engaged ? int(0, milestoneCount) : 0),
     }));
+    const customer = pick(CUSTOMERS);
     engagements.push({
-      id: `ENG${String(i + 1).padStart(3, '0')}`, customer: pick(CUSTOMERS), csamName: pick(CSAMS),
+      id: `ENG${String(i + 1).padStart(3, '0')}`, customer, csamName: pick(CSAMS),
       track, program: pick(PROGRAMS[track]), assignedTo: assignee ? assignee.id : null, status,
-      dispatchStage, outreach, milestones, dueDate: isoDay(dueOffset), atRisk, ...gov('Dispatch'),
+      dispatchStage, outreach, milestones, dueDate: isoDay(dueOffset), atRisk, s500Customer: S500_CUSTOMERS.includes(customer), ...gov('Dispatch'),
     });
   }
 
@@ -496,6 +522,22 @@ function build() {
     };
   }).filter(Boolean);
 
+  // POD IP Kit feedback — each engagement has its own IP Kit (derived from its Program); the delivering
+  // POD rates/tags that Kit after use, feeding the IP Lead's refresh backlog. Not a generic component library.
+  const kitCandidates = engagements.filter((e) => e.assignedTo && (e.status === 'complete' || e.status === 'in-delivery'));
+  let ipfSeq = 1;
+  const ipFeedback = pickN(kitCandidates, Math.min(kitCandidates.length, 40)).map((eng) => {
+    const csa = csas.find((c) => c.id === eng.assignedTo);
+    const pod = csa ? pods.find((p) => p.id === csa.podId) : null;
+    const rating = weighted([[5, 0.3], [4, 0.35], [3, 0.2], [2, 0.1], [1, 0.05]]);
+    const tag = rating >= 4 ? 'Reusable as-is' : rating === 3 ? 'Needs minor update' : weighted([['Needs major update', 0.6], ['Outdated — retire', 0.4]]);
+    return {
+      id: `IPF${String(ipfSeq++).padStart(3, '0')}`, engagementId: eng.id, csaId: csa ? csa.id : null, podId: pod ? pod.id : null,
+      rating, tag, comment: pick(IP_FEEDBACK_COMMENTS[tag]), submittedAt: daysAgo(int(1, 90)),
+      ...gov('Agentic Delivery'),
+    };
+  });
+
 
   const PERIODS = ['2026-04', '2026-05', '2026-06', '2026-07'];
   const sentiment = [];
@@ -529,6 +571,45 @@ function build() {
     });
   }
 
+  // Attrition — trailing-12-month exits (voluntary/involuntary), feeding the Attrition Analysis tab and
+  // linking to Backfill requisitions above. Currently-offboarding CSAs are recent/in-progress exits;
+  // additional historical exits are synthesized to give a full 12-month trend.
+  const EXIT_REASONS_VOLUNTARY = ['Competing offer', 'Career change', 'Relocation', 'Compensation', 'Return to study'];
+  const EXIT_REASONS_INVOLUNTARY = ['Performance', 'Role elimination', 'Restructuring'];
+  let atrSeq = 1;
+  const offboardingCsas = csas.filter((c) => c.lifecycle === 'offboarding');
+  const attritionRecent = offboardingCsas.map((c) => {
+    const pod = pods.find((p) => p.id === c.podId);
+    const voluntary = chance(0.78);
+    return {
+      id: `ATR${String(atrSeq++).padStart(3, '0')}`, csaId: c.id, name: c.name, vendor: c.vendor, resourceType: c.resourceType,
+      partnerId: c.partnerId, podId: c.podId, region: pod ? pod.region : null, tz: pod ? pod.tz : null,
+      family: c.tracks[0], tenureMonths: c.tenureMonths, exitType: voluntary ? 'Voluntary' : 'Involuntary',
+      exitReason: pick(voluntary ? EXIT_REASONS_VOLUNTARY : EXIT_REASONS_INVOLUNTARY),
+      exitDate: daysAgo(int(0, 25)), cpeAtExit: c.cpe, qualityAtExit: c.quality, ...gov('HC Consolidation'),
+    };
+  });
+  const attritionHistorical = Array.from({ length: 46 }, () => {
+    const pod = pick(pods);
+    const family = pick(pod.tracks);
+    const partner = pick(partners);
+    const resourceType = chance(0.9) ? 'FTC' : 'FTE';
+    const voluntary = chance(0.78);
+    return {
+      id: `ATR${String(atrSeq++).padStart(3, '0')}`, csaId: null, name: fullName(usedNames), vendor: resourceType === 'FTE' ? pick(['Nebula', 'GSCD']) : partner.name,
+      resourceType, partnerId: partner.id, podId: pod.id, region: pod.region, tz: pod.tz, family, tenureMonths: int(2, 44),
+      exitType: voluntary ? 'Voluntary' : 'Involuntary', exitReason: pick(voluntary ? EXIT_REASONS_VOLUNTARY : EXIT_REASONS_INVOLUNTARY),
+      exitDate: daysAgo(int(26, 365)), cpeAtExit: round1(clamp(3.6 + rng() * 1.2, 1, 5)), qualityAtExit: round1(clamp(3.4 + rng() * 1.3, 1, 5)),
+      ...gov('HC Consolidation'),
+    };
+  });
+  const usedBackfillReqs = new Set();
+  const attrition = [...attritionRecent, ...attritionHistorical].map((a) => {
+    const req = hiring.find((h) => h.type === 'Backfill' && h.family === a.family && h.podId === a.podId && !usedBackfillReqs.has(h.id));
+    if (req) usedBackfillReqs.add(req.id);
+    return { ...a, regretted: a.exitType === 'Voluntary' && a.cpeAtExit >= 4.3 && a.qualityAtExit >= 4.2, backfillReqId: req ? req.id : null };
+  });
+
   const financials = [];
   const financialCategories = ['Delivery Partner spend', 'Program management', 'Platforms & tooling', 'Enablement & readiness'];
   for (const period of ['2026-06', '2026-07']) {
@@ -556,7 +637,7 @@ function build() {
     { id: 'INI006', type: 'Platform', name: 'SSD IQ reporting semantic model', area: 'Reporting', stage: 'Pilot', ownerName: 'Robin Ellis', targetRelease: 'FY27 Q2', status: 'on-track', impact: 'Reconciles MBR metrics and enables governed drill-through.', nextStep: 'Reconcile Power BI measures.' },
   ].map((initiative) => ({ ...initiative, ...gov('Portfolio Management') }));
 
-  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, sentimentSignals, pips, shadowRequests, sentiment, deliveries, hiring, financials, initiatives };
+  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, sentimentSignals, pips, shadowRequests, ipFeedback, sentiment, deliveries, hiring, attrition, financials, initiatives };
 }
 
 export const dataset = build();

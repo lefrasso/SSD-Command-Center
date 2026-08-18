@@ -74,11 +74,111 @@ export function renderHome(container) {
 
   container.innerHTML = `
     ${pageHeader({
-      title: 'Executive Overview',
-      description: `Welcome, ${esc(persona.name.split(' ')[0])}. This is the leadership view of delivery health, resources, and operating priorities.`,
+      title: 'True North',
+      description: `Welcome, ${esc(persona.name.split(' ')[0])}. Your priorities for today and this week — personalized for ${esc(persona.title)}.`,
       actions: `<select class="select" id="f-track" aria-label="Filter by family">${trackOpts}</select>
                 <select class="select" id="f-partner" aria-label="Filter by partner">${partnerOpts}</select>`,
     })}
+
+    <div class="kpi-grid">
+      ${kpiCard({ label: 'Active engagements', value: k.activeEngagements, iconName: 'send', hint: 'Assigned + in delivery' })}
+      ${kpiCard({ label: 'On-time delivery', value: k.onTimePct + '%', iconName: 'check', tone: k.onTimePct >= 90 ? COLORS.positive : COLORS.warning, hint: 'Target ≥ 90%' })}
+      ${kpiCard({ label: 'Rolling CPE', value: k.rollingCpe.toFixed(1), iconName: 'star', tone: scoreColor(k.rollingCpe), hint: 'Target ≥ 4.4 / 5' })}
+      ${kpiCard({ label: 'Open escalations', value: k.openEscalations, iconName: 'warning', tone: k.slaBreaches > 0 ? COLORS.negative : COLORS.neutral, hint: `${k.slaBreaches} breaching SLA` })}
+      ${kpiCard({ label: 'Utilization', value: k.utilization + '%', iconName: 'people', tone: utilColor(k.utilization), hint: 'Healthy band 80–90%' })}
+      ${kpiCard({ label: 'Net sentiment', value: k.netSentiment > 0 ? '+' + k.netSentiment : k.netSentiment, iconName: 'emoji', tone: k.netSentiment >= 0 ? COLORS.positive : COLORS.negative, hint: 'Across channels' })}
+      ${kpiCard({ label: 'Open actions', value: openActs.length, iconName: 'flag', tone: overdueActs > 0 ? COLORS.warning : COLORS.neutral, hint: `${overdueActs} overdue` })}
+    </div>
+
+    <div class="card pad mb16">
+      <div class="brief-head">${icon('sparkle', 18)}<strong style="font-size:16px">Your priorities — today &amp; this week</strong>${aiChip()}</div>
+      <div class="brief-grid">
+        <div>
+          <div class="brief-headline">${esc(briefing.headline)}</div>
+          <ul class="brief-bullets">${briefing.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>
+        </div>
+        <div class="anomaly-box">
+          <div class="muted" style="font-weight:600; font-size:12px">Anomaly callouts</div>
+          ${briefing.anomalies.length ? briefing.anomalies.map((a) => `<span class="anomaly">${esc(a)}</span>`).join('') : '<div class="muted mt8">No anomalies detected.</div>'}
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card pad">
+        <div class="row" style="justify-content:space-between" >
+          <strong style="font-size:16px">Needs attention</strong>
+          ${badge(attention.length + ' items', 'tint-info')}
+        </div>
+        <hr class="divider"/>
+        <div id="attn-list">
+          ${attention.length ? attention.map((a) => `
+            <div class="attn-row">
+              ${a.severity ? severityPill(a.severity) : `<span style="color:${a.priority === 2 ? COLORS.warning : COLORS.info}">${icon('warning', 16)}</span>`}
+              <div class="attn-main">
+                <div class="attn-title">${esc(a.title)}</div>
+                <div class="attn-meta">${esc(a.meta)}</div>
+              </div>
+              <button class="btn subtle sm" data-q="${esc(a.q)}">View ${icon('chevronRight', 14)}</button>
+            </div>`).join('') : '<div class="muted">Nothing needs attention for this filter.</div>'}
+        </div>
+      </div>
+
+      <div class="col-stack">
+        <div class="card chart-card">
+          <div class="chart-head"><strong>Engagements by status</strong></div>
+          <div class="chart-holder" style="height:200px"><canvas id="c-status"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <div class="chart-head"><strong>Sentiment mix</strong>${aiChip('NLP')}</div>
+          <div class="chart-holder" style="height:200px"><canvas id="c-sent"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card pad mb16">
+      <div class="row" style="justify-content:space-between">
+        <div class="row" style="gap:8px"><strong style="font-size:16px">Action items</strong>${badge(actionsFiltered.length + ' open', 'tint-info')}${actionsDone ? badge(actionsDone + ' done', 'outline') : ''}</div>
+        <div class="row" style="gap:6px">
+          <button class="btn sm" id="assign-action">${icon('flag', 14)} Assign action</button>
+          <button class="btn subtle sm" id="open-messages">${icon('send', 14)} Messages</button>
+        </div>
+      </div>
+      <hr class="divider"/>
+      <div id="home-actions">
+        ${actionsFiltered.length ? actionsFiltered.map((a) => actionItemHtml(a, { showSource: true, withOpen: true })).join('') : '<div class="muted">No open actions for this filter. Assign one from a message thread or an escalation.</div>'}
+      </div>
+    </div>
+
+    <div class="card pad mb16">
+      <div class="row mb8"><strong style="font-size:15px">SSD Leadership</strong>${badge('Org', 'tint-info')}</div>
+      <div class="lead-people">
+        ${[{ name: LEADERSHIP.wwLead, role: 'Worldwide Lead' }, ...LEADERSHIP.timeZones.map((t) => ({ name: t.lead, role: `${t.tz} TZ Lead` })), { name: LEADERSHIP.businessManager, role: 'Business Manager' }]
+          .map((l, i) => `<div class="lead-person"><span class="lead-av" style="background:${CHART_PALETTE[i % CHART_PALETTE.length]}">${esc(initials(l.name))}</span><span><div style="font-weight:600">${esc(l.name)}</div><div class="lead-role">${esc(l.role)}</div></span></div>`)
+          .join('')}
+      </div>
+    </div>
+
+    <div class="card chart-card mb16">
+      <div class="chart-head"><strong>Average CPE by family</strong></div>
+      <div class="chart-holder" style="height:220px"><canvas id="c-cpe"></canvas></div>
+    </div>
+
+    <div class="section-title">POD health</div>
+    <div class="pod-grid">
+      ${podHealth.map(({ pod, avgUtil, avgCpe, atRisk, openEsc, headcount }) => `
+        <div class="card pod-card">
+          <div class="row" style="justify-content:space-between">
+            <strong>${esc(pod.name)}</strong>
+            <span class="dot" style="background:${utilColor(avgUtil)}"></span>
+          </div>
+          <div class="muted" style="font-size:12px">${esc(pod.region)} · ${esc(pod.tz)} TZ · ${headcount} active CSAs</div>
+          <hr class="divider"/>
+          <div class="pod-stat"><span>Utilization</span><strong style="color:${utilColor(avgUtil)}">${avgUtil}%</strong></div>
+          <div class="pod-stat"><span>Avg CPE</span><strong style="color:${scoreColor(avgCpe)}">${avgCpe.toFixed(1)}</strong></div>
+          <div class="pod-stat"><span>At-risk / Open esc.</span><strong>${atRisk} / ${openEsc}</strong></div>
+        </div>`).join('')}
+    </div>
 
     <section class="card pad mb16" aria-label="Resource mix and platform overview">
       <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
@@ -221,107 +321,8 @@ export function renderHome(container) {
           </div>
         `).join('')}
       </div>
-    </section>
+    </section>`;
 
-    <div class="kpi-grid">
-      ${kpiCard({ label: 'Active engagements', value: k.activeEngagements, iconName: 'send', hint: 'Assigned + in delivery' })}
-      ${kpiCard({ label: 'On-time delivery', value: k.onTimePct + '%', iconName: 'check', tone: k.onTimePct >= 90 ? COLORS.positive : COLORS.warning, hint: 'Target ≥ 90%' })}
-      ${kpiCard({ label: 'Rolling CPE', value: k.rollingCpe.toFixed(1), iconName: 'star', tone: scoreColor(k.rollingCpe), hint: 'Target ≥ 4.4 / 5' })}
-      ${kpiCard({ label: 'Open escalations', value: k.openEscalations, iconName: 'warning', tone: k.slaBreaches > 0 ? COLORS.negative : COLORS.neutral, hint: `${k.slaBreaches} breaching SLA` })}
-      ${kpiCard({ label: 'Utilization', value: k.utilization + '%', iconName: 'people', tone: utilColor(k.utilization), hint: 'Healthy band 80–90%' })}
-      ${kpiCard({ label: 'Net sentiment', value: k.netSentiment > 0 ? '+' + k.netSentiment : k.netSentiment, iconName: 'emoji', tone: k.netSentiment >= 0 ? COLORS.positive : COLORS.negative, hint: 'Across channels' })}
-      ${kpiCard({ label: 'Open actions', value: openActs.length, iconName: 'flag', tone: overdueActs > 0 ? COLORS.warning : COLORS.neutral, hint: `${overdueActs} overdue` })}
-    </div>
-
-    <div class="card pad mb16">
-      <div class="row mb8"><strong style="font-size:15px">SSD Leadership</strong>${badge('Org', 'tint-info')}</div>
-      <div class="lead-people">
-        ${[{ name: LEADERSHIP.wwLead, role: 'Worldwide Lead' }, ...LEADERSHIP.timeZones.map((t) => ({ name: t.lead, role: `${t.tz} TZ Lead` })), { name: LEADERSHIP.businessManager, role: 'Business Manager' }]
-          .map((l, i) => `<div class="lead-person"><span class="lead-av" style="background:${CHART_PALETTE[i % CHART_PALETTE.length]}">${esc(initials(l.name))}</span><span><div style="font-weight:600">${esc(l.name)}</div><div class="lead-role">${esc(l.role)}</div></span></div>`)
-          .join('')}
-      </div>
-    </div>
-
-    <div class="card pad mb16">
-      <div class="brief-head">${icon('sparkle', 18)}<strong style="font-size:16px">Daily briefing</strong>${aiChip()}</div>
-      <div class="brief-grid">
-        <div>
-          <div class="brief-headline">${esc(briefing.headline)}</div>
-          <ul class="brief-bullets">${briefing.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>
-        </div>
-        <div class="anomaly-box">
-          <div class="muted" style="font-weight:600; font-size:12px">Anomaly callouts</div>
-          ${briefing.anomalies.length ? briefing.anomalies.map((a) => `<span class="anomaly">${esc(a)}</span>`).join('') : '<div class="muted mt8">No anomalies detected.</div>'}
-        </div>
-      </div>
-    </div>
-
-    <div class="two-col">
-      <div class="card pad">
-        <div class="row" style="justify-content:space-between" >
-          <strong style="font-size:16px">Needs attention</strong>
-          ${badge(attention.length + ' items', 'tint-info')}
-        </div>
-        <hr class="divider"/>
-        <div id="attn-list">
-          ${attention.length ? attention.map((a) => `
-            <div class="attn-row">
-              ${a.severity ? severityPill(a.severity) : `<span style="color:${a.priority === 2 ? COLORS.warning : COLORS.info}">${icon('warning', 16)}</span>`}
-              <div class="attn-main">
-                <div class="attn-title">${esc(a.title)}</div>
-                <div class="attn-meta">${esc(a.meta)}</div>
-              </div>
-              <button class="btn subtle sm" data-q="${esc(a.q)}">View ${icon('chevronRight', 14)}</button>
-            </div>`).join('') : '<div class="muted">Nothing needs attention for this filter.</div>'}
-        </div>
-      </div>
-
-      <div class="col-stack">
-        <div class="card chart-card">
-          <div class="chart-head"><strong>Engagements by status</strong></div>
-          <div class="chart-holder" style="height:200px"><canvas id="c-status"></canvas></div>
-        </div>
-        <div class="card chart-card">
-          <div class="chart-head"><strong>Sentiment mix</strong>${aiChip('NLP')}</div>
-          <div class="chart-holder" style="height:200px"><canvas id="c-sent"></canvas></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card pad mb16">
-      <div class="row" style="justify-content:space-between">
-        <div class="row" style="gap:8px"><strong style="font-size:16px">Action items</strong>${badge(actionsFiltered.length + ' open', 'tint-info')}${actionsDone ? badge(actionsDone + ' done', 'outline') : ''}</div>
-        <div class="row" style="gap:6px">
-          <button class="btn sm" id="assign-action">${icon('flag', 14)} Assign action</button>
-          <button class="btn subtle sm" id="open-messages">${icon('send', 14)} Messages</button>
-        </div>
-      </div>
-      <hr class="divider"/>
-      <div id="home-actions">
-        ${actionsFiltered.length ? actionsFiltered.map((a) => actionItemHtml(a, { showSource: true, withOpen: true })).join('') : '<div class="muted">No open actions for this filter. Assign one from a message thread or an escalation.</div>'}
-      </div>
-    </div>
-
-    <div class="card chart-card mb16">
-      <div class="chart-head"><strong>Average CPE by family</strong></div>
-      <div class="chart-holder" style="height:220px"><canvas id="c-cpe"></canvas></div>
-    </div>
-
-    <div class="section-title">POD health</div>
-    <div class="pod-grid">
-      ${podHealth.map(({ pod, avgUtil, avgCpe, atRisk, openEsc, headcount }) => `
-        <div class="card pod-card">
-          <div class="row" style="justify-content:space-between">
-            <strong>${esc(pod.name)}</strong>
-            <span class="dot" style="background:${utilColor(avgUtil)}"></span>
-          </div>
-          <div class="muted" style="font-size:12px">${esc(pod.region)} · ${esc(pod.tz)} TZ · ${headcount} active CSAs</div>
-          <hr class="divider"/>
-          <div class="pod-stat"><span>Utilization</span><strong style="color:${utilColor(avgUtil)}">${avgUtil}%</strong></div>
-          <div class="pod-stat"><span>Avg CPE</span><strong style="color:${scoreColor(avgCpe)}">${avgCpe.toFixed(1)}</strong></div>
-          <div class="pod-stat"><span>At-risk / Open esc.</span><strong>${atRisk} / ${openEsc}</strong></div>
-        </div>`).join('')}
-    </div>`;
 
   // Charts
   donut(container.querySelector('#c-status'), {

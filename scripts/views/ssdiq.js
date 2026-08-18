@@ -9,12 +9,14 @@ import { icon } from '../icons.js';
 
 const engCustomer = (id) => { const e = store.data.engagements.find((x) => x.id === id); return e ? e.customer : id; };
 const csaName = (id) => { const c = store.data.csas.find((x) => x.id === id); return c ? c.name : id; };
+const podName = (id) => { const p = store.data.pods.find((x) => x.id === id); return p ? p.name : id; };
+const ipKitName = (engagementId) => { const e = store.data.engagements.find((x) => x.id === engagementId); return e ? `${e.program} IP Kit` : engagementId; };
 
 const CFG = [
   { key: 'partners', name: 'Partner', description: 'Delivery Partners under MOSA.', source: 'MOSA', icon: 'building', label: (r) => r.name,
-    columns: [['id', 'ID'], ['name', 'Name'], ['region', 'Region'], ['cpe', 'CPE'], ['deliveries', 'Deliveries'], ['status', 'Status', (r) => statusPill(r.status)]] },
+    columns: [['id', 'ID'], ['name', 'Name'], ['region', 'Region'], ['cpe', 'CPE'], ['quality', 'Quality'], ['deliveries', 'Deliveries'], ['status', 'Status', (r) => statusPill(r.status)]] },
   { key: 'csas', name: 'CSA', description: 'Partner Cloud Solution Architects.', source: 'Operations', icon: 'personAdd', label: (r) => r.name,
-    columns: [['id', 'ID'], ['name', 'Name'], ['vendor', 'Vendor'], ['tracks', 'Families', (r) => r.tracks.join(', ')], ['utilization', 'Util %'], ['cpe', 'CPE'], ['lifecycle', 'Lifecycle', (r) => statusPill(r.lifecycle)]] },
+    columns: [['id', 'ID'], ['name', 'Name'], ['vendor', 'Vendor'], ['tracks', 'Families', (r) => r.tracks.join(', ')], ['utilization', 'Util %'], ['cpe', 'CPE'], ['s500Ready', 'S500 ready', (r) => r.s500Ready ? badge('Ready', 'tint-info') : badge('No', 'outline')], ['lifecycle', 'Lifecycle', (r) => statusPill(r.lifecycle)]] },
   { key: 'pods', name: 'POD', description: 'Managed groups of CSAs.', source: 'SSD IQ', icon: 'people', label: (r) => r.name,
     columns: [['id', 'ID'], ['name', 'Name'], ['region', 'Region'], ['leadName', 'Lead'], ['utilization', 'Util %']] },
   { key: 'engagements', name: 'Engagement', description: 'Dispatched delivery engagements.', source: 'Dispatch', icon: 'send', label: (r) => r.customer,
@@ -39,8 +41,12 @@ const CFG = [
     columns: [['id', 'ID'], ['engagementId', 'Customer', (r) => engCustomer(r.engagementId)], ['type', 'Type'], ['completedDate', 'Completed'], ['track', 'Family']] },
   { key: 'hiring', name: 'Requisition', description: 'HC consolidation — hiring requisitions (Active & Future).', source: 'HC Consolidation', icon: 'personAdd', label: (r) => `${r.family} · ${r.stage}`,
     columns: [['id', 'ID'], ['family', 'Family'], ['partnerId', 'Partner', (r) => (store.data.partners.find((p) => p.id === r.partnerId) || {}).name || r.partnerId], ['tz', 'TZ'], ['type', 'Type'], ['stage', 'Stage'], ['targetStart', 'Target start']] },
+  { key: 'attrition', name: 'Attrition', description: 'Trailing 12-month exits — voluntary/involuntary, tenure and linked backfill requisitions.', source: 'HC Consolidation', icon: 'personAdd', label: (r) => `${r.name} · ${r.exitType}`,
+    columns: [['id', 'ID'], ['name', 'Name'], ['podId', 'POD', (r) => podName(r.podId)], ['family', 'Family'], ['tenureMonths', 'Tenure (mo)'], ['exitType', 'Exit type'], ['exitReason', 'Reason'], ['exitDate', 'Exit date'], ['backfillReqId', 'Backfill req']] },
   { key: 'shadowRequests', name: 'Shadow Request', description: 'Requests to observe a live delivery (listen-only) ahead of accreditation.', source: 'Enablement', icon: 'people', label: (r) => `${csaName(r.requesterId)} · ${engCustomer(r.engagementId)}`,
     columns: [['id', 'ID'], ['requesterId', 'Requester', (r) => csaName(r.requesterId)], ['engagementId', 'Customer', (r) => engCustomer(r.engagementId)], ['ownerId', 'Delivery resource', (r) => csaName(r.ownerId)], ['status', 'Status', (r) => statusPill(r.status)], ['requestedAt', 'Requested']] },
+  { key: 'ipFeedback', name: 'IP Feedback', description: "POD ratings and refresh signals on each engagement's IP Kit.", source: 'Agentic Delivery', icon: 'star', label: (r) => `${engCustomer(r.engagementId)} · ${r.rating}/5`,
+    columns: [['id', 'ID'], ['engagementId', 'Engagement', (r) => engCustomer(r.engagementId)], ['engagementId', 'IP Kit', (r) => ipKitName(r.engagementId)], ['podId', 'POD', (r) => podName(r.podId)], ['rating', 'Rating'], ['tag', 'Status'], ['submittedAt', 'Submitted']] },
   { key: 'financials', name: 'Financial', description: 'MBR budget, actual, forecast and variance records.', source: 'Finance / Power BI', icon: 'report', label: (r) => `${r.scope} · ${r.category}`,
     columns: [['id', 'ID'], ['period', 'Period'], ['scope', 'Scope'], ['category', 'Category'], ['budget', 'Budget'], ['actual', 'Actual'], ['variance', 'Variance'], ['status', 'Status']] },
   { key: 'initiatives', name: 'Strategy / IP Initiative', description: 'Offerings, roadmap, IP and platform initiatives.', source: 'Portfolio Management', icon: 'grid', label: (r) => r.name,
@@ -233,7 +239,10 @@ function relationshipsFor(key, r) {
         { label: 'Engagements', items: d.engagements.filter((e) => e.assignedTo === r.id).map((e) => ({ key: 'engagements', id: e.id, label: e.customer })) },
       ];
     case 'pods':
-      return [{ label: 'CSAs', items: d.csas.filter((c) => c.podId === r.id).slice(0, 12).map((c) => ({ key: 'csas', id: c.id, label: c.name })) }];
+      return [
+        { label: 'CSAs', items: d.csas.filter((c) => c.podId === r.id).slice(0, 12).map((c) => ({ key: 'csas', id: c.id, label: c.name })) },
+        { label: 'Attrition (12mo)', items: d.attrition.filter((a) => a.podId === r.id).map((a) => ({ key: 'attrition', id: a.id, label: `${a.name} · ${a.exitType}` })) },
+      ];
     case 'engagements':
       return [
         { label: 'Assigned CSA', items: r.assignedTo ? [{ key: 'csas', id: r.assignedTo, label: csaName(r.assignedTo) }] : [] },
@@ -242,6 +251,7 @@ function relationshipsFor(key, r) {
         { label: 'Deliveries', items: d.deliveries.filter((x) => x.engagementId === r.id).map((x) => ({ key: 'deliveries', id: x.id, label: x.type })) },
         { label: 'Success stories', items: d.successStories.filter((story) => story.engagementIds.includes(r.id)).map((story) => ({ key: 'successStories', id: story.id, label: story.title })) },
         { label: 'Shadow requests', items: d.shadowRequests.filter((s) => s.engagementId === r.id).map((s) => ({ key: 'shadowRequests', id: s.id, label: `${csaName(s.requesterId)} · ${s.status}` })) },
+        { label: 'IP Kit feedback', items: d.ipFeedback.filter((f) => f.engagementId === r.id).map((f) => ({ key: 'ipFeedback', id: f.id, label: `${f.rating}/5 · ${f.tag}` })) },
       ];
     case 'successStories':
       return [
@@ -282,12 +292,26 @@ function relationshipsFor(key, r) {
         { label: 'Delivery resource', items: [{ key: 'csas', id: r.ownerId, label: csaName(r.ownerId) }] },
         { label: 'Engagement', items: [{ key: 'engagements', id: r.engagementId, label: engCustomer(r.engagementId) }] },
       ];
+    case 'ipFeedback':
+      return [
+        { label: 'Engagement', items: [{ key: 'engagements', id: r.engagementId, label: engCustomer(r.engagementId) }] },
+        { label: 'POD', items: r.podId ? [{ key: 'pods', id: r.podId, label: podName(r.podId) }] : [] },
+        { label: 'CSA', items: r.csaId ? [{ key: 'csas', id: r.csaId, label: csaName(r.csaId) }] : [] },
+      ];
     case 'deliveries':
       return [{ label: 'Engagement', items: [{ key: 'engagements', id: r.engagementId, label: engCustomer(r.engagementId) }] }];
     case 'hiring':
       return [
         { label: 'Partner', items: r.partnerId ? [{ key: 'partners', id: r.partnerId, label: lk(d.partners, r.partnerId, (p) => p.name) }] : [] },
         { label: 'POD', items: r.podId ? [{ key: 'pods', id: r.podId, label: lk(d.pods, r.podId, (p) => p.name) }] : [] },
+        { label: 'Attrition (backfilling)', items: d.attrition.filter((a) => a.backfillReqId === r.id).map((a) => ({ key: 'attrition', id: a.id, label: a.name })) },
+      ];
+    case 'attrition':
+      return [
+        { label: 'CSA', items: r.csaId ? [{ key: 'csas', id: r.csaId, label: csaName(r.csaId) }] : [] },
+        { label: 'POD', items: r.podId ? [{ key: 'pods', id: r.podId, label: podName(r.podId) }] : [] },
+        { label: 'Partner', items: r.partnerId ? [{ key: 'partners', id: r.partnerId, label: lk(d.partners, r.partnerId, (p) => p.name) }] : [] },
+        { label: 'Backfill requisition', items: r.backfillReqId ? [{ key: 'hiring', id: r.backfillReqId, label: r.backfillReqId }] : [] },
       ];
     default:
       return [];

@@ -32,18 +32,30 @@ export const MODULES = [
     description: 'Escalation management with SDMs.', ai: 'Auto-severity, similar-case retrieval, action extraction.' },
   { id: 'performance', path: '/performance', label: 'Performance & PIPs', icon: 'trending', roles: ['csa-manager', 'pod-lead'], requires: 'view:pip', built: false,
     description: 'Performance management and improvement plans (confidential).', ai: 'Evidence-linked performance summaries (advisory only).' },
+  { id: 'admin-access', path: '/admin-access', label: 'Roles & Permissions', icon: 'lock', roles: ['admin'], requires: 'manage:accessControl', built: true,
+    description: 'Platform Admin only — manage which personas can access each module and which capability permissions they hold.', ai: 'Access-change summary for audit.' },
   { id: 'csam-escalation', path: '/csam-escalation', label: 'Raise a Delivery Concern', icon: 'warning', roles: ['csam'], built: true,
     description: 'CSAM-only intake to flag a delivery concern, which is triaged into Escalations & Actions.', ai: 'Suggested severity from the described impact.' },
   { id: 'reporting', path: '/reporting', label: 'Reporting & AI', icon: 'report', roles: [...SSD_LEADERS, ...SSD_MGRS, 'operations-manager', 'sdm', ...INNOVATION], built: false,
     description: 'AI-assisted reporting and MBR generation.', ai: 'One-click MBR narrative and ask-your-data queries.' },
   { id: 'sentiment', path: '/sentiment', label: 'Sentiment', icon: 'emoji', roles: [...SSD_LEADERS, ...SSD_MGRS, 'sdm'], built: false,
     description: 'Cross-channel sentiment analysis.', ai: 'NLP scoring, theme clustering, early-warning alerts.' },
-  { id: 'ssdiq', path: '/ssdiq', label: 'SSD IQ', icon: 'database', roles: ALL_EXCEPT_EXTERNAL, built: true,
+  { id: 'ssdiq', path: '/ssdiq', label: 'SSD IQ', icon: 'database', roles: [...ALL_EXCEPT_EXTERNAL, 'admin'], built: true,
     description: 'The System of Records and data catalog.', ai: 'Natural-language record search and data-quality flags.' },
-  { id: 'capabilities', path: '/capabilities', label: 'Capability Map', icon: 'grid', roles: ALL_EXCEPT_EXTERNAL, built: true,
+  { id: 'capabilities', path: '/capabilities', label: 'Capability Map', icon: 'grid', roles: [...ALL_EXCEPT_EXTERNAL, 'admin'], built: true,
     description: 'The SSD delivery capability map.', ai: 'Coverage of delivery capabilities across Compass.' },
-  { id: 'home', path: '/home', label: 'Platform Overview', icon: 'home', roles: ALL, built: true,
-    description: 'Executive overview — operating model, resource health, and priorities.', ai: 'Auto-generated daily briefing and anomaly callouts.' },
+  { id: 'home', path: '/home', label: 'True North', icon: 'compass', roles: [...ALL, 'admin'], built: true,
+    description: 'Your personalized start page — today\u2019s and this week\u2019s priorities, key KPIs, and what needs attention.', ai: 'Auto-generated daily briefing and anomaly callouts.' },
+];
+
+// Single source of truth for nav-rail sectioning — shared by the nav rail and the Admin Roles & Permissions matrix.
+export const NAV_GROUPS = [
+  { title: '', ids: ['home'] },
+  { title: 'Operations', ids: ['pods', 'lifecycle', 'capacity', 'engagements', 'enablement', 'reports-pending'] },
+  { title: 'Delivery', ids: ['agentic', 'success-stories', 'messages', 'quality', 'escalations', 'reporting', 'sentiment'] },
+  { title: 'Platform', ids: ['ssdiq', 'capabilities'] },
+  { title: 'People', ids: ['delivery-partners', 'performance', 'admin-access'] },
+  { title: 'Customer Success', ids: ['csam-escalation'] },
 ];
 
 export function modulesForRole(role) {

@@ -1,10 +1,14 @@
 // Reporting & AI — Executive View + MBR generator + ask-your-data.
-import { store, computeKpis, hoursSince } from '../store.js';
+import { store, computeKpis, computePodPerformance, computePartnerPerformance, ipKitStats, hoursSince } from '../store.js';
 import { pageHeader, kpiCard, aiChip, esc, badge, clearCharts, bar, donut, line, meter, COLORS, scoreColor, utilColor } from '../components.js';
 import { icon } from '../icons.js';
-import { mbrNarrative, askData, execSummary } from '../ai.js';
-import { TRACKS, TZ_MAP } from '../../data/generate.js';
+import { mbrNarrative, askData, execSummary, podPerformanceSummary, ipFeedbackSummary, partnerPerformanceSummary } from '../ai.js';
+import { TRACKS, TZ_MAP, IP_TAGS } from '../../data/generate.js';
 import { renderMbrScorecard } from './mbrscorecard.js';
+
+const TIER_BADGE = { Leading: 'tint-info', 'On track': 'outline', 'Needs attention': 'tint-danger' };
+const TIER_COLOR = { Leading: COLORS.positive, 'On track': COLORS.info, 'Needs attention': COLORS.negative };
+const IP_TAG_BADGE = { 'Reusable as-is': 'tint-info', 'Needs minor update': 'outline', 'Needs major update': 'tint-warn', 'Outdated — retire': 'tint-danger' };
 
 const PERIODS = ['2026-04', '2026-05', '2026-06', '2026-07'];
 let tab = 'scorecard';
@@ -18,9 +22,19 @@ let fTz = 'All';
 let fTrack = 'All';
 let fPartner = 'All';
 let fStatus = 'All';
+let fPodTz = 'All';
+let fPodRegion = 'All';
+let fPodManager = 'All';
+let fPodTrack = 'All';
+let fPodTier = 'All';
+let fIpTrack = 'All';
+let fIpTag = 'All';
+let fPPRegion = 'All';
+let fPPStatus = 'All';
+let fPPTier = 'All';
 
 export function renderReporting(container) {
-  const tabs = [['scorecard', 'SSD MBR Scorecard'], ['exec', 'Executive View'], ['territory', 'Territory Ops'], ['mbr', 'MBR Builder'], ['ask', 'Ask-your-data']];
+  const tabs = [['scorecard', 'SSD MBR Scorecard'], ['exec', 'Executive View'], ['territory', 'Territory Ops'], ['podperf', 'POD Performance'], ['partnerperf', 'Partner Performance'], ['ipfeedback', 'IP Feedback'], ['mbr', 'MBR Builder'], ['ask', 'Ask-your-data']];
   container.innerHTML = `
     ${pageHeader({ title: 'Reporting & AI', description: 'Executive reporting is derived from SSD IQ — the canonical source for engagement, quality, action, and capacity signals used in AI and MBRs.' })}
     <div class="tabs">${tabs.map(([k, l]) => `<div class="tab ${tab === k ? 'active' : ''}" data-tab="${k}">${l}</div>`).join('')}</div>
@@ -30,6 +44,9 @@ export function renderReporting(container) {
   if (tab === 'scorecard') renderMbrScorecard(tc);
   else if (tab === 'exec') renderExec(tc);
   else if (tab === 'territory') renderTerritory(tc);
+  else if (tab === 'podperf') renderPodPerformance(tc);
+  else if (tab === 'partnerperf') renderPartnerPerformance(tc);
+  else if (tab === 'ipfeedback') renderIpFeedback(tc);
   else if (tab === 'mbr') renderMbrBuilder(tc);
   else renderAsk(tc);
 }
@@ -63,6 +80,7 @@ function renderExec(tc) {
       ${kpiCard({ label: 'Open escalations', value: k.openEscalations, iconName: 'warning', tone: k.slaBreaches ? COLORS.negative : COLORS.neutral, hint: `${k.slaBreaches} breaching SLA` })}
       ${kpiCard({ label: 'Utilization', value: k.utilization + '%', iconName: 'people', tone: utilColor(k.utilization) })}
       ${kpiCard({ label: 'Net sentiment', value: k.netSentiment > 0 ? '+' + k.netSentiment : k.netSentiment, iconName: 'emoji', tone: k.netSentiment >= 0 ? COLORS.positive : COLORS.negative })}
+      ${kpiCard({ label: 'Attrition rate', value: k.attritionRate + '%', iconName: 'personAdd', tone: k.attritionRate > 12 ? COLORS.negative : COLORS.positive, hint: 'trailing 12mo' })}
     </div>
 
     <div class="card pad mb16" style="border-left:4px solid var(--brand-primary)">
@@ -206,6 +224,252 @@ function renderTerritory(tc) {
   tc.querySelector('#t-partner').addEventListener('change', (e) => { fPartner = e.target.value; rerender(); });
   tc.querySelector('#t-status').addEventListener('change', (e) => { fStatus = e.target.value; rerender(); });
   tc.querySelector('#t-reset').addEventListener('click', () => { fTz = 'All'; fTrack = 'All'; fPartner = 'All'; fStatus = 'All'; rerender(); });
+}
+
+// ---- POD Performance (composite scorecard rolled up from Performance & PIPs' CSA scoring) ----
+function renderPodPerformance(tc) {
+  clearCharts();
+  const d = store.data;
+  const all = computePodPerformance(d);
+  const tzs = Object.keys(TZ_MAP);
+  const regions = [...new Set(all.map((p) => p.region))].sort();
+  const managers = [...new Set(all.map((p) => p.csaManager))].sort();
+  const tiers = ['Leading', 'On track', 'Needs attention'];
+  const perf = all.filter((p) =>
+    (fPodTz === 'All' || p.tz === fPodTz) &&
+    (fPodRegion === 'All' || p.region === fPodRegion) &&
+    (fPodManager === 'All' || p.csaManager === fPodManager) &&
+    (fPodTrack === 'All' || p.tracks.includes(fPodTrack)) &&
+    (fPodTier === 'All' || p.tier === fPodTier)
+  ).sort((a, b) => b.score - a.score);
+  const summary = podPerformanceSummary(d);
+
+  const avg = (key) => perf.length ? Math.round((perf.reduce((s, p) => s + p[key], 0) / perf.length) * 10) / 10 : 0;
+  const leading = perf.filter((p) => p.tier === 'Leading').length;
+  const needsAttention = perf.filter((p) => p.tier === 'Needs attention').length;
+  const totalOpenEsc = perf.reduce((s, p) => s + p.openEsc, 0);
+  const opt = (v, sel, label) => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(label)}</option>`;
+
+  tc.innerHTML = `
+    <div class="row wrap mb8" style="gap:8px;align-items:center"><strong style="font-size:15px">POD Performance</strong>${badge('FY27', 'tint-info')}${badge('representative · pending real PBI', 'outline')}</div>
+    <div class="muted mb8" style="font-size:12px">Composite score (0–100) per POD, blending CPE, quality, utilization, open escalations and sentiment.</div>
+    <div class="row wrap mb16" style="gap:8px;align-items:center">
+      <select class="select" id="pp-tz">${opt('All', fPodTz, 'All time zones')}${tzs.map((v) => opt(v, fPodTz, v)).join('')}</select>
+      <select class="select" id="pp-region">${opt('All', fPodRegion, 'All regions')}${regions.map((v) => opt(v, fPodRegion, v)).join('')}</select>
+      <select class="select" id="pp-manager">${opt('All', fPodManager, 'All CSA Managers')}${managers.map((v) => opt(v, fPodManager, v)).join('')}</select>
+      <select class="select" id="pp-track">${opt('All', fPodTrack, 'All families')}${TRACKS.map((v) => opt(v, fPodTrack, v)).join('')}</select>
+      <select class="select" id="pp-tier">${opt('All', fPodTier, 'All tiers')}${tiers.map((v) => opt(v, fPodTier, v)).join('')}</select>
+      <button class="btn sm" id="pp-reset">Reset</button>
+    </div>
+
+    <div class="kpi-grid">
+      ${kpiCard({ label: 'Avg composite score', value: avg('score'), iconName: 'trending', tone: scoreColor(avg('score') / 20) })}
+      ${kpiCard({ label: 'Avg CPE', value: avg('avgCpe').toFixed(1), iconName: 'star', tone: scoreColor(avg('avgCpe')) })}
+      ${kpiCard({ label: 'Avg quality', value: avg('avgQuality').toFixed(1), iconName: 'check', tone: scoreColor(avg('avgQuality')) })}
+      ${kpiCard({ label: 'Avg utilization', value: avg('util') + '%', iconName: 'people', tone: utilColor(avg('util')) })}
+      ${kpiCard({ label: 'Leading PODs', value: leading, iconName: 'check', tone: COLORS.positive })}
+      ${kpiCard({ label: 'Needs attention', value: needsAttention, iconName: 'warning', tone: needsAttention ? COLORS.negative : COLORS.neutral, hint: `${totalOpenEsc} open escalations in scope` })}
+    </div>
+
+    <div class="card pad mb16" style="border-left:4px solid var(--brand-primary)">
+      <div class="row mb8">${icon('sparkle', 16)}<strong>POD performance summary</strong>${aiChip()}</div>
+      <div>${esc(summary.text)}</div>
+    </div>
+
+    <div class="card chart-card mb16"><div class="chart-head"><strong>Composite score by POD</strong></div><div class="chart-holder" style="height:260px"><canvas id="pp-score"></canvas></div></div>
+
+    <div class="section-title">PODs in scope (${perf.length})</div>
+    <div class="table-wrap"><table class="grid"><thead><tr><th>POD</th><th>Lead</th><th>CSA Manager</th><th>TZ</th><th>CSAs</th><th>Utilization</th><th>CPE</th><th>Quality</th><th>On-time</th><th>Open esc</th><th>Attrition (12mo)</th><th>Sentiment</th><th>Score</th><th>Tier</th></tr></thead><tbody>
+      ${perf.map((p) => `<tr>
+        <td><strong>${esc(p.name)}</strong></td>
+        <td>${esc(p.leadName)}</td>
+        <td>${esc(p.csaManager)}</td>
+        <td>${esc(p.tz)}</td>
+        <td>${p.csaCount}</td>
+        <td><div class="row" style="gap:6px">${meter(p.util, utilColor(p.util))}<span>${p.util}%</span></div></td>
+        <td style="color:${scoreColor(p.avgCpe)}">${p.avgCpe.toFixed(1)}</td>
+        <td style="color:${scoreColor(p.avgQuality)}">${p.avgQuality.toFixed(1)}</td>
+        <td>${p.onTimePct == null ? '—' : p.onTimePct + '%'}</td>
+        <td>${p.slaBreach ? `<span style="color:${COLORS.negative}">${p.openEsc}</span>` : p.openEsc}</td>
+        <td>${p.attritionCount ? `<span style="color:${COLORS.warning}">${p.attritionCount}</span>` : '0'}</td>
+        <td style="color:${p.netSentiment >= 0 ? COLORS.positive : COLORS.negative}">${p.netSentiment > 0 ? '+' + p.netSentiment : p.netSentiment}</td>
+        <td><strong>${p.score}</strong></td>
+        <td>${badge(p.tier, TIER_BADGE[p.tier])}</td>
+      </tr>`).join('') || '<tr><td colspan="14" class="muted" style="padding:16px">No PODs in scope.</td></tr>'}
+    </tbody></table></div>`;
+
+  bar(tc.querySelector('#pp-score'), { labels: perf.map((p) => p.name), values: perf.map((p) => p.score), color: perf.map((p) => TIER_COLOR[p.tier]), label: 'Score' });
+
+  const rerender = () => renderPodPerformance(tc);
+  tc.querySelector('#pp-tz').addEventListener('change', (e) => { fPodTz = e.target.value; rerender(); });
+  tc.querySelector('#pp-region').addEventListener('change', (e) => { fPodRegion = e.target.value; rerender(); });
+  tc.querySelector('#pp-manager').addEventListener('change', (e) => { fPodManager = e.target.value; rerender(); });
+  tc.querySelector('#pp-track').addEventListener('change', (e) => { fPodTrack = e.target.value; rerender(); });
+  tc.querySelector('#pp-tier').addEventListener('change', (e) => { fPodTier = e.target.value; rerender(); });
+  tc.querySelector('#pp-reset').addEventListener('click', () => { fPodTz = 'All'; fPodRegion = 'All'; fPodManager = 'All'; fPodTrack = 'All'; fPodTier = 'All'; rerender(); });
+}
+
+// ---- Partner Performance (Delivery Partner / Supplier scorecard, incl. S500 readiness) ----
+function renderPartnerPerformance(tc) {
+  clearCharts();
+  const d = store.data;
+  const all = computePartnerPerformance(d);
+  const regions = [...new Set(d.partners.map((p) => p.region))].sort();
+  const statuses = [...new Set(d.partners.map((p) => p.status))].sort();
+  const tiers = ['Leading', 'On track', 'Needs attention'];
+  const perf = all.filter((p) =>
+    (fPPRegion === 'All' || p.region === fPPRegion) &&
+    (fPPStatus === 'All' || p.status === fPPStatus) &&
+    (fPPTier === 'All' || p.tier === fPPTier)
+  ).sort((a, b) => b.score - a.score);
+  const summary = partnerPerformanceSummary(d);
+
+  const avg = (key) => perf.length ? Math.round((perf.reduce((s, p) => s + p[key], 0) / perf.length) * 10) / 10 : 0;
+  const needsAttention = perf.filter((p) => p.tier === 'Needs attention').length;
+  const totalFlags = perf.reduce((s, p) => s + p.s500Flags, 0);
+  const opt = (v, sel, label) => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(label)}</option>`;
+
+  tc.innerHTML = `
+    <div class="row wrap mb8" style="gap:8px;align-items:center"><strong style="font-size:15px">Partner Performance</strong>${badge('FY27', 'tint-info')}${badge('representative · pending real PBI', 'outline')}</div>
+    <div class="muted mb8" style="font-size:12px">Composite score (0–100) per Delivery Partner (Supplier), blending CPE, quality, utilization, open escalations and sentiment — plus S500 readiness.</div>
+    <div class="row wrap mb16" style="gap:8px;align-items:center">
+      <select class="select" id="ptp-region">${opt('All', fPPRegion, 'All regions')}${regions.map((v) => opt(v, fPPRegion, v)).join('')}</select>
+      <select class="select" id="ptp-status">${opt('All', fPPStatus, 'All statuses')}${statuses.map((v) => opt(v, fPPStatus, v)).join('')}</select>
+      <select class="select" id="ptp-tier">${opt('All', fPPTier, 'All tiers')}${tiers.map((v) => opt(v, fPPTier, v)).join('')}</select>
+      <button class="btn sm" id="ptp-reset">Reset</button>
+    </div>
+
+    <div class="kpi-grid">
+      ${kpiCard({ label: 'Avg composite score', value: avg('score'), iconName: 'trending', tone: scoreColor(avg('score') / 20) })}
+      ${kpiCard({ label: 'Avg CPE', value: avg('avgCpe').toFixed(1), iconName: 'star', tone: scoreColor(avg('avgCpe')) })}
+      ${kpiCard({ label: 'Avg quality', value: avg('avgQuality').toFixed(1), iconName: 'check', tone: scoreColor(avg('avgQuality')) })}
+      ${kpiCard({ label: 'Avg S500 readiness', value: avg('s500ReadyPct') + '%', iconName: 'people' })}
+      ${kpiCard({ label: 'Needs attention', value: needsAttention, iconName: 'warning', tone: needsAttention ? COLORS.negative : COLORS.neutral })}
+      ${kpiCard({ label: 'S500 cx by non-ready CSA', value: totalFlags, iconName: 'warning', tone: totalFlags ? COLORS.negative : COLORS.neutral, hint: 'target: 0' })}
+    </div>
+
+    <div class="card pad mb16" style="border-left:4px solid var(--brand-primary)">
+      <div class="row mb8">${icon('sparkle', 16)}<strong>Partner performance summary</strong>${aiChip()}</div>
+      <div>${esc(summary.text)}</div>
+    </div>
+
+    <div class="card chart-card mb16"><div class="chart-head"><strong>Composite score by partner</strong></div><div class="chart-holder" style="height:260px"><canvas id="ptp-score"></canvas></div></div>
+
+    <div class="section-title">Partners in scope (${perf.length})</div>
+    <div class="table-wrap"><table class="grid"><thead><tr><th>Partner</th><th>Region</th><th>Status</th><th>CSAs</th><th>Utilization</th><th>CPE</th><th>Quality</th><th>On-time</th><th>Open esc</th><th>S500 ready</th><th>S500 flags</th><th>Sentiment</th><th>Score</th><th>Tier</th></tr></thead><tbody>
+      ${perf.map((p) => `<tr>
+        <td><strong>${esc(p.name)}</strong></td>
+        <td>${esc(p.region)}</td>
+        <td>${esc(p.status)}</td>
+        <td>${p.csaCount}</td>
+        <td><div class="row" style="gap:6px">${meter(p.util, utilColor(p.util))}<span>${p.util}%</span></div></td>
+        <td style="color:${scoreColor(p.avgCpe)}">${p.avgCpe.toFixed(1)}</td>
+        <td style="color:${scoreColor(p.avgQuality)}">${p.avgQuality.toFixed(1)}</td>
+        <td>${p.onTimePct == null ? '—' : p.onTimePct + '%'}</td>
+        <td>${p.slaBreach ? `<span style="color:${COLORS.negative}">${p.openEsc}</span>` : p.openEsc}</td>
+        <td>${p.s500ReadyPct}%</td>
+        <td>${p.s500Flags ? `<span style="color:${COLORS.negative}">${p.s500Flags}</span>` : '0'}</td>
+        <td style="color:${p.netSentiment >= 0 ? COLORS.positive : COLORS.negative}">${p.netSentiment > 0 ? '+' + p.netSentiment : p.netSentiment}</td>
+        <td><strong>${p.score}</strong></td>
+        <td>${badge(p.tier, TIER_BADGE[p.tier])}</td>
+      </tr>`).join('') || '<tr><td colspan="14" class="muted" style="padding:16px">No partners in scope.</td></tr>'}
+    </tbody></table></div>`;
+
+  bar(tc.querySelector('#ptp-score'), { labels: perf.map((p) => p.name), values: perf.map((p) => p.score), color: perf.map((p) => TIER_COLOR[p.tier]), label: 'Score' });
+
+  const rerenderPP = () => renderPartnerPerformance(tc);
+  tc.querySelector('#ptp-region').addEventListener('change', (e) => { fPPRegion = e.target.value; rerenderPP(); });
+  tc.querySelector('#ptp-status').addEventListener('change', (e) => { fPPStatus = e.target.value; rerenderPP(); });
+  tc.querySelector('#ptp-tier').addEventListener('change', (e) => { fPPTier = e.target.value; rerenderPP(); });
+  tc.querySelector('#ptp-reset').addEventListener('click', () => { fPPRegion = 'All'; fPPStatus = 'All'; fPPTier = 'All'; rerenderPP(); });
+}
+
+// ---- IP Feedback (each engagement's own IP Kit, rated/tagged by the delivering POD) ----
+const ratingColor = (r) => (r >= 4 ? COLORS.positive : r >= 3 ? COLORS.warning : COLORS.negative);
+function renderIpFeedback(tc) {
+  clearCharts();
+  const d = store.data;
+  const engById = (id) => d.engagements.find((e) => e.id === id);
+  const statsAll = ipKitStats(d);
+  const stats = statsAll.filter((a) => fIpTrack === 'All' || a.track === fIpTrack);
+  const feedbackRows = d.ipFeedback
+    .filter((f) => { const eng = engById(f.engagementId); return (fIpTrack === 'All' || (eng && eng.track === fIpTrack)) && (fIpTag === 'All' || f.tag === fIpTag); })
+    .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+  const summary = ipFeedbackSummary(d);
+
+  const rated = stats.filter((a) => a.avgRating != null);
+  const avgRating = rated.length ? Math.round((rated.reduce((s, a) => s + a.avgRating, 0) / rated.length) * 10) / 10 : 0;
+  const needsAttention = stats.reduce((s, a) => s + a.needsAttention, 0);
+  const totalSubmissions = stats.reduce((s, a) => s + a.feedbackCount, 0);
+  const top = [...rated].sort((a, b) => b.avgRating - a.avgRating)[0];
+  const opt = (v, sel, label) => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(label)}</option>`;
+
+  tc.innerHTML = `
+    <div class="row wrap mb8" style="gap:8px;align-items:center"><strong style="font-size:15px">POD - IP Feedback</strong>${badge('FY27', 'tint-info')}${badge('representative · pending real PBI', 'outline')}</div>
+    <div class="muted mb8" style="font-size:12px">Each engagement has its own IP Kit (the collateral bundle for its Program) — the delivering POD rates and tags it after use; feedback rolls up to the IP Lead's refresh backlog by Kit type.</div>
+    <div class="row wrap mb16" style="gap:8px;align-items:center">
+      <select class="select" id="ipf-track">${opt('All', fIpTrack, 'All families')}${TRACKS.map((v) => opt(v, fIpTrack, v)).join('')}</select>
+      <select class="select" id="ipf-tag">${opt('All', fIpTag, 'All statuses')}${IP_TAGS.map((v) => opt(v, fIpTag, v)).join('')}</select>
+      <button class="btn sm" id="ipf-reset">Reset</button>
+    </div>
+
+    <div class="kpi-grid">
+      ${kpiCard({ label: 'Feedback submissions', value: totalSubmissions, iconName: 'chat' })}
+      ${kpiCard({ label: 'Avg rating', value: avgRating.toFixed(1) + '/5', iconName: 'star', tone: ratingColor(avgRating) })}
+      ${kpiCard({ label: 'Top-rated Kit', value: top ? top.name : '—', iconName: 'check', tone: COLORS.positive })}
+      ${kpiCard({ label: 'Flagged for refresh', value: needsAttention, iconName: 'warning', tone: needsAttention ? COLORS.negative : COLORS.neutral, hint: 'Needs major update / Outdated' })}
+    </div>
+
+    <div class="card pad mb16" style="border-left:4px solid var(--brand-primary)">
+      <div class="row mb8">${icon('sparkle', 16)}<strong>IP feedback summary</strong>${aiChip()}</div>
+      <div>${esc(summary.text)}</div>
+    </div>
+
+    <div class="two-col">
+      <div class="card chart-card"><div class="chart-head"><strong>Avg rating by IP Kit</strong></div><div class="chart-holder" style="height:240px"><canvas id="ipf-rating"></canvas></div></div>
+      <div class="card chart-card"><div class="chart-head"><strong>Feedback by status</strong></div><div class="chart-holder" style="height:240px"><canvas id="ipf-tagchart"></canvas></div></div>
+    </div>
+
+    <div class="section-title">IP Kits in scope (${stats.length})</div>
+    <div class="table-wrap mb16"><table class="grid"><thead><tr><th>IP Kit</th><th>Family</th><th>Submissions</th><th>Avg rating</th><th>Flagged</th><th>Latest feedback</th></tr></thead><tbody>
+      ${stats.map((a) => `<tr>
+        <td><strong>${esc(a.name)}</strong></td>
+        <td>${esc(a.track)}</td>
+        <td>${a.feedbackCount}</td>
+        <td style="color:${a.avgRating != null ? ratingColor(a.avgRating) : 'inherit'}">${a.avgRating != null ? a.avgRating.toFixed(1) : '—'}</td>
+        <td>${a.needsAttention ? `<span style="color:${COLORS.negative}">${a.needsAttention}</span>` : '0'}</td>
+        <td class="muted" style="font-size:12px">${a.latest ? `${esc(a.latest.submittedAt)} · ${esc(a.latest.comment)}` : '—'}</td>
+      </tr>`).join('') || '<tr><td colspan="6" class="muted" style="padding:16px">No IP Kits in scope.</td></tr>'}
+    </tbody></table></div>
+
+    <div class="section-title">Feedback log (${feedbackRows.length})</div>
+    <div class="table-wrap"><table class="grid"><thead><tr><th>Date</th><th>Engagement</th><th>IP Kit</th><th>POD</th><th>Rating</th><th>Status</th><th>Comment</th></tr></thead><tbody>
+      ${feedbackRows.slice(0, 30).map((f) => {
+        const eng = engById(f.engagementId);
+        const pod = d.pods.find((p) => p.id === f.podId);
+        return `<tr>
+          <td>${esc(f.submittedAt)}</td>
+          <td><strong>${esc(eng ? eng.customer : f.engagementId)}</strong></td>
+          <td>${esc(eng ? `${eng.program} IP Kit` : '—')}</td>
+          <td>${esc(pod ? pod.name : '—')}</td>
+          <td style="color:${ratingColor(f.rating)}">${f.rating}/5</td>
+          <td>${badge(f.tag, IP_TAG_BADGE[f.tag] || 'outline')}</td>
+          <td class="muted" style="font-size:12px">${esc(f.comment)}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="7" class="muted" style="padding:16px">No feedback in scope.</td></tr>'}
+    </tbody></table></div>`;
+
+  bar(tc.querySelector('#ipf-rating'), { labels: stats.map((a) => a.name), values: stats.map((a) => a.avgRating || 0), color: stats.map((a) => ratingColor(a.avgRating || 0)), label: 'Avg rating' });
+  donut(tc.querySelector('#ipf-tagchart'), {
+    labels: IP_TAGS,
+    values: IP_TAGS.map((t) => feedbackRows.filter((f) => f.tag === t).length),
+    colors: [COLORS.positive, COLORS.info, COLORS.warning, COLORS.negative],
+  });
+
+  const rerenderIp = () => renderIpFeedback(tc);
+  tc.querySelector('#ipf-track').addEventListener('change', (e) => { fIpTrack = e.target.value; rerenderIp(); });
+  tc.querySelector('#ipf-tag').addEventListener('change', (e) => { fIpTag = e.target.value; rerenderIp(); });
+  tc.querySelector('#ipf-reset').addEventListener('click', () => { fIpTrack = 'All'; fIpTag = 'All'; rerenderIp(); });
 }
 
 // ---- MBR Builder (Delivery Partner MBR + internal SSD Business MBR) ----

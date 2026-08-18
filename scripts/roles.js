@@ -1,5 +1,7 @@
 // Personas and permission gating for the role switcher.
-// Org groups: SSD (Microsoft), CSAM Innovation, and the Delivery Partner.
+// Org groups: SSD (Microsoft), CSAM Innovation, the Delivery Partner, Customer Success, and Platform Admin.
+import { notifyAccessChange } from './store.js';
+
 export const PERSONAS = {
   // SSD (Microsoft): WW Lead → TZ Lead → CSA Manager → POD Lead
   'ww-lead': { role: 'ww-lead', name: 'Jordan Pierce', title: 'Worldwide Lead · SSD', initials: 'JP', color: '#5c2e91', org: 'SSD', scope: 'Global portfolio, CPE & delivery trends, sentiment, MBR roll-ups.' },
@@ -17,9 +19,39 @@ export const PERSONAS = {
   'operations-manager': { role: 'operations-manager', name: 'Omar Haddad', title: 'Operations Manager · Delivery Partner', initials: 'OH', color: '#8764b8', org: 'Delivery Partner', scope: 'Sourcing, headcount, onboarding/offboarding and capacity.' },
   // Customer Success (Microsoft, customer-facing)
   csam: { role: 'csam', name: 'Julia Meyer', title: 'CSAM · Customer Success', initials: 'JM', color: '#c19c00', org: 'Customer Success', scope: 'Owns the customer relationship; raises delivery concerns as escalations for the POD Lead/SDM.' },
+  // Platform Admin (governs Compass itself, not a delivery role)
+  admin: { role: 'admin', name: 'Alex Ito', title: 'Platform Admin · Compass', initials: 'AI', color: '#3b3a39', org: 'Platform Admin', scope: 'Manages persona access to modules and capability permissions. No delivery-data ownership.' },
 };
 
-export const ROLE_ORDER = ['ww-lead', 'tz-lead', 'csa-manager', 'pod-lead', 'business-manager', 'csa', 'ip-lead', 'adoption-lead', 'partner-csa', 'sdm', 'operations-manager', 'csam'];
+export const ROLE_ORDER = ['ww-lead', 'tz-lead', 'csa-manager', 'pod-lead', 'business-manager', 'csa', 'ip-lead', 'adoption-lead', 'partner-csa', 'sdm', 'operations-manager', 'csam', 'admin'];
+
+// Every capability permission checked anywhere in the app via can(), plus the Admin-only permission that gates Roles & Permissions.
+export const ALL_PERMISSIONS = [
+  'view:portfolio', 'view:allPartners', 'run:mbr',
+  'edit:successStories', 'assign:successStoryActions', 'review:successStories',
+  'approve:podSuccessStories', 'approve:leadershipSuccessStories', 'approve:ltSuccessStories', 'publish:successStories',
+  'view:pip', 'edit:pip', 'edit:dispatch', 'edit:escalation', 'edit:capacity', 'raise:escalation',
+  'manage:accessControl',
+];
+export const PERMISSION_LABELS = {
+  'view:portfolio': 'View portfolio — cross-POD/territory visibility',
+  'view:allPartners': 'View all partners — not just own assignments',
+  'run:mbr': 'Run MBR — generate MBR narratives & reports',
+  'edit:successStories': 'Create success stories',
+  'assign:successStoryActions': 'Assign success story follow-up actions',
+  'review:successStories': 'Review success stories (SDM step)',
+  'approve:podSuccessStories': 'Approve success stories (POD Lead step)',
+  'approve:leadershipSuccessStories': 'Approve success stories (Leadership step)',
+  'approve:ltSuccessStories': 'Approve success stories (LT sign-off)',
+  'publish:successStories': 'Publish, archive & restore success stories',
+  'view:pip': 'View performance improvement plans (confidential)',
+  'edit:pip': 'Edit performance improvement plans',
+  'edit:dispatch': 'Edit engagement dispatch / assignment',
+  'edit:escalation': 'Manage escalations',
+  'edit:capacity': 'Edit capacity plans & headcount mapping',
+  'raise:escalation': 'Raise a delivery concern (CSAM intake)',
+  'manage:accessControl': 'Manage roles & permissions (Platform Admin)',
+};
 
 const ROLE_PERMISSIONS = {
   'ww-lead': ['view:portfolio', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:leadershipSuccessStories', 'approve:ltSuccessStories'],
@@ -34,8 +66,29 @@ const ROLE_PERMISSIONS = {
   sdm: ['edit:escalation', 'view:allPartners', 'run:mbr', 'review:successStories'],
   'operations-manager': ['edit:capacity', 'view:allPartners'],
   csam: ['raise:escalation'],
+  admin: ['manage:accessControl'],
 };
 
+// Admin-managed permission overrides, layered over the base ROLE_PERMISSIONS above.
+const permissionOverrides = {}; // { [role]: { [permission]: true|false } }
+
 export function can(role, permission) {
+  const override = permissionOverrides[role] && permissionOverrides[role][permission];
+  if (override != null) return override;
   return (ROLE_PERMISSIONS[role] || []).includes(permission);
+}
+export function effectivePermissions(role) {
+  return ALL_PERMISSIONS.filter((p) => can(role, p));
+}
+export function isPermissionOverridden(role, permission) {
+  return !!(permissionOverrides[role] && permissionOverrides[role][permission] != null);
+}
+export function setPermissionOverride(role, permission, allowed) {
+  if (!permissionOverrides[role]) permissionOverrides[role] = {};
+  permissionOverrides[role][permission] = allowed;
+  notifyAccessChange();
+}
+export function resetPermissionOverride(role, permission) {
+  if (permissionOverrides[role]) delete permissionOverrides[role][permission];
+  notifyAccessChange();
 }

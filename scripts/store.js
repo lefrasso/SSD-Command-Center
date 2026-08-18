@@ -1,20 +1,50 @@
 // In-memory SSD IQ store + derived KPIs and selectors.
-import { dataset } from '../data/generate.js';
+import { dataset, IP_TAGS } from '../data/generate.js';
+import { MODULES, moduleById } from './nav.js';
 
 export const store = {
   data: dataset,
   role: 'pod-lead',
   navCollapsed: false,
   copilotOpen: true,
+  accessOverrides: {}, // { [role]: { [moduleId]: true|false } } — Admin-managed module access, layered over nav.js defaults
   _listeners: [],
 };
 
 export function onChange(fn) { store._listeners.push(fn); }
 function emit(reason) { store._listeners.forEach((fn) => fn(reason)); }
+export function notifyAccessChange() { emit('access'); }
 
 export function setRole(role) { store.role = role; emit('role'); }
 export function toggleNav() { store.navCollapsed = !store.navCollapsed; emit('nav'); }
 export function toggleCopilot(force) { store.copilotOpen = typeof force === 'boolean' ? force : !store.copilotOpen; emit('copilot'); }
+
+// ---- Module access (Roles & Permissions, Admin-only) ----
+export function roleHasModuleAccess(role, moduleId) {
+  const override = store.accessOverrides[role] && store.accessOverrides[role][moduleId];
+  if (override != null) return override;
+  const mod = moduleById(moduleId);
+  return !!mod && mod.roles.includes(role);
+}
+export function modulesForRoleEffective(role) {
+  return MODULES.filter((m) => roleHasModuleAccess(role, m.id));
+}
+export function isModuleAccessOverridden(role, moduleId) {
+  return !!(store.accessOverrides[role] && store.accessOverrides[role][moduleId] != null);
+}
+export function setModuleAccess(role, moduleId, allowed) {
+  if (!store.accessOverrides[role]) store.accessOverrides[role] = {};
+  store.accessOverrides[role][moduleId] = allowed;
+  emit('access');
+}
+export function resetModuleAccess(role, moduleId) {
+  if (store.accessOverrides[role]) delete store.accessOverrides[role][moduleId];
+  emit('access');
+}
+export function resetAllModuleAccess() {
+  store.accessOverrides = {};
+  emit('access');
+}
 
 // ---- Relationship helpers ----
 export const byId = (arr, id) => arr.find((x) => x.id === id);
@@ -49,6 +79,8 @@ export const CANONICAL_ENTITIES = [
   { entity: 'Sentiment Signals', owner: 'Voice of customer', source: 'AI Services', key: 'sentimentSignals', count: (d) => d.sentimentSignals.length },
   { entity: 'Sentiment', owner: 'Voice of customer', source: 'AI sentiment rollup', key: 'sentiment', count: (d) => d.sentiment.length },
   { entity: 'Shadow Requests', owner: 'Enablement', source: 'Shadowing program', key: 'shadowRequests', count: (d) => d.shadowRequests.length },
+  { entity: 'IP Feedback', owner: 'IP Lead · CSAM Innovation', source: 'Agentic Delivery', key: 'ipFeedback', count: (d) => d.ipFeedback.length },
+  { entity: 'Attrition', owner: 'Capacity planning', source: 'HC Consolidation', key: 'attrition', count: (d) => d.attrition.length },
 ];
 
 export function canonicalEntityMap(d = store.data) {
@@ -69,7 +101,8 @@ export function computeKpis(d = store.data) {
   const utilization = activeCsas.length ? Math.round(activeCsas.reduce((s, c) => s + c.utilization, 0) / activeCsas.length) : 0;
   const latest = d.sentiment.filter((s) => s.scopeType === 'partner' && s.period === '2026-07');
   const netSentiment = latest.length ? Math.round(latest.reduce((s, r) => s + r.net, 0) / latest.length) : 0;
-  return { activeEngagements: active, onTimePct, rollingCpe, openEscalations: open.length, slaBreaches, utilization, netSentiment, deliveriesCompleted: d.deliveries.length };
+  const attritionRate = activeCsas.length ? Math.round((d.attrition.length / (activeCsas.length + d.attrition.length)) * 1000) / 10 : 0;
+  return { activeEngagements: active, onTimePct, rollingCpe, openEscalations: open.length, slaBreaches, utilization, netSentiment, deliveriesCompleted: d.deliveries.length, attritionRate };
 }
 
 export function sentimentBreakdown(d = store.data) {
@@ -79,6 +112,128 @@ export function sentimentBreakdown(d = store.data) {
     neutral: src.filter((s) => s === 'neutral').length,
     negative: src.filter((s) => s === 'negative').length,
   };
+}
+
+// Composite POD performance — blends CPE, quality, utilization, escalations and sentiment into a single
+// 0-100 score (mirrors the per-CSA scorecard on Performance & PIPs, rolled up to POD level).
+export function computePodPerformance(d = store.data) {
+  return d.pods.map((pod) => {
+    const csas = d.csas.filter((c) => c.podId === pod.id && c.lifecycle === 'active');
+    const engIds = new Set(d.engagements.filter((e) => csas.some((c) => c.id === e.assignedTo)).map((e) => e.id));
+    const mine = d.engagements.filter((e) => engIds.has(e.id));
+    const complete = mine.filter((e) => e.status === 'complete').length;
+    const dels = d.deliveries.filter((dl) => engIds.has(dl.engagementId));
+    const onTime = dels.filter((dl) => { const e = mine.find((x) => x.id === dl.engagementId); return e && dl.completedDate <= e.dueDate; }).length;
+    const onTimePct = dels.length ? Math.round((onTime / dels.length) * 100) : null;
+    const escs = d.escalations.filter((e) => engIds.has(e.engagementId));
+    const openEsc = escs.filter((e) => e.status !== 'resolved').length;
+    const slaBreach = escs.filter((e) => e.status !== 'resolved' && hoursSince(e.opened) > e.slaHours).length;
+    const avgCpe = csas.length ? Math.round((csas.reduce((s, c) => s + c.cpe, 0) / csas.length) * 10) / 10 : 0;
+    const avgQuality = csas.length ? Math.round((csas.reduce((s, c) => s + c.quality, 0) / csas.length) * 10) / 10 : 0;
+    const util = csas.length ? Math.round(csas.reduce((s, c) => s + c.utilization, 0) / csas.length) : pod.utilization;
+    const positive = csas.filter((c) => c.sentiment === 'positive').length;
+    const negative = csas.filter((c) => c.sentiment === 'negative').length;
+    const netSentiment = csas.length ? Math.round(((positive - negative) / csas.length) * 100) : 0;
+    const deliveryRate = mine.length ? Math.round((complete / mine.length) * 100) : 0;
+    const attritionCount = d.attrition.filter((a) => a.podId === pod.id && hoursSince(a.exitDate) <= 8760).length;
+
+    const cpeNorm = (avgCpe / 5) * 100;
+    const qualityNorm = (avgQuality / 5) * 100;
+    const utilNorm = Math.max(0, 100 - Math.abs(util - 85) * 2);
+    const escNorm = Math.max(0, 100 - openEsc * 15);
+    const sentimentNorm = (netSentiment + 100) / 2;
+    const score = Math.round(cpeNorm * 0.3 + qualityNorm * 0.25 + utilNorm * 0.15 + escNorm * 0.15 + sentimentNorm * 0.15);
+    const tier = score >= 90 ? 'Leading' : score >= 80 ? 'On track' : 'Needs attention';
+
+    return {
+      id: pod.id, name: pod.name, leadName: pod.leadName, csaManager: pod.csaManager, tz: pod.tz, region: pod.region, tracks: pod.tracks,
+      csaCount: csas.length, activeEngagements: mine.filter((e) => e.status === 'assigned' || e.status === 'in-delivery').length,
+      onTimePct, openEsc, slaBreach, avgCpe, avgQuality, util, netSentiment, deliveryRate, attritionCount, score, tier,
+    };
+  });
+}
+
+// S500 = eligibility (computed from CPE/quality/tenure) reconciled against readiness (marked independently,
+// e.g. in SharePoint). A reconciliation gap is when the marked flag doesn't match computed eligibility.
+export function computeS500(d = store.data) {
+  return d.csas.filter((c) => c.lifecycle === 'active').map((c) => {
+    const eligible = c.cpe >= 4.4 && c.quality >= 4.4 && c.tenureMonths >= 6;
+    const reason = eligible ? 'Meets CPE, quality & tenure' : c.cpe < 4.4 ? 'CPE below 4.4' : c.quality < 4.4 ? 'Quality below 4.4' : 'Tenure < 6 months';
+    return { csa: c, eligible, ready: c.s500Ready, reconciled: c.s500Ready === eligible, reason };
+  });
+}
+
+// S500 customers must be served by an S500-ready CSA; flag any that are not (target: 0).
+export function s500FlaggedEngagements(d = store.data) {
+  const readyById = new Map(d.csas.map((c) => [c.id, c.s500Ready]));
+  return d.engagements.filter((e) => e.s500Customer && e.assignedTo && !readyById.get(e.assignedTo));
+}
+
+// Composite Partner performance — same blend as computePodPerformance, rolled up to the Delivery Partner
+// (Supplier), plus S500 readiness and the S500-customer/non-ready-CSA flag (CAP-10 FR-DP-5/FR-DP-7).
+export function computePartnerPerformance(d = store.data) {
+  const flagged = s500FlaggedEngagements(d);
+  return d.partners.map((partner) => {
+    const csas = d.csas.filter((c) => c.partnerId === partner.id && c.lifecycle === 'active');
+    const engIds = new Set(d.engagements.filter((e) => csas.some((c) => c.id === e.assignedTo)).map((e) => e.id));
+    const mine = d.engagements.filter((e) => engIds.has(e.id));
+    const complete = mine.filter((e) => e.status === 'complete').length;
+    const dels = d.deliveries.filter((dl) => engIds.has(dl.engagementId));
+    const onTime = dels.filter((dl) => { const e = mine.find((x) => x.id === dl.engagementId); return e && dl.completedDate <= e.dueDate; }).length;
+    const onTimePct = dels.length ? Math.round((onTime / dels.length) * 100) : null;
+    const escs = d.escalations.filter((e) => engIds.has(e.engagementId));
+    const openEsc = escs.filter((e) => e.status !== 'resolved').length;
+    const slaBreach = escs.filter((e) => e.status !== 'resolved' && hoursSince(e.opened) > e.slaHours).length;
+    const avgCpe = csas.length ? Math.round((csas.reduce((s, c) => s + c.cpe, 0) / csas.length) * 10) / 10 : partner.cpe;
+    const avgQuality = csas.length ? Math.round((csas.reduce((s, c) => s + c.quality, 0) / csas.length) * 10) / 10 : partner.quality;
+    const util = csas.length ? Math.round(csas.reduce((s, c) => s + c.utilization, 0) / csas.length) : 0;
+    const positive = csas.filter((c) => c.sentiment === 'positive').length;
+    const negative = csas.filter((c) => c.sentiment === 'negative').length;
+    const netSentiment = csas.length ? Math.round(((positive - negative) / csas.length) * 100) : 0;
+    const deliveryRate = mine.length ? Math.round((complete / mine.length) * 100) : 0;
+    const s500ReadyCount = csas.filter((c) => c.s500Ready).length;
+    const s500ReadyPct = csas.length ? Math.round((s500ReadyCount / csas.length) * 100) : 0;
+    const s500Flags = flagged.filter((e) => csas.some((c) => c.id === e.assignedTo)).length;
+    const attritionCount = d.attrition.filter((a) => a.partnerId === partner.id && hoursSince(a.exitDate) <= 8760).length;
+
+    const cpeNorm = (avgCpe / 5) * 100;
+    const qualityNorm = (avgQuality / 5) * 100;
+    const utilNorm = Math.max(0, 100 - Math.abs(util - 85) * 2);
+    const escRate = csas.length ? openEsc / csas.length : 0;
+    const escNorm = Math.max(0, 100 - escRate * 100);
+    const sentimentNorm = (netSentiment + 100) / 2;
+    const score = Math.round(cpeNorm * 0.3 + qualityNorm * 0.25 + utilNorm * 0.15 + escNorm * 0.15 + sentimentNorm * 0.15);
+    const tier = score >= 90 ? 'Leading' : score >= 80 ? 'On track' : 'Needs attention';
+
+    return {
+      id: partner.id, name: partner.name, region: partner.region, status: partner.status,
+      csaCount: csas.length, activeEngagements: mine.filter((e) => e.status === 'assigned' || e.status === 'in-delivery').length,
+      onTimePct, openEsc, slaBreach, avgCpe, avgQuality, util, netSentiment, deliveryRate, s500ReadyPct, s500Flags, attritionCount, score, tier,
+    };
+  });
+}
+
+// POD - IP Kit Feedback: each engagement has its own IP Kit (derived from its Program) — not a shared
+// component library — so usage/rating is rolled up per Kit (Program) across the engagements that used it.
+export function ipKitStats(d = store.data) {
+  const groups = new Map();
+  d.ipFeedback.forEach((f) => {
+    const eng = d.engagements.find((e) => e.id === f.engagementId);
+    if (!eng) return;
+    if (!groups.has(eng.program)) groups.set(eng.program, { program: eng.program, track: eng.track, feedback: [] });
+    groups.get(eng.program).feedback.push(f);
+  });
+  return [...groups.values()].map((g) => {
+    const fb = g.feedback;
+    const avgRating = fb.length ? Math.round((fb.reduce((s, f) => s + f.rating, 0) / fb.length) * 10) / 10 : null;
+    const needsAttention = fb.filter((f) => f.tag === 'Needs major update' || f.tag === 'Outdated — retire').length;
+    const latest = fb.length ? [...fb].sort((a, b) => b.submittedAt.localeCompare(a.submittedAt))[0] : null;
+    return { id: g.program, name: `${g.program} IP Kit`, program: g.program, track: g.track, feedbackCount: fb.length, avgRating, needsAttention, latest };
+  });
+}
+
+export function ipFeedbackForEngagement(engagementId, d = store.data) {
+  return d.ipFeedback.filter((f) => f.engagementId === engagementId);
 }
 
 // ---- Mutations (mutate in-memory data + notify) ----
@@ -354,6 +509,23 @@ export function respondShadowRequest(id, status) {
   req.updatedAt = todayISO();
   req.audit.push({ at: new Date().toISOString(), who: store.role, action: `shadow request ${status}` });
   emit('data');
+}
+let ipfSeq = store.data.ipFeedback.reduce((max, f) => Math.max(max, Number(f.id.replace(/^IPF/, '')) || 0), 0) + 1;
+export function addIpFeedback({ engagementId, rating, tag, comment }) {
+  const eng = byId(store.data.engagements, engagementId);
+  if (!eng) throw new Error(`Engagement ${engagementId} was not found.`);
+  const ratingNum = Number(rating);
+  if (!Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) throw new Error('Rating must be between 1 and 5.');
+  if (!IP_TAGS.includes(tag)) throw new Error('Select a valid feedback tag.');
+  const csa = eng.assignedTo ? byId(store.data.csas, eng.assignedTo) : null;
+  const id = `IPF${String(ipfSeq++).padStart(3, '0')}`;
+  store.data.ipFeedback.unshift({
+    id, engagementId, csaId: csa ? csa.id : null, podId: csa ? csa.podId : null, rating: ratingNum, tag, comment: String(comment || '').trim(),
+    submittedAt: todayISO(), sourceOfTruth: 'Agentic Delivery', updatedAt: todayISO(),
+    audit: [{ at: new Date().toISOString(), who: store.role, action: 'IP Kit feedback submitted' }],
+  });
+  emit('data');
+  return id;
 }
 export function addMessage(threadId, engagementId, from, to, body, sentiment) {
   const id = `MSG${msgSeq++}`;

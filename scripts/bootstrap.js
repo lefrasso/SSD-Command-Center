@@ -1,7 +1,7 @@
 // Bootstrap — assembles the shell, wires routing, roles and the Copilot panel.
-import { store, onChange, setRole, toggleNav, toggleCopilot } from './store.js';
+import { store, onChange, setRole, toggleNav, toggleCopilot, roleHasModuleAccess, modulesForRoleEffective } from './store.js';
 import { PERSONAS, ROLE_ORDER, can } from './roles.js';
-import { modulesForRole, moduleById } from './nav.js';
+import { moduleById, NAV_GROUPS } from './nav.js';
 import { parseHash, navigate, onRoute } from './router.js';
 import { dataQualityFlags } from './ai.js';
 import { esc, clearCharts, closeDrawer } from './components.js';
@@ -25,8 +25,10 @@ import { renderPerformance } from './views/performance.js';
 import { renderCsamEscalation } from './views/csamescalation.js';
 import { renderReporting } from './views/reporting.js';
 import { renderSentiment } from './views/sentiment.js';
+import { renderAdminRoles } from './views/adminroles.js';
 import { renderPlaceholder } from './views/placeholder.js';
 import { renderCopilot } from './copilot.js';
+import { renderAboutDrawer } from './about.js';
 
 const app = document.getElementById('app');
 const cb = document.getElementById('commandbar');
@@ -47,6 +49,7 @@ function renderCommandBar() {
     <div class="cmd-spacer"></div>
     <div class="cmd-right">
       <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">${icon(currentTheme() === 'dark' ? 'sun' : 'moon', 20)}</button>
+      <button class="icon-btn" id="about-btn" aria-label="About & feedback" title="About & feedback">${icon('info', 20)}</button>
       <button class="ask-btn" id="ask-copilot">${icon('sparkle', 18)} Ask Copilot</button>
       <span class="menu-anchor">
         <button class="icon-btn" id="bell" aria-label="Notifications: ${flags.length} alerts">${icon('bell', 20)}${flags.length ? `<span class="bell-badge">${flags.length}</span>` : ''}</button>
@@ -61,6 +64,7 @@ function renderCommandBar() {
   cb.querySelector('#nav-toggle').onclick = toggleNav;
   cb.querySelector('#ask-copilot').onclick = () => toggleCopilot();
   cb.querySelector('#theme-toggle').onclick = toggleTheme;
+  cb.querySelector('#about-btn').onclick = () => renderAboutDrawer();
   const gs = cb.querySelector('#global-search');
   gs.onkeydown = (e) => { if (e.key === 'Enter' && gs.value.trim()) navigate(`/ssdiq?q=${encodeURIComponent(gs.value.trim())}`); };
 
@@ -73,24 +77,16 @@ function renderCommandBar() {
 }
 
 function renderNav() {
-  const items = modulesForRole(store.role);
+  const items = modulesForRoleEffective(store.role);
   const { id: activeId } = parseHash();
 
-  const groups = [
-    { title: 'Platform', ids: ['home', 'ssdiq', 'capabilities'] },
-    { title: 'Operations', ids: ['pods', 'lifecycle', 'capacity', 'engagements', 'enablement', 'reports-pending'] },
-    { title: 'Delivery', ids: ['agentic', 'success-stories', 'messages', 'quality', 'escalations', 'reporting', 'sentiment'] },
-    { title: 'People', ids: ['delivery-partners', 'performance'] },
-    { title: 'Customer Success', ids: ['csam-escalation'] },
-  ];
-
-  const navGroups = groups.map((group) => {
+  const navGroups = NAV_GROUPS.map((group) => {
     const sectionItems = items.filter((m) => group.ids.includes(m.id));
     if (!sectionItems.length) return '';
 
     return `
       <div class="nav-group">
-        <div class="nav-group-title">${group.title}</div>
+        ${group.title ? `<div class="nav-group-title">${group.title}</div>` : ''}
         ${sectionItems.map((m) => `<a class="nav-item ${m.id === activeId ? 'active' : ''}" href="#${m.path}"><span class="nav-ico">${icon(m.icon, 20)}</span><span class="nav-label">${esc(m.label)}</span></a>`).join('')}
       </div>
     `;
@@ -103,9 +99,9 @@ onChange((reason) => {
   if (reason === 'role') {
     renderCommandBar();
     const mod = moduleById(parseHash().id);
-    if (!mod || (!mod.roles.includes(store.role) && mod.id !== 'performance')) navigate('/home');
+    if (!mod || (!roleHasModuleAccess(store.role, mod.id) && mod.id !== 'performance')) navigate('/home');
     else renderView();
-  } else if (reason === 'data') {
+  } else if (reason === 'data' || reason === 'access') {
     renderCommandBar();
     renderView();
   } else {
@@ -122,7 +118,7 @@ function renderView() {
   const { id, params } = parseHash();
   const mod = moduleById(id);
   if (!mod) { navigate('/home'); return; }
-  if (!mod.roles.includes(store.role) && mod.id !== 'performance') { navigate('/home'); return; }
+  if (!roleHasModuleAccess(store.role, mod.id) && mod.id !== 'performance') { navigate('/home'); return; }
   closeDrawer();
   clearCharts();
   const view = document.getElementById('view');
@@ -146,6 +142,7 @@ function renderView() {
     case 'delivery-partners': renderPartners(view); break;
     case 'enablement': renderEnablement(view); break;
     case 'csam-escalation': renderCsamEscalation(view); break;
+    case 'admin-access': renderAdminRoles(view); break;
     default: renderPlaceholder(view, mod);
   }
   document.getElementById('content').scrollTop = 0;
@@ -162,3 +159,28 @@ applyTheme(currentTheme());
 renderCommandBar();
 applyChrome();
 renderView();
+runBootSplash();
+
+// Simulated component-loading splash — purely cosmetic, the data/render above is already complete.
+function runBootSplash() {
+  const splash = document.getElementById('boot-splash');
+  if (!splash) return;
+  const steps = [...splash.querySelectorAll('[data-step]')];
+  const fill = document.getElementById('boot-bar-fill');
+  let i = 0;
+  const tick = () => {
+    if (i > 0) steps[i - 1].classList.replace('active', 'done');
+    if (i < steps.length) {
+      steps[i].classList.add('active');
+      fill.style.width = `${Math.round(((i + 1) / steps.length) * 100)}%`;
+      i += 1;
+      setTimeout(tick, 220);
+    } else {
+      setTimeout(() => {
+        splash.classList.add('hide');
+        setTimeout(() => splash.remove(), 400);
+      }, 250);
+    }
+  };
+  tick();
+}

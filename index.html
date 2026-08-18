@@ -13,6 +13,19 @@
     <script src="assets/vendor/chart.umd.min.js"></script>
   </head>
   <body>
+    <div class="boot-splash" id="boot-splash" role="status" aria-label="Loading Compass">
+      <img class="boot-logo" src="assets/compass.svg" width="56" height="56" alt=""/>
+      <div class="boot-title">Compass</div>
+      <div class="boot-sub">SSD Delivery Console</div>
+      <ul class="boot-steps" id="boot-steps">
+        <li data-step>Connecting to SSD IQ…</li>
+        <li data-step>Loading roster &amp; PODs…</li>
+        <li data-step>Loading engagements &amp; delivery signals…</li>
+        <li data-step>Initializing simulated AI layer…</li>
+        <li data-step>Rendering Compass…</li>
+      </ul>
+      <div class="boot-bar"><div class="boot-bar-fill" id="boot-bar-fill"></div></div>
+    </div>
     <div class="app" id="app">
       <header class="command-bar" id="commandbar"></header>
       <div class="body">

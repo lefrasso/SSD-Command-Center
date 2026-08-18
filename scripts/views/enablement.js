@@ -1,5 +1,5 @@
 // Enablement — accreditations, S500 eligibility, SDM onboarding, user voice, shadowing.
-import { store, hoursSince, requestShadow, respondShadowRequest } from '../store.js';
+import { store, hoursSince, requestShadow, respondShadowRequest, computeS500, s500FlaggedEngagements } from '../store.js';
 import { pageHeader, kpiCard, esc, badge, statusPill, openDrawer, closeDrawer, COLORS } from '../components.js';
 import { icon } from '../icons.js';
 import { PROGRAMS, TRACKS } from '../../data/generate.js';
@@ -70,18 +70,26 @@ function renderCatalogue(tc) {
 
 function renderS500(tc) {
   const d = store.data;
-  const active = d.csas.filter((c) => c.lifecycle === 'active');
-  const rows = active.map((c) => { const eligible = c.cpe >= 4.4 && c.quality >= 4.4 && c.tenureMonths >= 6; const reason = eligible ? 'Meets CPE, quality & tenure' : c.cpe < 4.4 ? 'CPE below 4.4' : c.quality < 4.4 ? 'Quality below 4.4' : 'Tenure < 6 months'; return { c, eligible, reason }; });
+  const rows = computeS500(d);
   const eligibleCount = rows.filter((r) => r.eligible).length;
+  const readyCount = rows.filter((r) => r.ready).length;
+  const unreconciled = rows.filter((r) => !r.reconciled);
+  const flagged = s500FlaggedEngagements(d);
+  const partnerName = (id) => (d.partners.find((p) => p.id === id) || {}).name || '—';
   tc.innerHTML = `
     <div class="kpi-grid">
       ${kpiCard({ label: 'S500 eligible', value: eligibleCount, iconName: 'check', tone: COLORS.positive })}
-      ${kpiCard({ label: 'Not yet eligible', value: active.length - eligibleCount, iconName: 'clock', tone: COLORS.warning })}
-      ${kpiCard({ label: 'Eligibility rate', value: (active.length ? Math.round((eligibleCount / active.length) * 100) : 0) + '%', iconName: 'trending' })}
+      ${kpiCard({ label: 'S500 ready (reconciled)', value: readyCount, iconName: 'check', tone: COLORS.positive, hint: 'marked ready, e.g. in SharePoint' })}
+      ${kpiCard({ label: 'Readiness rate', value: (rows.length ? Math.round((readyCount / rows.length) * 100) : 0) + '%', iconName: 'trending' })}
+      ${kpiCard({ label: 'Not reconciled', value: unreconciled.length, iconName: 'warning', tone: unreconciled.length ? COLORS.warning : COLORS.neutral, hint: 'ready flag ≠ eligibility' })}
+      ${kpiCard({ label: 'S500 cx by non-ready CSA', value: flagged.length, iconName: 'warning', tone: flagged.length ? COLORS.negative : COLORS.neutral, hint: 'target: 0' })}
     </div>
-    <div class="muted mb8" style="font-size:12px">Criteria: CPE ≥ 4.4, quality ≥ 4.4 and tenure ≥ 6 months.</div>
-    <div class="table-wrap"><table class="grid"><thead><tr><th>CSA</th><th>Vendor</th><th>CPE</th><th>Quality</th><th>Tenure</th><th>S500</th><th>Reason</th></tr></thead><tbody>
-      ${rows.slice(0, 50).map((r) => `<tr><td><strong>${esc(r.c.name)}</strong></td><td>${esc(r.c.vendor)}</td><td>${r.c.cpe.toFixed(1)}</td><td>${r.c.quality.toFixed(1)}</td><td>${r.c.tenureMonths}mo</td><td>${r.eligible ? badge('Eligible', 'tint-info') : badge('No', 'tint-warn')}</td><td class="muted" style="font-size:12px">${esc(r.reason)}</td></tr>`).join('')}
+    <div class="muted mb8" style="font-size:12px">Eligibility: CPE ≥ 4.4, quality ≥ 4.4 and tenure ≥ 6 months. Readiness is marked independently and reconciled against eligibility — a mismatch is a governance flag.</div>
+    ${flagged.length ? `<div class="card pad mb16" style="border-left:4px solid ${COLORS.negative}"><strong style="font-size:13px">S500 customers served by a non-ready CSA</strong><div class="table-wrap mt8"><table class="grid"><thead><tr><th>Customer</th><th>Program</th><th>CSA</th><th>Partner</th></tr></thead><tbody>
+      ${flagged.map((e) => { const csa = d.csas.find((c) => c.id === e.assignedTo); return `<tr><td><strong>${esc(e.customer)}</strong></td><td>${esc(e.program)}</td><td>${esc(csa ? csa.name : '—')}</td><td>${esc(csa ? partnerName(csa.partnerId) : '—')}</td></tr>`; }).join('')}
+    </tbody></table></div></div>` : ''}
+    <div class="table-wrap"><table class="grid"><thead><tr><th>CSA</th><th>Vendor</th><th>CPE</th><th>Quality</th><th>Tenure</th><th>Eligible</th><th>Ready</th><th>Reconciled</th><th>Reason</th></tr></thead><tbody>
+      ${rows.slice(0, 50).map((r) => `<tr><td><strong>${esc(r.csa.name)}</strong></td><td>${esc(r.csa.vendor)}</td><td>${r.csa.cpe.toFixed(1)}</td><td>${r.csa.quality.toFixed(1)}</td><td>${r.csa.tenureMonths}mo</td><td>${r.eligible ? badge('Eligible', 'tint-info') : badge('No', 'outline')}</td><td>${r.ready ? badge('Ready', 'tint-info') : badge('Not ready', 'outline')}</td><td>${r.reconciled ? badge('Yes', 'tint-info') : badge('Gap', 'tint-warn')}</td><td class="muted" style="font-size:12px">${esc(r.reason)}</td></tr>`).join('')}
     </tbody></table></div>`;
 }
 

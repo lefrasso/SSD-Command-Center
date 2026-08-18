@@ -1,8 +1,10 @@
 // PODs & People — roster, capacity, utilization, skills, time-zone rollup.
-import { store } from '../store.js';
-import { pageHeader, kpiCard, badge, statusPill, aiChip, esc, meter, utilColor, COLORS } from '../components.js';
+import { store, computePodPerformance } from '../store.js';
+import { pageHeader, kpiCard, badge, statusPill, aiChip, esc, meter, utilColor, scoreColor, COLORS } from '../components.js';
 import { icon } from '../icons.js';
 import { TZ_MAP, LEADERSHIP } from '../../data/generate.js';
+
+const TIER_BADGE = { Leading: 'tint-info', 'On track': 'outline', 'Needs attention': 'tint-danger' };
 
 let tz = 'All';
 let podFilter = 'All';
@@ -21,6 +23,7 @@ export function renderPods(container) {
   });
 
   const avgUtil = active.length ? Math.round(active.reduce((s, c) => s + c.utilization, 0) / active.length) : 0;
+  const podPerf = computePodPerformance(d).filter((p) => (tz === 'All' || p.tz === tz) && (podFilter === 'All' || p.id === podFilter)).sort((a, b) => b.score - a.score);
 
   // Skills coverage
   const skillCount = {};
@@ -89,6 +92,33 @@ export function renderPods(container) {
             <div style="font-size:11px;opacity:.9;margin-top:2px">${esc(p.tz)} · ${csas.length} CSAs · Lead ${esc(p.leadName)}</div>
           </div>`;
         }).join('')}
+      </div>
+    </div>
+
+    <div class="section-title">POD performance leaderboard</div>
+    <div class="card pad mb16">
+      <div class="muted mb8" style="font-size:12px">Composite score (0–100) blends CPE, quality, utilization, open escalations and sentiment — a POD-level read of the CSA scorecard used on Performance &amp; PIPs.</div>
+      <div class="table-wrap">
+        <table class="grid">
+          <thead><tr><th>POD</th><th>Lead</th><th>TZ</th><th>CSAs</th><th>Utilization</th><th>CPE</th><th>Quality</th><th>On-time</th><th>Open esc</th><th>Attrition (12mo)</th><th>Sentiment</th><th>Score</th><th>Tier</th></tr></thead>
+          <tbody>
+            ${podPerf.map((p) => `<tr>
+              <td><strong>${esc(p.name)}</strong></td>
+              <td>${esc(p.leadName)}</td>
+              <td>${esc(p.tz)}</td>
+              <td>${p.csaCount}</td>
+              <td><div class="row" style="gap:6px">${meter(p.util, utilColor(p.util))}<span>${p.util}%</span></div></td>
+              <td style="color:${scoreColor(p.avgCpe)}">${p.avgCpe.toFixed(1)}</td>
+              <td style="color:${scoreColor(p.avgQuality)}">${p.avgQuality.toFixed(1)}</td>
+              <td>${p.onTimePct == null ? '—' : p.onTimePct + '%'}</td>
+              <td>${p.slaBreach ? `<span style="color:${COLORS.negative}">${p.openEsc}</span>` : p.openEsc}</td>
+              <td>${p.attritionCount ? `<span style="color:${COLORS.warning}">${p.attritionCount}</span>` : '0'}</td>
+              <td style="color:${p.netSentiment >= 0 ? COLORS.positive : COLORS.negative}">${p.netSentiment > 0 ? '+' + p.netSentiment : p.netSentiment}</td>
+              <td><strong>${p.score}</strong></td>
+              <td>${badge(p.tier, TIER_BADGE[p.tier])}</td>
+            </tr>`).join('') || '<tr><td colspan="13" class="muted" style="padding:16px">No PODs in scope.</td></tr>'}
+          </tbody>
+        </table>
       </div>
     </div>
 
