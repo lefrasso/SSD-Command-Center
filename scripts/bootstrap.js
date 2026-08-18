@@ -22,6 +22,7 @@ import { renderMessages } from './views/messages.js';
 import { renderQuality } from './views/quality.js';
 import { renderEscalations } from './views/escalations.js';
 import { renderPerformance } from './views/performance.js';
+import { renderCsamEscalation } from './views/csamescalation.js';
 import { renderReporting } from './views/reporting.js';
 import { renderSentiment } from './views/sentiment.js';
 import { renderPlaceholder } from './views/placeholder.js';
@@ -80,6 +81,7 @@ function renderNav() {
     { title: 'Operations', ids: ['pods', 'lifecycle', 'capacity', 'engagements', 'enablement', 'reports-pending'] },
     { title: 'Delivery', ids: ['agentic', 'success-stories', 'messages', 'quality', 'escalations', 'reporting', 'sentiment'] },
     { title: 'People', ids: ['delivery-partners', 'performance'] },
+    { title: 'Customer Success', ids: ['csam-escalation'] },
   ];
 
   const navGroups = groups.map((group) => {
@@ -143,6 +145,7 @@ function renderView() {
     case 'capacity': renderCapacity(view); break;
     case 'delivery-partners': renderPartners(view); break;
     case 'enablement': renderEnablement(view); break;
+    case 'csam-escalation': renderCsamEscalation(view); break;
     default: renderPlaceholder(view, mod);
   }
   document.getElementById('content').scrollTop = 0;

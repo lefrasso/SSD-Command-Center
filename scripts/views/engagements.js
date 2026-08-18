@@ -1,5 +1,5 @@
 // Engagements & Dispatch — dispatch board + engagement detail with AI dispatch.
-import { store, assignEngagement, canonicalEntityMap } from '../store.js';
+import { store, assignEngagement, respondShadowRequest } from '../store.js';
 import { pageHeader, badge, statusPill, aiChip, esc, kanban, openDrawer, closeDrawer, COLORS } from '../components.js';
 import { icon } from '../icons.js';
 import { recommendCSA, draftOutreach } from '../ai.js';
@@ -9,17 +9,17 @@ const COLS = [['new', 'New'], ['assigned', 'Assigned'], ['in-delivery', 'In deli
 
 export function renderEngagements(container) {
   const d = store.data;
-  const governed = canonicalEntityMap(d).filter((x) => ['Engagements', 'People', 'PODs', 'Partners', 'Actions', 'Messages'].includes(x.entity));
   const columns = COLS.map(([status, title]) => {
     const engs = d.engagements.filter((e) => e.status === status);
     return {
       title, count: engs.length,
       cards: engs.slice(0, 40).map((e) => {
         const csa = d.csas.find((c) => c.id === e.assignedTo);
+        const shadowConfirmed = d.shadowRequests.some((s) => s.engagementId === e.id && s.status === 'confirmed');
         return `<div class="kan-card" data-id="${e.id}">
           <div class="kc-title">${esc(e.customer)}${e.atRisk ? ` <span style="color:${COLORS.warning}">${icon('warning', 13)}</span>` : ''}</div>
           <div class="kc-meta">${esc(e.track)} · ${esc(e.program)}</div>
-          <div class="kc-foot">${badge(e.dispatchStage, 'outline')}${csa ? `<span class="muted" style="font-size:11px">${esc(csa.name)}</span>` : badge('Unassigned', 'tint-warn')}</div>
+          <div class="kc-foot">${badge(e.dispatchStage, 'outline')}${csa ? `<span class="muted" style="font-size:11px">${esc(csa.name)}</span>` : badge('Unassigned', 'tint-warn')}${shadowConfirmed ? `<span class="badge tint-info" title="A shadow request is confirmed for this delivery">${icon('people', 12)} Shadow confirmed</span>` : ''}</div>
         </div>`;
       }),
     };
@@ -27,22 +27,6 @@ export function renderEngagements(container) {
 
   container.innerHTML = `
     ${pageHeader({ title: 'Engagements & Dispatch', description: 'Demand enters the platform as an engagement record, is governed in SSD IQ, and is routed through dispatch with human review and AI guidance.' })}
-    <section class="card pad mb16" aria-label="Canonical operating model">
-      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
-        <strong style="font-size:16px">Canonical operating model</strong>
-        ${badge('Engagement decisions are sourced from SSD IQ', 'tint-info')}
-      </div>
-      <div class="governance-list">
-        ${governed.map(({ entity, owner, source, count }) => `
-          <div class="governance-item">
-            <div class="governance-meta">${esc(entity)}</div>
-            <div class="governance-owner">${esc(owner)}</div>
-            <div class="governance-source">${esc(source)}</div>
-            <div class="governance-count">${count}</div>
-          </div>
-        `).join('')}
-      </div>
-    </section>
     ${kanban(columns)}`;
 
   container.querySelectorAll('.kan-card').forEach((el) => el.addEventListener('click', () => openEngagement(el.getAttribute('data-id'))));
@@ -54,6 +38,7 @@ function openEngagement(id) {
   if (!e) return;
   const csa = d.csas.find((c) => c.id === e.assignedTo);
   const stories = d.successStories.filter((story) => story.engagementIds.includes(e.id));
+  const shadowRequests = d.shadowRequests.filter((s) => s.engagementId === e.id);
   const outreach = ['day0', 'day1', 'day2', 'day3'].map((k, i) => `<span class="badge ${e.outreach[k] ? 'tint-info' : 'outline'}">Day ${i} ${e.outreach[k] ? '✓' : '—'}</span>`).join(' ');
   const milestones = e.milestones.map((m) => `<div class="check-item"><span class="check-box ${m.done ? 'done' : ''}">${m.done ? icon('check', 12) : ''}</span><span>${esc(m.label)} <span class="muted">· ${m.done ? 'done' : 'due ' + m.due}</span></span></div>`).join('');
 
@@ -68,6 +53,11 @@ function openEngagement(id) {
     <div class="section-title">Milestones</div>${milestones}
     <div class="section-title">Success stories</div>
     ${stories.length ? `<div class="col-stack" style="gap:6px">${stories.map((story) => `<button class="btn" data-story-link="${story.id}" style="justify-content:space-between">${esc(story.title)} ${statusPill(story.status)}</button>`).join('')}</div>` : '<div class="muted">No success story is linked to this engagement.</div>'}
+    <div class="section-title">Shadowing</div>
+    ${shadowRequests.length ? shadowRequests.map((s) => {
+      const requester = d.csas.find((c) => c.id === s.requesterId);
+      return `<div class="field"><span class="field-key">${esc(requester ? requester.name : s.requesterId)}</span><span class="field-val">${statusPill(s.status)}${s.status === 'requested' ? `<button class="btn sm" data-shadow-confirm="${s.id}" style="margin-left:6px">Confirm</button><button class="btn sm subtle" data-shadow-decline="${s.id}" style="margin-left:4px">Decline</button>` : ''}</span></div>`;
+    }).join('') : '<div class="muted">No shadow requests for this delivery.</div>'}
     <div class="section-title">AI dispatch</div>
     <div class="row wrap mb8" style="gap:6px">
       <button class="btn sm" id="rec">${icon('sparkle', 14)} Recommend best-fit CSA</button>
@@ -81,6 +71,8 @@ function openEngagement(id) {
       closeDrawer();
       navigate(`/success-stories?q=${encodeURIComponent(button.getAttribute('data-story-link'))}`);
     }));
+    dr.querySelectorAll('[data-shadow-confirm]').forEach((b) => b.addEventListener('click', () => { respondShadowRequest(b.getAttribute('data-shadow-confirm'), 'confirmed'); closeDrawer(); openEngagement(e.id); }));
+    dr.querySelectorAll('[data-shadow-decline]').forEach((b) => b.addEventListener('click', () => { respondShadowRequest(b.getAttribute('data-shadow-decline'), 'declined'); closeDrawer(); openEngagement(e.id); }));
     dr.querySelector('#rec').addEventListener('click', () => {
       const r = recommendCSA(e, d);
       out.innerHTML = `<div class="card pad" style="background:var(--bg-2)"><div class="row mb8">${aiChip()}</div><div>${esc(r.text)}</div>

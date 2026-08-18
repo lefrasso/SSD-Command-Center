@@ -48,8 +48,8 @@ function gov(source, who = 'a.navarro') {
 const FIRST = ['Marco','Ana','Liam','Sofia','Noah','Emma','Lucas','Mia','Diego','Chloe','Hugo','Aisha','Ravi','Yuki','Omar','Nina','Pablo','Elena','Tariq','Freya','Iker','Lena','Sami','Zoe'];
 const LAST = ['Rossi','Kaur','Novak','García','Müller','Silva','Haddad','Chen','Okafor','Ivanova','Costa','Dubois','Nguyen','Almeida','Kowalski','Reyes','Bianchi','Andersson','Fischer','Popescu'];
 const CUSTOMERS = ['Northwind Traders','Contoso','Fabrikam','Adventure Works','Tailwind Traders','Wingtip Toys','Proseware','Litware','Fourth Coffee','Graphic Design Institute','Alpine Ski House','Coho Vineyard','Lucerne Publishing',"Margie's Travel",'Trey Research','VanArsdel','WideWorld Importers','Blue Yonder','Woodgrove Bank','Relecloud'];
-const CSAMS = ['Julia Meyer','Tom Baker','Sara Lind','Marcus Webb','Elif Demir','Paulo Neto','Hannah Ross','Ken Adachi','Bea Fontana','Ivan Petrov'];
-const SDMS = ['Priya Nair','Kenji Watanabe','Laura Bianchi','Mohammed Ali','Grace Park','Tomás Herrera'];
+export const CSAMS = ['Julia Meyer','Tom Baker','Sara Lind','Marcus Webb','Elif Demir','Paulo Neto','Hannah Ross','Ken Adachi','Bea Fontana','Ivan Petrov'];
+export const SDMS = ['Priya Nair','Kenji Watanabe','Laura Bianchi','Mohammed Ali','Grace Park','Tomás Herrera'];
 const POD_LEADS = [
   'Nils Berg','Amara Blake','Viktor Petrov','Rosa Mendes','Daniel Kim','Chiara Romano','Felix Wagner','Nadia Hassan','Oscar Lund','Meera Shah',
   'Maya Chen','Ethan Brooks','Leila Haddad','Tomas Silva','Ingrid Novak','Kenji Mori','Amina Yusuf','Luca Bianchi','Sofia Alvarez','Noah Fischer',
@@ -62,7 +62,11 @@ const TZ_MANAGERS = {
   EMEA: ['Bruno Alves', 'Greta Roth'],
   ASIA: ['Amir Khan', 'Lena Vogt'],
 };
-const SKILLS = ['Azure Migrate','Landing Zones','FinOps','Security Copilot','Sentinel','Fabric','Power BI','Copilot Studio','AKS','App Modernization','Data Governance','ESA Assessment','Well-Architected','Networking','Identity','Backup & ASR','Cost Optimization','AI Foundry','RAG Patterns','Prompt Engineering'];
+export const SKILLS = ['Azure Migrate','Landing Zones','FinOps','Security Copilot','Sentinel','Fabric','Power BI','Copilot Studio','AKS','App Modernization','Data Governance','ESA Assessment','Well-Architected','Networking','Identity','Backup & ASR','Cost Optimization','AI Foundry','RAG Patterns','Prompt Engineering'];
+// Non-technical growth areas used by Performance & PIPs to categorize improvement objectives.
+export const SOFT_SKILLS = ['Stakeholder communication', 'Executive presence', 'Active listening', 'Conflict resolution', 'Negotiation', 'Time management', 'Cross-team collaboration'];
+export const QC_CRITERIA = ['Scope & success criteria documented', 'Day 0–3 outreach completed on time', 'Stakeholders identified & engaged', 'Milestone plan baselined & tracked', 'Technical guidance accurate & actionable', 'Artifacts captured & shared', 'Risks & blockers escalated appropriately', 'CPE survey requested at close'];
+export const MS_CERTIFICATIONS = ['Microsoft Certified: Azure Fundamentals', 'Microsoft Certified: Azure Administrator Associate', 'Microsoft Certified: Azure Solutions Architect Expert', 'Microsoft Certified: Security, Compliance, and Identity Fundamentals', 'Microsoft Certified: Power BI Data Analyst Associate', 'Microsoft Certified: Azure AI Engineer Associate', 'Microsoft 365 Certified: Fundamentals', 'Microsoft Certified: DevOps Engineer Expert'];
 const REGIONS = ['Iberia','UKI','DACH','Nordics','France','Italy','North America','LATAM','India','ANZ'];
 // SSD leadership org — fictional vanity names for the prototype. Regions roll up to time zones.
 export const TZ_MAP = {
@@ -89,7 +93,7 @@ export const TZ_LANGUAGES = {
   EMEA: ['English', 'Spanish', 'Portuguese', 'French', 'Arabic', 'German'],
   ASIA: ['English', 'Japanese', 'Mandarin', 'Korean'],
 };
-const ALL_LANGUAGES = [...new Set(Object.values(TZ_LANGUAGES).flat())];
+export const ALL_LANGUAGES = [...new Set(Object.values(TZ_LANGUAGES).flat())];
 // Service catalogue: Track = Family of services; Program = the service / event. Each Program maps 1:1 to an accreditation.
 export const PROGRAMS = {
   Health: ['ESA', 'Azure', 'M365', 'D365', 'Crisis Management - DMIRP', 'Crisis Management - Azure Sim', 'Crisis Management - M365 Sim', 'Crisis Management - Security', 'Crisis Management - D365 Sim'],
@@ -108,7 +112,6 @@ const ACTION_TITLES = ['Schedule stakeholder sync','Escalate access request to I
 const THEMES = ['responsiveness','technical depth','scheduling','communication','onboarding pace','tooling access','proactivity','documentation','stakeholder alignment'];
 const MSG_POD = ['Please confirm Day 1 outreach is complete for this account.','Can you share the latest milestone status?','Customer flagged a scheduling concern — can you follow up today?','Great work on the health check. Let’s prep the CPE survey.','Reminder: artifacts due before the review on Friday.'];
 const MSG_CSA = ['Day 1 outreach done — customer is engaged and responsive.','Milestone 2 is on track; migration sprint starts Monday.','Following up with the stakeholder now, will update by EOD.','Artifacts uploaded to the workspace, ready for review.','Hit a permissions blocker; raising an escalation.'];
-const PIP_OBJECTIVES = ['Raise rolling CPE to 4.4 within two periods.','Complete Day 0–3 outreach on 100% of dispatches.','Close all open action items within SLA.','Attend Landing Zone enablement bootcamp.','Improve documentation quality on delivery artifacts.'];
 const PIP_NOTES = ['Check-in held; outreach cadence improving.','Two engagements recovered to on-track.','CPE trend flat; agreed coaching focus.','Completed enablement module; applying on live account.'];
 const STORY_IMPACTS = [
   'Reduced the delivery timeline by three weeks while keeping the agreed scope intact.',
@@ -293,7 +296,7 @@ function build() {
     escalations.push({
       id: escId, engagementId: eng.id, severity, status, ownerName: pod?.leadName ?? pick(POD_LEADS),
       sdmName: pick(SDMS), adoRef: `AB#${int(20000, 99999)}`, opened: daysAgo(int(1, 45)), slaHours,
-      actionIds, summary: pick(ESC_SUMMARIES), ...gov('Azure DevOps'),
+      actionIds, summary: pick(ESC_SUMMARIES), raisedBy: 'import', channel: 'internal', ...gov('Azure DevOps'),
     });
   }
 
@@ -449,15 +452,50 @@ function build() {
   });
 
   const pipCandidates = [...activeCsas].sort((a, b) => a.quality - b.quality).slice(0, 4);
+  const randomPipObjective = (csa) => {
+    const pod = pods.find((p) => p.id === csa.podId);
+    const kind = weighted([['quality', 0.35], ['technical', 0.25], ['soft', 0.2], ['language', 0.1], ['certification', 0.1]]);
+    if (kind === 'quality') return { label: `Quality check focus: ${pick(QC_CRITERIA)}`, category: 'delivery-skills', kind: 'quality-check' };
+    if (kind === 'soft') return { label: `Develop soft skill: ${pick(SOFT_SKILLS)}`, category: 'soft-skills', kind: 'objective' };
+    if (kind === 'language') {
+      const langs = (pod && TZ_LANGUAGES[pod.tz]) || ALL_LANGUAGES;
+      const gap = pick(langs.filter((l) => !csa.languages.includes(l))) || pick(ALL_LANGUAGES);
+      return { label: `Build language proficiency: ${gap}`, category: 'language-proficiency', kind: 'objective' };
+    }
+    if (kind === 'certification') return { label: pick(MS_CERTIFICATIONS), category: 'technical-skills', kind: 'certification' };
+    const gap = pick(SKILLS.filter((s) => !csa.skills.includes(s))) || pick(SKILLS);
+    return { label: `Strengthen technical skill: ${gap}`, category: 'technical-skills', kind: 'objective' };
+  };
   const pips = pipCandidates.map((csa, i) => {
     const status = weighted([['active', 0.6], ['draft', 0.2], ['closed', 0.2]]);
+    const outcome = status === 'closed' ? (chance(0.6) ? 'met' : 'not-met') : 'in-progress';
+    const objectives = Array.from({ length: int(2, 3) }, () => randomPipObjective(csa)).map((o) => ({ ...o, done: status === 'draft' ? false : (outcome === 'met' ? chance(0.85) : chance(0.4)) }));
     return {
       id: `PIP${String(i + 1).padStart(3, '0')}`, csaId: csa.id, status, opened: daysAgo(int(20, 120)),
-      objectives: pickN(PIP_OBJECTIVES, int(2, 3)),
+      objectives,
       checkIns: Array.from({ length: int(1, 3) }, () => ({ date: daysAgo(int(3, 90)), note: pick(PIP_NOTES) })),
-      outcome: status === 'closed' ? (chance(0.6) ? 'met' : 'not-met') : 'in-progress', ...gov('Confidential/HR'),
+      outcome, ...gov('Confidential/HR'),
     };
   });
+
+  // Shadowing requests — onboarding/selection/sourcing CSAs asking to observe an upcoming, assigned delivery.
+  const mentees = csas.filter((c) => ['onboarding', 'selection', 'sourcing'].includes(c.lifecycle));
+  const shadowWindowMs = 21 * 864e5;
+  const shadowCandidates = engagements.filter((e) => e.assignedTo && (e.status === 'assigned' || e.status === 'in-delivery') && (new Date(e.dueDate).getTime() - NOW.getTime()) >= 0 && (new Date(e.dueDate).getTime() - NOW.getTime()) <= shadowWindowMs);
+  const SHADOW_NOTES = ['Requesting to shadow this delivery to build track exposure.', 'Would like to observe live customer conversations before my first solo delivery.', 'Building confidence on this Program ahead of accreditation.'];
+  let shdSeq = 1;
+  const shadowRequests = pickN(mentees, Math.min(mentees.length, 6)).map((mentee) => {
+    const pool = shadowCandidates.filter((e) => mentee.tracks.includes(e.track));
+    const eng = pick(pool.length ? pool : shadowCandidates);
+    if (!eng) return null;
+    const status = weighted([['requested', 0.4], ['confirmed', 0.4], ['declined', 0.2]]);
+    return {
+      id: `SHD${String(shdSeq++).padStart(3, '0')}`, engagementId: eng.id, requesterId: mentee.id, ownerId: eng.assignedTo,
+      status, note: pick(SHADOW_NOTES), requestedAt: daysAgo(int(1, 10)), respondedAt: status === 'requested' ? null : daysAgo(int(0, 5)),
+      ...gov('Enablement'),
+    };
+  }).filter(Boolean);
+
 
   const PERIODS = ['2026-04', '2026-05', '2026-06', '2026-07'];
   const sentiment = [];
@@ -518,7 +556,7 @@ function build() {
     { id: 'INI006', type: 'Platform', name: 'SSD IQ reporting semantic model', area: 'Reporting', stage: 'Pilot', ownerName: 'Robin Ellis', targetRelease: 'FY27 Q2', status: 'on-track', impact: 'Reconciles MBR metrics and enables governed drill-through.', nextStep: 'Reconcile Power BI measures.' },
   ].map((initiative) => ({ ...initiative, ...gov('Portfolio Management') }));
 
-  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, sentimentSignals, pips, sentiment, deliveries, hiring, financials, initiatives };
+  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, sentimentSignals, pips, shadowRequests, sentiment, deliveries, hiring, financials, initiatives };
 }
 
 export const dataset = build();

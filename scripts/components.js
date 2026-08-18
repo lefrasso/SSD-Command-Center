@@ -31,6 +31,8 @@ const STATUS = {
   approved: [COLORS.positive, 'check', 'Approved'], published: [COLORS.positive, 'check', 'Published'],
   archived: [COLORS.neutral, 'lock', 'Archived'],
   closed: [COLORS.neutral, 'check', 'Closed'],
+  requested: [COLORS.warning, 'clock', 'Requested'], confirmed: [COLORS.positive, 'check', 'Confirmed'],
+  declined: [COLORS.negative, 'x', 'Declined'],
 };
 export function statusPill(status) {
   const [c, ic, label] = STATUS[status] || [COLORS.neutral, 'clock', status];

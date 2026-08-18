@@ -1,5 +1,5 @@
 // Partner CSA Lifecycle — pipeline Kanban + per-CSA profile drawer.
-import { store, canonicalEntityMap } from '../store.js';
+import { store } from '../store.js';
 import { pageHeader, badge, aiChip, esc, kanban, openDrawer, meter, COLORS, sentimentPill } from '../components.js';
 import { icon } from '../icons.js';
 
@@ -18,7 +18,6 @@ const seedOf = (id) => [...id].reduce((a, ch) => a + ch.charCodeAt(0), 0);
 
 export function renderLifecycle(container) {
   const d = store.data;
-  const governed = canonicalEntityMap(d).filter((x) => ['People', 'PODs', 'Partners', 'Engagements', 'Capacity'].includes(x.entity));
   const resourceSummary = d.csas.reduce((acc, c) => {
     const type = c.resourceType || (c.vendor === 'Nebula' || c.vendor === 'GSCD' ? 'FTE' : 'FTC');
     acc[type] = (acc[type] || 0) + 1;
@@ -61,16 +60,6 @@ export function renderLifecycle(container) {
           <div class="record-value">${resourceSummary.FTE}</div>
           <div class="record-foot">Nebula / GSCD employees</div>
         </div>
-      </div>
-      <div class="governance-list" style="margin-top: 16px;">
-        ${governed.map(({ entity, owner, source, count }) => `
-          <div class="governance-item">
-            <div class="governance-meta">${esc(entity)}</div>
-            <div class="governance-owner">${esc(owner)}</div>
-            <div class="governance-source">${esc(source)}</div>
-            <div class="governance-count">${count}</div>
-          </div>
-        `).join('')}
       </div>
     </section>
     <div class="card pad mb16">

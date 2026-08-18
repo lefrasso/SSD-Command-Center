@@ -1,9 +1,9 @@
 // Quality & CPE — CPE trends, Quality Check forms + reporting, and Mock Deliveries.
-import { store, canonicalEntityMap } from '../store.js';
+import { store } from '../store.js';
 import { pageHeader, kpiCard, aiChip, esc, badge, sentimentPill, scoreColor, COLORS, clearCharts, line, bar, openDrawer } from '../components.js';
 import { icon } from '../icons.js';
 import { scoreQuality } from '../ai.js';
-import { TRACKS } from '../../data/generate.js';
+import { TRACKS, QC_CRITERIA } from '../../data/generate.js';
 
 const PRACTICES = [
   ['Day 0 outreach completed', (e) => e.outreach.day0],
@@ -12,16 +12,6 @@ const PRACTICES = [
   ['Milestone plan baselined', (e) => e.milestones.length > 0],
   ['Artifacts captured', (e) => e.milestones.some((m) => m.done)],
   ['CPE survey requested', (e) => e.status === 'complete'],
-];
-const QC_CRITERIA = [
-  'Scope & success criteria documented',
-  'Day 0–3 outreach completed on time',
-  'Stakeholders identified & engaged',
-  'Milestone plan baselined & tracked',
-  'Technical guidance accurate & actionable',
-  'Artifacts captured & shared',
-  'Risks & blockers escalated appropriately',
-  'CPE survey requested at close',
 ];
 const MOCK_QC_GUIDE = ['Delivery narrative & structure', 'Technical accuracy & depth', 'Stakeholder handling & Q&A', 'Artifact & deliverable quality', 'Time management & pacing', 'Proactive risk identification'];
 const RATINGS = [['2', 'Met'], ['1', 'Partial'], ['0', 'Not met']];
@@ -36,25 +26,8 @@ export function renderQuality(container) {
   const tabs = [['cpe', 'CPE & Trends'], ['qc', 'Quality Checks'], ['mock', 'Mock Deliveries']]
     .filter(([key]) => key !== 'qc' || store.role !== 'partner-csa');
   if (!tabs.some(([key]) => key === tab)) tab = 'cpe';
-  const governed = canonicalEntityMap(store.data).filter((x) => ['Quality', 'Engagements', 'People', 'Messages', 'Actions'].includes(x.entity));
   container.innerHTML = `
     ${pageHeader({ title: 'Quality & CPE', description: 'Quality signals are captured against the engagement record in SSD IQ and rolled up to delivery quality, action follow-through, and customer sentiment.' })}
-    <section class="card pad mb16" aria-label="Canonical operating model">
-      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
-        <strong style="font-size:16px">Canonical operating model</strong>
-        ${badge('Quality outcomes remain tied to engagement truth', 'tint-info')}
-      </div>
-      <div class="governance-list">
-        ${governed.map(({ entity, owner, source, count }) => `
-          <div class="governance-item">
-            <div class="governance-meta">${esc(entity)}</div>
-            <div class="governance-owner">${esc(owner)}</div>
-            <div class="governance-source">${esc(source)}</div>
-            <div class="governance-count">${count}</div>
-          </div>
-        `).join('')}
-      </div>
-    </section>
     <div class="tabs">${tabs.map(([k, l]) => `<div class="tab ${tab === k ? 'active' : ''}" data-tab="${k}">${l}</div>`).join('')}</div>
     <div id="tabc"></div>`;
   container.querySelectorAll('[data-tab]').forEach((el) => el.addEventListener('click', () => { tab = el.getAttribute('data-tab'); renderQuality(container); }));

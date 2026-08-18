@@ -1,5 +1,5 @@
 // PODs & People — roster, capacity, utilization, skills, time-zone rollup.
-import { store, canonicalEntityMap } from '../store.js';
+import { store } from '../store.js';
 import { pageHeader, kpiCard, badge, statusPill, aiChip, esc, meter, utilColor, COLORS } from '../components.js';
 import { icon } from '../icons.js';
 import { TZ_MAP, LEADERSHIP } from '../../data/generate.js';
@@ -21,7 +21,6 @@ export function renderPods(container) {
   });
 
   const avgUtil = active.length ? Math.round(active.reduce((s, c) => s + c.utilization, 0) / active.length) : 0;
-  const governed = canonicalEntityMap(d).filter((x) => ['People', 'PODs', 'Capacity'].includes(x.entity));
 
   // Skills coverage
   const skillCount = {};
@@ -54,23 +53,6 @@ export function renderPods(container) {
       description: 'POD structure, FTC workforce, capacity, utilization and skills — rolled up by time zone.',
       actions: `<select class="select" id="f-tz">${tzOpts}</select><select class="select" id="f-pod">${podOpts}</select>`,
     })}
-
-    <section class="card pad mb16" aria-label="Canonical operating model">
-      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
-        <strong style="font-size:16px">Canonical operating model</strong>
-        ${badge('POD, people and capacity are governed in SSD IQ', 'tint-info')}
-      </div>
-      <div class="governance-list">
-        ${governed.map(({ entity, owner, source, count }) => `
-          <div class="governance-item">
-            <div class="governance-meta">${esc(entity)}</div>
-            <div class="governance-owner">${esc(owner)}</div>
-            <div class="governance-source">${esc(source)}</div>
-            <div class="governance-count">${count}</div>
-          </div>
-        `).join('')}
-      </div>
-    </section>
 
     <div class="kpi-grid">
       ${kpiCard({ label: 'FTC workforce', value: ftcs.length, iconName: 'people', hint: 'All lifecycle stages' })}

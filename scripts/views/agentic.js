@@ -1,5 +1,5 @@
 // Agentic Delivery — AI delivery agents, Deliverables Generation, and the IP library.
-import { store, canonicalEntityMap } from '../store.js';
+import { store } from '../store.js';
 import { pageHeader, kpiCard, aiChip, esc, badge, COLORS, openDrawer } from '../components.js';
 import { icon } from '../icons.js';
 import { generateDeliverable } from '../ai.js';
@@ -26,29 +26,12 @@ function agentStatus(e) {
 
 export function renderAgentic(container) {
   const d = store.data;
-  const governed = canonicalEntityMap(d).filter((x) => ['Engagements', 'Actions', 'Messages', 'Quality', 'People'].includes(x.entity));
   const active = d.engagements.filter((e) => e.assignedTo && (e.status === 'in-delivery' || e.status === 'assigned'));
   const automation = d.engagements.filter((e) => e.status !== 'new').length;
   const coverage = d.engagements.length ? Math.round((automation / d.engagements.length) * 100) : 0;
 
   container.innerHTML = `
     ${pageHeader({ title: 'Agentic Delivery', description: 'AI delivery agents draft from SSD IQ-backed engagement records and reusable IP, while the human CSA remains accountable for review and publication.', actions: aiChip('Agentic') })}
-    <section class="card pad mb16" aria-label="Canonical operating model">
-      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
-        <strong style="font-size:16px">Canonical operating model</strong>
-        ${badge('Agents assist the workflow but do not replace source-of-truth ownership', 'tint-info')}
-      </div>
-      <div class="governance-list">
-        ${governed.map(({ entity, owner, source, count }) => `
-          <div class="governance-item">
-            <div class="governance-meta">${esc(entity)}</div>
-            <div class="governance-owner">${esc(owner)}</div>
-            <div class="governance-source">${esc(source)}</div>
-            <div class="governance-count">${count}</div>
-          </div>
-        `).join('')}
-      </div>
-    </section>
 
     <div class="kpi-grid">
       ${kpiCard({ label: 'Active delivery agents', value: active.length, iconName: 'sparkle', tone: COLORS.brand })}

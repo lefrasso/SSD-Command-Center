@@ -1,5 +1,5 @@
 // Reporting & AI — Executive View + MBR generator + ask-your-data.
-import { store, computeKpis, hoursSince, canonicalEntityMap } from '../store.js';
+import { store, computeKpis, hoursSince } from '../store.js';
 import { pageHeader, kpiCard, aiChip, esc, badge, clearCharts, bar, donut, line, meter, COLORS, scoreColor, utilColor } from '../components.js';
 import { icon } from '../icons.js';
 import { mbrNarrative, askData, execSummary } from '../ai.js';
@@ -21,25 +21,8 @@ let fStatus = 'All';
 
 export function renderReporting(container) {
   const tabs = [['scorecard', 'SSD MBR Scorecard'], ['exec', 'Executive View'], ['territory', 'Territory Ops'], ['mbr', 'MBR Builder'], ['ask', 'Ask-your-data']];
-  const governed = canonicalEntityMap(store.data).filter((x) => ['Engagements', 'Quality', 'Escalations', 'Actions', 'Capacity', 'People', 'Financials', 'Strategy & IP'].includes(x.entity));
   container.innerHTML = `
     ${pageHeader({ title: 'Reporting & AI', description: 'Executive reporting is derived from SSD IQ — the canonical source for engagement, quality, action, and capacity signals used in AI and MBRs.' })}
-    <section class="card pad mb16" aria-label="Canonical operating model">
-      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
-        <strong style="font-size:16px">Canonical operating model</strong>
-        ${badge('Insights are downstream of governed records', 'tint-info')}
-      </div>
-      <div class="governance-list">
-        ${governed.map(({ entity, owner, source, count }) => `
-          <div class="governance-item">
-            <div class="governance-meta">${esc(entity)}</div>
-            <div class="governance-owner">${esc(owner)}</div>
-            <div class="governance-source">${esc(source)}</div>
-            <div class="governance-count">${count}</div>
-          </div>
-        `).join('')}
-      </div>
-    </section>
     <div class="tabs">${tabs.map(([k, l]) => `<div class="tab ${tab === k ? 'active' : ''}" data-tab="${k}">${l}</div>`).join('')}</div>
     <div id="tabc"></div>`;
   container.querySelectorAll('[data-tab]').forEach((el) => el.addEventListener('click', () => { tab = el.getAttribute('data-tab'); renderReporting(container); }));

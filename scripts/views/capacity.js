@@ -1,6 +1,6 @@
 // Capacity & Forecasting — planning, coverage, and Active & Future HC tracking + hiring progress.
 // HC tracking + hiring progress are representative of the Active & Future SP HC Consolidation PBI.
-import { store, canonicalEntityMap } from '../store.js';
+import { store } from '../store.js';
 import { pageHeader, kpiCard, aiChip, esc, badge, COLORS, clearCharts, bar, utilColor } from '../components.js';
 import { icon } from '../icons.js';
 import { TRACKS, TZ_MAP, TZ_LANGUAGES, PROGRAMS } from '../../data/generate.js';
@@ -11,25 +11,8 @@ let tab = 'forecast';
 
 export function renderCapacity(container) {
   const tabs = [['forecast', 'Forecast & Coverage'], ['hc', 'HC Tracking'], ['hiring', 'Hiring Progress']];
-  const governed = canonicalEntityMap(store.data).filter((x) => ['People', 'Engagements', 'Capacity'].includes(x.entity));
   container.innerHTML = `
     ${pageHeader({ title: 'Capacity & Forecasting', description: 'Demand forecasting and coverage, plus Active & Future headcount consolidation and hiring progress.', actions: aiChip('Planning') })}
-    <section class="card pad mb16" aria-label="Capacity operating model">
-      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
-        <strong style="font-size:16px">Capacity operating model</strong>
-        ${badge('Demand, people and hiring are governed through SSD IQ', 'tint-info')}
-      </div>
-      <div class="governance-list">
-        ${governed.map(({ entity, owner, source, count }) => `
-          <div class="governance-item">
-            <div class="governance-meta">${esc(entity)}</div>
-            <div class="governance-owner">${esc(owner)}</div>
-            <div class="governance-source">${esc(source)}</div>
-            <div class="governance-count">${count}</div>
-          </div>
-        `).join('')}
-      </div>
-    </section>
     <div class="tabs">${tabs.map(([k, l]) => `<div class="tab ${tab === k ? 'active' : ''}" data-tab="${k}">${l}</div>`).join('')}</div>
     <div id="tabc"></div>`;
   container.querySelectorAll('[data-tab]').forEach((el) => el.addEventListener('click', () => { tab = el.getAttribute('data-tab'); renderCapacity(container); }));

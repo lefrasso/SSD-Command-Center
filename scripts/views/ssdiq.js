@@ -39,6 +39,8 @@ const CFG = [
     columns: [['id', 'ID'], ['engagementId', 'Customer', (r) => engCustomer(r.engagementId)], ['type', 'Type'], ['completedDate', 'Completed'], ['track', 'Family']] },
   { key: 'hiring', name: 'Requisition', description: 'HC consolidation — hiring requisitions (Active & Future).', source: 'HC Consolidation', icon: 'personAdd', label: (r) => `${r.family} · ${r.stage}`,
     columns: [['id', 'ID'], ['family', 'Family'], ['partnerId', 'Partner', (r) => (store.data.partners.find((p) => p.id === r.partnerId) || {}).name || r.partnerId], ['tz', 'TZ'], ['type', 'Type'], ['stage', 'Stage'], ['targetStart', 'Target start']] },
+  { key: 'shadowRequests', name: 'Shadow Request', description: 'Requests to observe a live delivery (listen-only) ahead of accreditation.', source: 'Enablement', icon: 'people', label: (r) => `${csaName(r.requesterId)} · ${engCustomer(r.engagementId)}`,
+    columns: [['id', 'ID'], ['requesterId', 'Requester', (r) => csaName(r.requesterId)], ['engagementId', 'Customer', (r) => engCustomer(r.engagementId)], ['ownerId', 'Delivery resource', (r) => csaName(r.ownerId)], ['status', 'Status', (r) => statusPill(r.status)], ['requestedAt', 'Requested']] },
   { key: 'financials', name: 'Financial', description: 'MBR budget, actual, forecast and variance records.', source: 'Finance / Power BI', icon: 'report', label: (r) => `${r.scope} · ${r.category}`,
     columns: [['id', 'ID'], ['period', 'Period'], ['scope', 'Scope'], ['category', 'Category'], ['budget', 'Budget'], ['actual', 'Actual'], ['variance', 'Variance'], ['status', 'Status']] },
   { key: 'initiatives', name: 'Strategy / IP Initiative', description: 'Offerings, roadmap, IP and platform initiatives.', source: 'Portfolio Management', icon: 'grid', label: (r) => r.name,
@@ -207,6 +209,7 @@ function openRecord(key, id) {
 function renderValue(key, v) {
   if (key === 'outreach' && v && typeof v === 'object') return Object.entries(v).map(([day, done]) => `${day.toUpperCase()} ${done ? '✓' : '—'}`).join('  ');
   if (key === 'milestones' && Array.isArray(v)) return esc(v.map((m) => `${m.label} (${m.done ? 'done' : m.due})`).join(', '));
+  if (key === 'objectives' && Array.isArray(v)) return esc(v.map((o) => (typeof o === 'string' ? o : `${o.label} [${o.category}${o.kind && o.kind !== 'objective' ? `/${o.kind}` : ''}] (${o.done ? 'done' : 'open'})`)).join(', '));
   if (key === 'checkIns' && Array.isArray(v)) return esc(v.map((c) => `${c.date}: ${c.note}`).join(' · '));
   if (key === 'reviewHistory' && Array.isArray(v)) return esc(v.map((review) => `${review.stage}: ${review.decision} by ${review.by}${review.comment ? ` (${review.comment})` : ''}`).join(' · '));
   if (Array.isArray(v)) return esc(v.join(', '));
@@ -238,6 +241,7 @@ function relationshipsFor(key, r) {
         { label: 'CPE feedback', items: d.cpe.filter((c) => c.engagementId === r.id).map((c) => ({ key: 'cpe', id: c.id, label: `CPE ${c.score}` })) },
         { label: 'Deliveries', items: d.deliveries.filter((x) => x.engagementId === r.id).map((x) => ({ key: 'deliveries', id: x.id, label: x.type })) },
         { label: 'Success stories', items: d.successStories.filter((story) => story.engagementIds.includes(r.id)).map((story) => ({ key: 'successStories', id: story.id, label: story.title })) },
+        { label: 'Shadow requests', items: d.shadowRequests.filter((s) => s.engagementId === r.id).map((s) => ({ key: 'shadowRequests', id: s.id, label: `${csaName(s.requesterId)} · ${s.status}` })) },
       ];
     case 'successStories':
       return [
@@ -272,6 +276,12 @@ function relationshipsFor(key, r) {
       ];
     case 'pips':
       return [{ label: 'CSA', items: [{ key: 'csas', id: r.csaId, label: csaName(r.csaId) }] }];
+    case 'shadowRequests':
+      return [
+        { label: 'Requester', items: [{ key: 'csas', id: r.requesterId, label: csaName(r.requesterId) }] },
+        { label: 'Delivery resource', items: [{ key: 'csas', id: r.ownerId, label: csaName(r.ownerId) }] },
+        { label: 'Engagement', items: [{ key: 'engagements', id: r.engagementId, label: engCustomer(r.engagementId) }] },
+      ];
     case 'deliveries':
       return [{ label: 'Engagement', items: [{ key: 'engagements', id: r.engagementId, label: engCustomer(r.engagementId) }] }];
     case 'hiring':

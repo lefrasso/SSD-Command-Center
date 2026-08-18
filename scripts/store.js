@@ -48,6 +48,7 @@ export const CANONICAL_ENTITIES = [
   { entity: 'Strategy & IP', owner: 'Tech strategy & IP leads', source: 'Portfolio Management', key: 'initiatives', count: (d) => d.initiatives.length },
   { entity: 'Sentiment Signals', owner: 'Voice of customer', source: 'AI Services', key: 'sentimentSignals', count: (d) => d.sentimentSignals.length },
   { entity: 'Sentiment', owner: 'Voice of customer', source: 'AI sentiment rollup', key: 'sentiment', count: (d) => d.sentiment.length },
+  { entity: 'Shadow Requests', owner: 'Enablement', source: 'Shadowing program', key: 'shadowRequests', count: (d) => d.shadowRequests.length },
 ];
 
 export function canonicalEntityMap(d = store.data) {
@@ -247,11 +248,112 @@ export function acknowledgeSentimentAlert(signalId) {
   signal.audit.push({ at: now, who: store.role, action: 'sentiment alert acknowledged' });
   emit('data');
 }
-export function addEscalation({ engagementId, severity, summary, ownerName, sdmName }) {
+export function addEscalation({ engagementId, severity, summary, ownerName, sdmName, raisedBy = null, channel = 'internal' }) {
   const id = `ESC${escSeq++}`;
-  store.data.escalations.unshift({ id, engagementId, severity, status: 'new', ownerName, sdmName, adoRef: `AB#${Math.floor(Math.random() * 80000 + 10000)}`, opened: new Date().toISOString().slice(0, 10), slaHours: { sev1: 8, sev2: 24, sev3: 48, sev4: 72 }[severity], actionIds: [], summary, sourceOfTruth: 'Azure DevOps', updatedAt: new Date().toISOString().slice(0, 10), audit: [{ at: new Date().toISOString(), who: 'you', action: 'escalation raised' }] });
+  store.data.escalations.unshift({ id, engagementId, severity, status: 'new', ownerName, sdmName, raisedBy: raisedBy || 'you', channel, adoRef: `AB#${Math.floor(Math.random() * 80000 + 10000)}`, opened: new Date().toISOString().slice(0, 10), slaHours: { sev1: 8, sev2: 24, sev3: 48, sev4: 72 }[severity], actionIds: [], summary, sourceOfTruth: 'Azure DevOps', updatedAt: new Date().toISOString().slice(0, 10), audit: [{ at: new Date().toISOString(), who: raisedBy || 'you', action: 'escalation raised' }] });
   emit('data');
   return id;
+}
+let pipSeq = store.data.pips.reduce((max, p) => Math.max(max, Number(p.id.replace(/^PIP/, '')) || 0), 0) + 1;
+const PIP_CATEGORIES = ['technical-skills', 'soft-skills', 'language-proficiency', 'delivery-skills'];
+const PIP_KINDS = ['objective', 'training', 'certification', 'quality-check'];
+function normalizePipObjective(o) {
+  if (typeof o === 'string') return { label: o.trim(), category: 'delivery-skills', kind: 'objective' };
+  return {
+    label: String((o && o.label) || '').trim(),
+    category: PIP_CATEGORIES.includes(o && o.category) ? o.category : 'delivery-skills',
+    kind: PIP_KINDS.includes(o && o.kind) ? o.kind : 'objective',
+  };
+}
+export function draftPip(csaId, objectiveInputs) {
+  if (store.data.pips.some((p) => p.csaId === csaId && p.status !== 'closed')) throw new Error('An active or draft PIP already exists for this Partner CSA.');
+  const objectives = (objectiveInputs || []).map(normalizePipObjective).filter((o) => o.label);
+  if (!objectives.length) throw new Error('At least one objective is required to draft a PIP.');
+  const id = `PIP${String(pipSeq++).padStart(3, '0')}`;
+  store.data.pips.unshift({
+    id, csaId, status: 'draft', opened: todayISO(),
+    objectives: objectives.map((o) => ({ ...o, done: false })),
+    checkIns: [], outcome: 'in-progress', sourceOfTruth: 'Confidential/HR', updatedAt: todayISO(),
+    audit: [{ at: new Date().toISOString(), who: store.role, action: 'PIP drafted' }],
+  });
+  emit('data');
+  return id;
+}
+export function addPipObjective(pipId, objectiveInput) {
+  const pip = byId(store.data.pips, pipId);
+  if (!pip) throw new Error(`PIP ${pipId} was not found.`);
+  if (pip.status === 'closed') throw new Error('Cannot add objectives to a closed PIP.');
+  const objective = normalizePipObjective(objectiveInput);
+  if (!objective.label) throw new Error('An objective description is required.');
+  pip.objectives.push({ ...objective, done: false });
+  pip.updatedAt = todayISO();
+  pip.audit.push({ at: new Date().toISOString(), who: store.role, action: `objective added: "${objective.label}"` });
+  emit('data');
+}
+export function activatePip(pipId) {
+  const pip = byId(store.data.pips, pipId);
+  if (!pip) throw new Error(`PIP ${pipId} was not found.`);
+  if (pip.status !== 'draft') throw new Error('Only a draft PIP can be activated.');
+  pip.status = 'active';
+  pip.updatedAt = todayISO();
+  pip.audit.push({ at: new Date().toISOString(), who: store.role, action: 'PIP activated' });
+  emit('data');
+}
+export function togglePipObjective(pipId, index) {
+  const pip = byId(store.data.pips, pipId);
+  const obj = pip && pip.objectives[index];
+  if (!obj) return;
+  obj.done = !obj.done;
+  pip.updatedAt = todayISO();
+  pip.audit.push({ at: new Date().toISOString(), who: store.role, action: `objective "${obj.label}" marked ${obj.done ? 'done' : 'open'}` });
+  emit('data');
+}
+export function addPipCheckIn(pipId, note) {
+  const pip = byId(store.data.pips, pipId);
+  if (!pip) throw new Error(`PIP ${pipId} was not found.`);
+  const text = String(note || '').trim();
+  if (!text) throw new Error('A check-in note is required.');
+  pip.checkIns.unshift({ date: todayISO(), note: text });
+  pip.updatedAt = todayISO();
+  pip.audit.push({ at: new Date().toISOString(), who: store.role, action: 'check-in added' });
+  emit('data');
+}
+export function closePip(pipId, outcome) {
+  const pip = byId(store.data.pips, pipId);
+  if (!pip) throw new Error(`PIP ${pipId} was not found.`);
+  if (!['met', 'not-met'].includes(outcome)) throw new Error('PIP outcome must be "met" or "not-met".');
+  pip.status = 'closed';
+  pip.outcome = outcome;
+  pip.updatedAt = todayISO();
+  pip.audit.push({ at: new Date().toISOString(), who: store.role, action: `PIP closed (outcome: ${outcome})` });
+  emit('data');
+}
+let shdSeq = store.data.shadowRequests.reduce((max, s) => Math.max(max, Number(s.id.replace(/^SHD/, '')) || 0), 0) + 1;
+export function requestShadow({ engagementId, requesterId, note }) {
+  const eng = byId(store.data.engagements, engagementId);
+  if (!eng) throw new Error(`Engagement ${engagementId} was not found.`);
+  if (!eng.assignedTo) throw new Error('This delivery has no assigned delivery resource to request from yet.');
+  if (!requesterId) throw new Error('Select who is requesting to shadow.');
+  if (store.data.shadowRequests.some((s) => s.engagementId === engagementId && s.requesterId === requesterId && s.status !== 'declined')) throw new Error('A shadow request for this delivery already exists.');
+  const id = `SHD${String(shdSeq++).padStart(3, '0')}`;
+  store.data.shadowRequests.unshift({
+    id, engagementId, requesterId, ownerId: eng.assignedTo, status: 'requested',
+    note: String(note || '').trim(), requestedAt: todayISO(), respondedAt: null,
+    sourceOfTruth: 'Enablement', updatedAt: todayISO(),
+    audit: [{ at: new Date().toISOString(), who: store.role, action: 'shadow request sent' }],
+  });
+  emit('data');
+  return id;
+}
+export function respondShadowRequest(id, status) {
+  const req = byId(store.data.shadowRequests, id);
+  if (!req) throw new Error(`Shadow request ${id} was not found.`);
+  if (!['confirmed', 'declined'].includes(status)) throw new Error('Shadow request status must be "confirmed" or "declined".');
+  req.status = status;
+  req.respondedAt = todayISO();
+  req.updatedAt = todayISO();
+  req.audit.push({ at: new Date().toISOString(), who: store.role, action: `shadow request ${status}` });
+  emit('data');
 }
 export function addMessage(threadId, engagementId, from, to, body, sentiment) {
   const id = `MSG${msgSeq++}`;

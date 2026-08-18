@@ -15,9 +15,11 @@ export const PERSONAS = {
   'partner-csa': { role: 'partner-csa', name: 'Marco Rossi', title: 'Partner CSA · Avanade', initials: 'MR', color: '#038387', org: 'Delivery Partner', scope: 'Sees assigned engagements, dispatch, messages and own scorecards.' },
   sdm: { role: 'sdm', name: 'Priya Nair', title: 'SDM · Delivery Partner', initials: 'PN', color: '#5b5fc7', org: 'Delivery Partner', scope: 'Co-owns escalations and action items, monitors partner health.' },
   'operations-manager': { role: 'operations-manager', name: 'Omar Haddad', title: 'Operations Manager · Delivery Partner', initials: 'OH', color: '#8764b8', org: 'Delivery Partner', scope: 'Sourcing, headcount, onboarding/offboarding and capacity.' },
+  // Customer Success (Microsoft, customer-facing)
+  csam: { role: 'csam', name: 'Julia Meyer', title: 'CSAM · Customer Success', initials: 'JM', color: '#c19c00', org: 'Customer Success', scope: 'Owns the customer relationship; raises delivery concerns as escalations for the POD Lead/SDM.' },
 };
 
-export const ROLE_ORDER = ['ww-lead', 'tz-lead', 'csa-manager', 'pod-lead', 'business-manager', 'csa', 'ip-lead', 'adoption-lead', 'partner-csa', 'sdm', 'operations-manager'];
+export const ROLE_ORDER = ['ww-lead', 'tz-lead', 'csa-manager', 'pod-lead', 'business-manager', 'csa', 'ip-lead', 'adoption-lead', 'partner-csa', 'sdm', 'operations-manager', 'csam'];
 
 const ROLE_PERMISSIONS = {
   'ww-lead': ['view:portfolio', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:leadershipSuccessStories', 'approve:ltSuccessStories'],
@@ -31,6 +33,7 @@ const ROLE_PERMISSIONS = {
   'partner-csa': ['edit:successStories'],
   sdm: ['edit:escalation', 'view:allPartners', 'run:mbr', 'review:successStories'],
   'operations-manager': ['edit:capacity', 'view:allPartners'],
+  csam: ['raise:escalation'],
 };
 
 export function can(role, permission) {

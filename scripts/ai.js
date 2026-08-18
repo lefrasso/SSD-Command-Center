@@ -2,6 +2,7 @@
 // Every consumer stamps output with an "AI-generated" chip. Production seam:
 // swap these for Azure OpenAI grounded over SSD IQ (see azureOpenAiStub.js).
 import { computeKpis, hoursSince, store } from './store.js';
+import { QC_CRITERIA, PROGRAMS, TZ_LANGUAGES } from '../data/generate.js';
 
 const now = () => new Date().toISOString();
 
@@ -233,6 +234,29 @@ export function performanceSummary(csa, d = store.data) {
   const complete = mine.filter((e) => e.status === 'complete').length;
   const escs = d.escalations.filter((e) => mine.some((m) => m.id === e.engagementId)).length;
   return { text: `Advisory summary for ${csa.name} (${csa.vendor}). Delivery: ${complete} completed of ${mine.length} assigned. CPE ${csa.cpe.toFixed(1)}, quality ${csa.quality.toFixed(1)}, utilization ${csa.utilization}%, ${escs} linked escalation(s). Sentiment ${csa.sentiment}. This is an advisory input for the POD Lead — not an automated decision.`, sources: mine.slice(0, 4).map((e) => ({ id: e.id, label: e.customer })), generatedAt: now() };
+}
+export function suggestPipObjectives(csa, d = store.data) {
+  const mine = d.engagements.filter((e) => e.assignedTo === csa.id);
+  const escs = d.escalations.filter((e) => mine.some((m) => m.id === e.engagementId));
+  const pod = d.pods.find((p) => p.id === csa.podId);
+  const objectives = [];
+  if (csa.quality < 4.2) objectives.push({ label: `Quality check focus: ${QC_CRITERIA[0]} (currently ${csa.quality.toFixed(1)}).`, category: 'delivery-skills', kind: 'quality-check' });
+  if (csa.cpe < 4.4) objectives.push({ label: `Raise rolling CPE to 4.4+ within two review periods (currently ${csa.cpe.toFixed(1)}).`, category: 'delivery-skills', kind: 'objective' });
+  if (escs.length > 2) objectives.push({ label: `Develop soft skill: stakeholder communication & expectation management (${escs.length} linked escalation(s)).`, category: 'soft-skills', kind: 'objective' });
+  const trackPrograms = csa.tracks.flatMap((t) => PROGRAMS[t] || []);
+  const missingProgram = trackPrograms.find((p) => !(csa.accreditations || []).includes(p));
+  if (missingProgram) objectives.push({ label: `Complete ${missingProgram} training and accreditation.`, category: 'technical-skills', kind: 'training' });
+  const tzLangs = (pod && TZ_LANGUAGES[pod.tz]) || [];
+  const missingLang = tzLangs.find((l) => !(csa.languages || []).includes(l));
+  if (missingLang && (csa.languages || []).length < 2) objectives.push({ label: `Build language proficiency: ${missingLang}.`, category: 'language-proficiency', kind: 'objective' });
+  if (csa.utilization < 80) objectives.push({ label: `Increase utilization toward the capacity target (currently ${csa.utilization}%).`, category: 'delivery-skills', kind: 'objective' });
+  if (!objectives.length) objectives.push({ label: 'Sustain current delivery cadence and document wins for the next review.', category: 'delivery-skills', kind: 'objective' });
+  return {
+    text: `Suggested starting objectives for ${csa.name}, drawn from delivery evidence across quality checks, technical/soft skills, language proficiency and certifications. The POD Lead selects, edits and finalizes what goes into the plan — this is advisory only.`,
+    objectives: objectives.slice(0, 4),
+    sources: mine.slice(0, 4).map((e) => ({ id: e.id, label: e.customer })),
+    generatedAt: now(),
+  };
 }
 
 // ---- Executive summary (Reporting → Executive View) ----

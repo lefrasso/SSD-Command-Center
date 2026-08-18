@@ -98,6 +98,11 @@
 .governance-meta { font-size: 12px; font-weight: 700; color: var(--fg-1); }
 .governance-owner { font-size: 11px; color: var(--fg-2); }
 .governance-source { font-size: 11px; color: var(--fg-3); }
+
+.scenario-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+.scenario-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 10px 12px; border: 1px solid var(--stroke-2); border-radius: var(--radius); background: var(--bg-1); color: var(--fg-1); font-size: 12px; font-weight: 600; text-align: left; cursor: pointer; }
+.scenario-card:hover { background: var(--bg-2); }
+.scenario-card.active { border-color: var(--brand-stroke-2, var(--brand-fg)); background: var(--brand-bg-2); color: var(--brand-fg); }
 .governance-count { margin-top: 8px; font-size: 18px; font-weight: 700; color: var(--brand-primary); }
 
 .roadmap-grid { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 12px; }
