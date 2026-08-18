@@ -26,12 +26,6 @@ export function dailyBriefing(role, d = store.data) {
     headline = `${k.openEscalations} open escalations, ${k.slaBreaches} breaching SLA — co-owned with POD Leads.`;
     bullets.push(`${breaches.length} escalation(s) past SLA need an SDM decision.`);
     bullets.push(`${d.actions.filter((a) => a.status !== 'done').length} action items open across cases.`);
-  } else if (role === 'operations-manager') {
-    const onboarding = d.csas.filter((c) => c.lifecycle === 'onboarding').length;
-    const offboarding = d.csas.filter((c) => c.lifecycle === 'offboarding').length;
-    headline = `${onboarding} CSAs onboarding, ${offboarding} offboarding; utilization at ${k.utilization}%.`;
-    bullets.push(`Capacity is ${k.utilization}% — ${k.utilization > 90 ? 'over the healthy band' : 'within band'}.`);
-    bullets.push(`${newDemand.length} unassigned engagements may need additional headcount.`);
   } else if (['ww-lead', 'tz-lead', 'business-manager'].includes(role)) {
     headline = `Portfolio: CPE ${k.rollingCpe.toFixed(1)}, on-time ${k.onTimePct}%, net sentiment ${k.netSentiment}.`;
     bullets.push(`${k.deliveriesCompleted} deliveries completed this period.`);
@@ -330,20 +324,23 @@ export function attritionSummary(d = store.data) {
 // ---- Capacity Trajectory Simulator summary (Capacity & Forecasting → Trajectory Simulator) ----
 // Takes the already-computed forecast (computeCapacityForecast) since it depends on user-adjustable
 // utilization / onboarding / trajectory inputs — this narrates that specific scenario, not a recompute.
+const SCOPE_NOUN = { family: 'Family', tz: 'Time zone', language: 'Language' };
 export function capacityForecastSummary(forecast) {
-  const breaching = forecast.families.filter((f) => f.breach).sort((a, b) => a.breach.monthKey.localeCompare(b.breach.monthKey));
+  const noun = SCOPE_NOUN[forecast.scope] || 'Family';
+  const breaching = forecast.items.filter((f) => f.breach).sort((a, b) => a.breach.monthKey.localeCompare(b.breach.monthKey));
   const soonest = breaching[0];
   const text =
     `Scenario: ${forecast.utilizationTarget}% expected utilization (effective capacity ${forecast.effectiveCapPerCsa.toFixed(1)} engagements/CSA) ` +
-    `and a ${forecast.onboardingMonths}-month onboarding lead time. ` +
+    `and a ${forecast.onboardingMonths}-month onboarding lead time, by ${noun.toLowerCase()}${forecast.minRequired ? ` (minimum ${forecast.minRequired} person coverage enforced)` : ''}. ` +
     `${soonest
-      ? `${soonest.track} is the first Family to go under capacity, in ${soonest.breach.label} (${soonest.breach.quarter}) — a gap of ${soonest.breach.gap}. ` +
+      ? `${soonest.key} is the first ${noun} to go under capacity, in ${soonest.breach.label} (${soonest.breach.quarter}) — a gap of ${soonest.breach.gap}. ` +
         `${soonest.hireByMonth.overdue ? `You are already past the hire-by date (${soonest.hireByMonth.label}) — start hiring now. ` : `Start hiring by ${soonest.hireByMonth.label} to land in time. `}` +
-        `${breaching.length > 1 ? `${breaching.length - 1} other Family/Families also go under capacity within the horizon: ${breaching.slice(1).map((f) => `${f.track} (${f.breach.label})`).join(', ')}. ` : ''}`
-      : 'No Family is projected to go under capacity within the horizon at this trajectory and utilization. '}` +
-    `This is a simulated projection from a detected 3-month demand trend — validate before opening requisitions.`;
-  return { text, sources: breaching.slice(0, 5).map((f) => ({ id: f.track, label: f.track })), generatedAt: now() };
+        `${breaching.length > 1 ? `${breaching.length - 1} other ${noun.toLowerCase()}(s) also go under capacity within the horizon: ${breaching.slice(1).map((f) => `${f.key} (${f.breach.label})`).join(', ')}. ` : ''}`
+      : `No ${noun.toLowerCase()} is projected to go under capacity within the horizon at this trajectory and utilization. `}` +
+    `This is a simulated projection from a detected 3-month demand trend — continue it as-is or override any month, then validate before opening requisitions.`;
+  return { text, sources: breaching.slice(0, 5).map((f) => ({ id: f.key, label: f.key })), generatedAt: now() };
 }
+
 
 // ---- Partner performance summary (Delivery Partners / Reporting → Partner Performance) ----
 export function partnerPerformanceSummary(d = store.data) {

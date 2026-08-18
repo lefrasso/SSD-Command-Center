@@ -11,19 +11,22 @@ let podFilter = 'All';
 
 export function renderPods(container) {
   const d = store.data;
-  const active = d.csas.filter((c) => c.lifecycle === 'active');
-  const ftcs = d.csas.filter((c) => c.resourceType === 'FTC');
+  // POD Lead is scoped to their own POD only — a stable stand-in since the persona isn't
+  // individually linked to a generated POD lead name.
+  const myPod = store.role === 'pod-lead' ? d.pods[0] : null;
+  const active = (myPod ? d.csas.filter((c) => c.podId === myPod.id) : d.csas).filter((c) => c.lifecycle === 'active');
+  const ftcs = active.filter((c) => c.resourceType === 'FTC');
   const podLeadsByTz = Object.fromEntries(Object.keys(TZ_MAP).map((timeZone) => [timeZone, new Set(d.pods.filter((pod) => pod.tz === timeZone).map((pod) => pod.leadName)).size]));
 
   const podsByTz = (region) => Object.entries(TZ_MAP).find(([, i]) => i.regions.includes(region))?.[0] || 'Global';
-  const pods = d.pods.filter((p) => (tz === 'All' || p.tz === tz));
-  const roster = active.filter((c) => {
+  const pods = myPod ? [myPod] : d.pods.filter((p) => (tz === 'All' || p.tz === tz));
+  const roster = myPod ? active : active.filter((c) => {
     const pod = d.pods.find((p) => p.id === c.podId);
     return (tz === 'All' || (pod && pod.tz === tz)) && (podFilter === 'All' || c.podId === podFilter);
   });
 
   const avgUtil = active.length ? Math.round(active.reduce((s, c) => s + c.utilization, 0) / active.length) : 0;
-  const podPerf = computePodPerformance(d).filter((p) => (tz === 'All' || p.tz === tz) && (podFilter === 'All' || p.id === podFilter)).sort((a, b) => b.score - a.score);
+  const podPerf = computePodPerformance(d).filter((p) => myPod ? p.id === myPod.id : ((tz === 'All' || p.tz === tz) && (podFilter === 'All' || p.id === podFilter))).sort((a, b) => b.score - a.score);
 
   // Skills coverage
   const skillCount = {};
@@ -52,17 +55,21 @@ export function renderPods(container) {
 
   container.innerHTML = `
     ${pageHeader({
-      title: 'PODs & People',
-      description: 'POD structure, FTC workforce, capacity, utilization and skills — rolled up by time zone.',
-      actions: `<select class="select" id="f-tz">${tzOpts}</select><select class="select" id="f-pod">${podOpts}</select>`,
+      title: myPod ? `PODs & People — ${myPod.name}` : 'PODs & People',
+      description: myPod ? 'Your POD — roster, capacity, utilization and skills.' : 'POD structure, FTC workforce, capacity, utilization and skills — rolled up by time zone.',
+      actions: myPod ? '' : `<select class="select" id="f-tz">${tzOpts}</select><select class="select" id="f-pod">${podOpts}</select>`,
     })}
 
     <div class="kpi-grid">
       ${kpiCard({ label: 'FTC workforce', value: ftcs.length, iconName: 'people', hint: 'All lifecycle stages' })}
       ${kpiCard({ label: 'Active Partner CSAs', value: active.length, iconName: 'people' })}
       ${kpiCard({ label: 'Avg utilization', value: avgUtil + '%', iconName: 'trending', tone: utilColor(avgUtil), hint: 'Healthy 80–90%' })}
-      ${kpiCard({ label: 'POD Leads', value: d.pods.length, iconName: 'database', hint: Object.entries(podLeadsByTz).map(([timeZone, count]) => `${timeZone} ${count}`).join(' · ') })}
-      ${kpiCard({ label: 'Delivery Partners', value: d.partners.length, iconName: 'building' })}
+      ${myPod
+        ? kpiCard({ label: 'Time zone', value: myPod.tz, iconName: 'database', hint: myPod.region })
+        : kpiCard({ label: 'POD Leads', value: d.pods.length, iconName: 'database', hint: Object.entries(podLeadsByTz).map(([timeZone, count]) => `${timeZone} ${count}`).join(' · ') })}
+      ${myPod
+        ? kpiCard({ label: 'CSA Manager', value: myPod.csaManager, iconName: 'building' })
+        : kpiCard({ label: 'Delivery Partners', value: d.partners.length, iconName: 'building' })}
     </div>
 
     <div class="card pad mb16">
@@ -70,7 +77,7 @@ export function renderPods(container) {
       <div>${esc(aiText)}</div>
     </div>
 
-    <div class="card pad mb16">
+    ${myPod ? '' : `<div class="card pad mb16">
       <div class="row mb8"><strong style="font-size:15px">Org hierarchy</strong>${badge('WW → TZ → Manager → POD Lead', 'tint-info')}</div>
       <div class="muted mb8" style="font-size:12px">${esc(LEADERSHIP.wwLead)} · Worldwide Lead</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px">
@@ -79,7 +86,7 @@ export function renderPods(container) {
           ${g.managers.map((mm) => `<div class="mt8"><div style="font-size:13px;font-weight:600">${esc(mm.m)} <span class="muted" style="font-weight:400">· CSA Manager</span></div><div class="muted" style="font-size:12px">POD Leads: ${esc(mm.leads.join(', '))}</div></div>`).join('')}
         </div>`).join('')}
       </div>
-    </div>
+    </div>`}
 
     <div class="section-title">Capacity heatmap by POD</div>
     <div class="card pad mb16">
@@ -151,6 +158,8 @@ export function renderPods(container) {
       </div>
     </div>`;
 
-  container.querySelector('#f-tz').addEventListener('change', (e) => { tz = e.target.value; podFilter = 'All'; renderPods(container); });
-  container.querySelector('#f-pod').addEventListener('change', (e) => { podFilter = e.target.value; renderPods(container); });
+  const fTz = container.querySelector('#f-tz');
+  const fPod = container.querySelector('#f-pod');
+  if (fTz) fTz.addEventListener('change', (e) => { tz = e.target.value; podFilter = 'All'; renderPods(container); });
+  if (fPod) fPod.addEventListener('change', (e) => { podFilter = e.target.value; renderPods(container); });
 }

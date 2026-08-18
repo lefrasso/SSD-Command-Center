@@ -281,27 +281,38 @@ function build() {
     });
   }
 
-  // Capacity theoretical targets (leadership-approved operating-model headcount per Family) and a
-  // trailing 6-month demand history per Family — feeds the Capacity Trajectory Simulator. Demand here
-  // is modeled as monthly workload throughput (headcount × utilization × capacity-per-CSA), not the
-  // sparse "currently open" engagement snapshot — a flow measure suitable for a trend/trajectory.
+  // Capacity theoretical targets (leadership-approved operating-model headcount) and a trailing
+  // 6-month demand history — feeds the Capacity Trajectory Simulator, granular by Family, Time zone
+  // and Language. Demand is modeled as monthly workload throughput (headcount × utilization ×
+  // capacity-per-CSA — treated as an engagement count, so hours = engagements × 8), not the sparse
+  // "currently open" engagement snapshot — a flow measure suitable for a trend/trajectory.
+  const podById = new Map(pods.map((p) => [p.id, p]));
+  const CAPACITY_DIMENSIONS = {
+    family: { keys: TRACKS, memberOf: (c, key) => c.tracks.includes(key) },
+    tz: { keys: Object.keys(TZ_MAP), memberOf: (c, key) => (podById.get(c.podId) || {}).tz === key },
+    language: { keys: ALL_LANGUAGES, memberOf: (c, key) => c.languages.includes(key) },
+  };
+  const months6 = [];
+  for (let m = 5; m >= 0; m--) { const dt = new Date(NOW); dt.setUTCMonth(dt.getUTCMonth() - m); months6.push(dt.toISOString().slice(0, 7)); }
   const capacityTargets = {};
   const demandHistory = {};
-  for (const t of TRACKS) {
-    const headcountForTrack = csasForTrack(t);
-    capacityTargets[t] = Math.max(1, headcountForTrack.length + int(-6, 10));
-    const avgUtilForTrack = headcountForTrack.length ? headcountForTrack.reduce((s, c) => s + c.utilization, 0) / headcountForTrack.length : BASELINE_UTILIZATION;
-    const currentDemand = Math.round(headcountForTrack.length * (avgUtilForTrack / 100) * CAP_PER_CSA);
-    const monthlyTrend = (-8 + rng() * 20) / 100; // per-family drift, roughly -8%..+12% month over month
-    const points = [];
-    let demand = currentDemand;
-    for (let m = 0; m < 6; m++) {
-      points.unshift(Math.max(0, Math.round(demand * (1 + (rng() - 0.5) * 0.1))));
-      demand /= (1 + monthlyTrend);
+  for (const [dim, { keys, memberOf }] of Object.entries(CAPACITY_DIMENSIONS)) {
+    capacityTargets[dim] = {};
+    demandHistory[dim] = {};
+    for (const key of keys) {
+      const members = activeCsas.filter((c) => memberOf(c, key));
+      capacityTargets[dim][key] = Math.max(1, members.length + int(-6, 10));
+      const avgUtil = members.length ? members.reduce((s, c) => s + c.utilization, 0) / members.length : BASELINE_UTILIZATION;
+      const currentDemand = Math.round(members.length * (avgUtil / 100) * CAP_PER_CSA);
+      const monthlyTrend = (-8 + rng() * 20) / 100; // per-key drift, roughly -8%..+12% month over month
+      const points = [];
+      let demand = currentDemand;
+      for (let m = 0; m < 6; m++) {
+        points.unshift(Math.max(0, Math.round(demand * (1 + (rng() - 0.5) * 0.1))));
+        demand /= (1 + monthlyTrend);
+      }
+      demandHistory[dim][key] = months6.map((month, i) => ({ month, engagements: points[i], hours: points[i] * 8 }));
     }
-    const months = [];
-    for (let m = 5; m >= 0; m--) { const dt = new Date(NOW); dt.setUTCMonth(dt.getUTCMonth() - m); months.push(dt.toISOString().slice(0, 7)); }
-    demandHistory[t] = months.map((month, i) => ({ month, demand: points[i] }));
   }
 
   const deliveries = [];

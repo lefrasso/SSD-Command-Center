@@ -24,7 +24,8 @@ const seedOf = (id) => [...id].reduce((a, ch) => a + ch.charCodeAt(0), 0);
 
 export function renderQuality(container) {
   const tabs = [['cpe', 'CPE & Trends'], ['qc', 'Quality Checks'], ['mock', 'Mock Deliveries']]
-    .filter(([key]) => key !== 'qc' || store.role !== 'partner-csa');
+    .filter(([key]) => key !== 'qc' || store.role !== 'partner-csa')
+    .filter(([key]) => store.role !== 'adoption-lead' || key === 'cpe');
   if (!tabs.some(([key]) => key === tab)) tab = 'cpe';
   container.innerHTML = `
     ${pageHeader({ title: 'Quality & CPE', description: 'Quality signals are captured against the engagement record in SSD IQ and rolled up to delivery quality, action follow-through, and customer sentiment.' })}

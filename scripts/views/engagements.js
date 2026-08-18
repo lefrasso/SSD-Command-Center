@@ -1,5 +1,5 @@
 // Engagements & Dispatch — dispatch board + engagement detail with AI dispatch.
-import { store, assignEngagement, respondShadowRequest } from '../store.js';
+import { store, assignEngagement, respondShadowRequest, myCsa } from '../store.js';
 import { pageHeader, badge, statusPill, aiChip, esc, kanban, openDrawer, closeDrawer, COLORS } from '../components.js';
 import { icon } from '../icons.js';
 import { recommendCSA, draftOutreach } from '../ai.js';
@@ -9,8 +9,10 @@ const COLS = [['new', 'New'], ['assigned', 'Assigned'], ['in-delivery', 'In deli
 
 export function renderEngagements(container) {
   const d = store.data;
+  const my = myCsa(store.role, d);
+  const scoped = my ? d.engagements.filter((e) => e.assignedTo === my.id) : d.engagements;
   const columns = COLS.map(([status, title]) => {
-    const engs = d.engagements.filter((e) => e.status === status);
+    const engs = scoped.filter((e) => e.status === status);
     return {
       title, count: engs.length,
       cards: engs.slice(0, 40).map((e) => {
@@ -26,7 +28,7 @@ export function renderEngagements(container) {
   });
 
   container.innerHTML = `
-    ${pageHeader({ title: 'Engagements & Dispatch', description: 'Demand enters the platform as an engagement record, is governed in SSD IQ, and is routed through dispatch with human review and AI guidance.' })}
+    ${pageHeader({ title: 'Engagements & Dispatch', description: my ? `Your assigned engagements only — as ${esc(my.name)}.` : 'Demand enters the platform as an engagement record, is governed in SSD IQ, and is routed through dispatch with human review and AI guidance.' })}
     ${kanban(columns)}`;
 
   container.querySelectorAll('.kan-card').forEach((el) => el.addEventListener('click', () => openEngagement(el.getAttribute('data-id'))));

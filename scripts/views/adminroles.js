@@ -3,7 +3,7 @@
 import { store, roleHasModuleAccess, isModuleAccessOverridden, setModuleAccess, resetModuleAccess, resetAllModuleAccess } from '../store.js';
 import {
   PERSONAS, ROLE_ORDER, ALL_PERMISSIONS, PERMISSION_LABELS,
-  can, isPermissionOverridden, setPermissionOverride, resetPermissionOverride,
+  can, isPermissionOverridden, setPermissionOverride, resetPermissionOverride, setPersonaScope,
 } from '../roles.js';
 import { MODULES, NAV_GROUPS } from '../nav.js';
 import { pageHeader, esc, aiChip } from '../components.js';
@@ -41,7 +41,7 @@ export function renderAdminRoles(container) {
 function renderPersonas(tc) {
   const orgs = [...new Set(ROLE_ORDER.map((r) => PERSONAS[r].org))];
   tc.innerHTML = `
-    <div class="muted mb16" style="font-size:12px">Every persona Compass models today, grouped by organization. Use these as the reference when assigning module access and permissions below.</div>
+    <div class="muted mb16" style="font-size:12px">Every persona Compass models today, grouped by organization — one persona per role. Each persona's description is a brief, editable summary of its access; use these as the reference when assigning module access and permissions below.</div>
     ${orgs.map((org) => `
       <div class="section-title">${esc(org)}</div>
       <div class="persona-grid mb16">
@@ -51,10 +51,24 @@ function renderPersonas(tc) {
             <div class="persona-body">
               <div class="persona-name">${esc(p.name)}</div>
               <div class="persona-title">${esc(p.title)}</div>
-              <div class="persona-scope">${esc(p.scope)}</div>
+              <textarea class="input persona-scope-input" data-role="${r}" rows="2" maxlength="220" placeholder="Brief description of this persona's access">${esc(p.scope)}</textarea>
+              <div class="row" style="justify-content:flex-end;margin-top:4px"><button class="btn sm" data-save-scope="${r}" disabled>Save</button></div>
             </div>
           </div>`; }).join('')}
       </div>`).join('')}`;
+
+  tc.querySelectorAll('.persona-scope-input').forEach((el) => {
+    const btn = tc.querySelector(`[data-save-scope="${el.getAttribute('data-role')}"]`);
+    el.addEventListener('input', () => { btn.disabled = el.value.trim() === PERSONAS[el.getAttribute('data-role')].scope; });
+  });
+  tc.querySelectorAll('[data-save-scope]').forEach((btn) => btn.addEventListener('click', () => {
+    const role = btn.getAttribute('data-save-scope');
+    const el = tc.querySelector(`.persona-scope-input[data-role="${role}"]`);
+    setPersonaScope(role, el.value);
+    btn.disabled = true;
+    btn.textContent = 'Saved';
+    setTimeout(() => { btn.textContent = 'Save'; }, 1200);
+  }));
 }
 
 function renderModuleMatrix(tc, container) {

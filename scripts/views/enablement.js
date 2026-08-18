@@ -1,5 +1,5 @@
 // Enablement — accreditations, S500 eligibility, SDM onboarding, user voice, shadowing.
-import { store, hoursSince, requestShadow, respondShadowRequest, computeS500, s500FlaggedEngagements } from '../store.js';
+import { store, hoursSince, requestShadow, respondShadowRequest, computeS500, s500FlaggedEngagements, myCsa } from '../store.js';
 import { pageHeader, kpiCard, esc, badge, statusPill, openDrawer, closeDrawer, COLORS } from '../components.js';
 import { icon } from '../icons.js';
 import { PROGRAMS, TRACKS } from '../../data/generate.js';
@@ -17,7 +17,9 @@ const userVoice = [
 const seedOf = (s) => [...s].reduce((a, ch) => a + ch.charCodeAt(0), 0);
 
 export function renderEnablement(container) {
-  const tabs = [['accred', 'Accreditations'], ['catalogue', 'Service Catalogue'], ['s500', 'S500 Eligibility'], ['sdm', 'SDM Onboarding'], ['uv', 'User Voice'], ['shadow', 'Shadowing']];
+  const tabs = [['accred', 'Accreditations'], ['catalogue', 'Service Catalogue'], ['s500', 'S500 Eligibility'], ['sdm', 'SDM Onboarding'], ['uv', 'User Voice'], ['shadow', 'Shadowing']]
+    .filter(([key]) => store.role !== 'adoption-lead' || key === 'accred' || key === 'shadow');
+  if (!tabs.some(([key]) => key === tab)) tab = 'accred';
   container.innerHTML = `
     ${pageHeader({ title: 'Enablement', description: 'Enablement is positioned as a governed capability in SSD IQ: skills, readiness, quality, and shadowing all feed the people and delivery model.' })}
     <div class="tabs">${tabs.map(([k, l]) => `<div class="tab ${tab === k ? 'active' : ''}" data-tab="${k}">${l}</div>`).join('')}</div>
@@ -133,7 +135,8 @@ function renderShadow(tc, container) {
 
   const myRequests = d.shadowRequests.filter((s) => s.requesterId === selRequester);
   const requestedIds = new Set(myRequests.filter((s) => s.status !== 'declined').map((s) => s.engagementId));
-  const pending = d.shadowRequests.filter((s) => s.status === 'requested');
+  const my = myCsa(store.role, d);
+  const pending = d.shadowRequests.filter((s) => s.status === 'requested' && (!my || s.ownerId === my.id));
 
   tc.innerHTML = `
     <div class="muted mb8" style="font-size:12px">Shadowing lets a CSA observe a live delivery — listen-only — before taking on similar work. Requests are sent to the delivery's assigned CSA for confirmation, and a confirmed request marks the engagement.</div>
@@ -162,7 +165,7 @@ function renderShadow(tc, container) {
       }).join('') : '<tr><td colspan="4" class="muted" style="padding:16px">No shadow requests yet.</td></tr>'}
     </tbody></table></div>
 
-    <div class="section-title">Requests awaiting the delivery resource's response</div>
+    <div class="section-title">Requests awaiting the delivery resource's response${my ? ` (${esc(my.name)})` : ''}</div>
     <div class="table-wrap"><table class="grid"><thead><tr><th>Requester</th><th>Customer</th><th>Delivery resource</th><th>Note</th><th></th></tr></thead><tbody>
       ${pending.length ? pending.map((s) => {
         const requester = d.csas.find((c) => c.id === s.requesterId);

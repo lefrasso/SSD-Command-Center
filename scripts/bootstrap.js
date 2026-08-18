@@ -162,24 +162,40 @@ renderView();
 runBootSplash();
 
 // Simulated component-loading splash — purely cosmetic, the data/render above is already complete.
+// Steps are built from the real seeded dataset counts so the detail is meaningful, not just decorative.
 function runBootSplash() {
   const splash = document.getElementById('boot-splash');
   if (!splash) return;
-  const steps = [...splash.querySelectorAll('[data-step]')];
+  const list = document.getElementById('boot-steps');
+  const d = store.data;
+  const stepTexts = [
+    'Connecting to SSD IQ…',
+    `Loading org structure — ${d.pods.length} PODs across ${Object.keys(d.pods.reduce((acc, p) => { acc[p.tz] = 1; return acc; }, {})).length} time zones…`,
+    `Loading roster — ${d.csas.length} CSAs (FTC + FTE) and ${d.partners.length} Delivery Partners…`,
+    `Loading dispatch — ${d.engagements.length.toLocaleString()} engagement records…`,
+    `Loading quality signals — ${d.cpe.length.toLocaleString()} CPE responses…`,
+    `Loading escalations & actions — ${d.escalations.length} escalations, ${d.actions.length} actions…`,
+    `Loading capacity & hiring — ${d.hiring.length} open requisitions, ${d.attrition.length} attrition records…`,
+    'Initializing simulated AI layer…',
+    'Applying your role & permissions…',
+    'Rendering Compass…',
+  ];
+  if (list) list.innerHTML = stepTexts.map((t) => `<li data-step>${t}</li>`).join('');
+  const steps = list ? [...list.querySelectorAll('[data-step]')] : [];
   const fill = document.getElementById('boot-bar-fill');
   let i = 0;
   const tick = () => {
     if (i > 0) steps[i - 1].classList.replace('active', 'done');
     if (i < steps.length) {
       steps[i].classList.add('active');
-      fill.style.width = `${Math.round(((i + 1) / steps.length) * 100)}%`;
+      if (fill) fill.style.width = `${Math.round(((i + 1) / steps.length) * 100)}%`;
       i += 1;
-      setTimeout(tick, 220);
+      setTimeout(tick, 380 + Math.round(Math.random() * 140));
     } else {
       setTimeout(() => {
         splash.classList.add('hide');
-        setTimeout(() => splash.remove(), 400);
-      }, 250);
+        setTimeout(() => splash.remove(), 450);
+      }, 450);
     }
   };
   tick();
