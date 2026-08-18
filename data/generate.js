@@ -2,6 +2,10 @@
 // Same seed => same data (repeatable demos). All names/figures are fictional.
 
 export const TRACKS = ['Health', 'AI Innovation', 'Cloud Deployment', 'Foundations'];
+// Capacity forecast assumptions — CAP_PER_CSA is calibrated at BASELINE_UTILIZATION; the Trajectory
+// Simulator scales effective capacity per CSA when the user sets a different expected utilization.
+export const CAP_PER_CSA = 4;
+export const BASELINE_UTILIZATION = 85;
 
 function mulberry32(seed) {
   return function () {
@@ -275,6 +279,29 @@ function build() {
       track, program: pick(PROGRAMS[track]), assignedTo: assignee ? assignee.id : null, status,
       dispatchStage, outreach, milestones, dueDate: isoDay(dueOffset), atRisk, s500Customer: S500_CUSTOMERS.includes(customer), ...gov('Dispatch'),
     });
+  }
+
+  // Capacity theoretical targets (leadership-approved operating-model headcount per Family) and a
+  // trailing 6-month demand history per Family — feeds the Capacity Trajectory Simulator. Demand here
+  // is modeled as monthly workload throughput (headcount × utilization × capacity-per-CSA), not the
+  // sparse "currently open" engagement snapshot — a flow measure suitable for a trend/trajectory.
+  const capacityTargets = {};
+  const demandHistory = {};
+  for (const t of TRACKS) {
+    const headcountForTrack = csasForTrack(t);
+    capacityTargets[t] = Math.max(1, headcountForTrack.length + int(-6, 10));
+    const avgUtilForTrack = headcountForTrack.length ? headcountForTrack.reduce((s, c) => s + c.utilization, 0) / headcountForTrack.length : BASELINE_UTILIZATION;
+    const currentDemand = Math.round(headcountForTrack.length * (avgUtilForTrack / 100) * CAP_PER_CSA);
+    const monthlyTrend = (-8 + rng() * 20) / 100; // per-family drift, roughly -8%..+12% month over month
+    const points = [];
+    let demand = currentDemand;
+    for (let m = 0; m < 6; m++) {
+      points.unshift(Math.max(0, Math.round(demand * (1 + (rng() - 0.5) * 0.1))));
+      demand /= (1 + monthlyTrend);
+    }
+    const months = [];
+    for (let m = 5; m >= 0; m--) { const dt = new Date(NOW); dt.setUTCMonth(dt.getUTCMonth() - m); months.push(dt.toISOString().slice(0, 7)); }
+    demandHistory[t] = months.map((month, i) => ({ month, demand: points[i] }));
   }
 
   const deliveries = [];
@@ -637,7 +664,7 @@ function build() {
     { id: 'INI006', type: 'Platform', name: 'SSD IQ reporting semantic model', area: 'Reporting', stage: 'Pilot', ownerName: 'Robin Ellis', targetRelease: 'FY27 Q2', status: 'on-track', impact: 'Reconciles MBR metrics and enables governed drill-through.', nextStep: 'Reconcile Power BI measures.' },
   ].map((initiative) => ({ ...initiative, ...gov('Portfolio Management') }));
 
-  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, sentimentSignals, pips, shadowRequests, ipFeedback, sentiment, deliveries, hiring, attrition, financials, initiatives };
+  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, sentimentSignals, pips, shadowRequests, ipFeedback, sentiment, deliveries, hiring, attrition, financials, initiatives, capacityTargets, demandHistory };
 }
 
 export const dataset = build();

@@ -1,27 +1,32 @@
 // Capacity & Forecasting — planning, coverage, and Active & Future HC tracking + hiring progress.
 // HC tracking + hiring progress are representative of the Active & Future SP HC Consolidation PBI.
-import { store } from '../store.js';
-import { pageHeader, kpiCard, aiChip, esc, badge, COLORS, clearCharts, bar, donut, utilColor } from '../components.js';
+import { store, computeCapacityForecast } from '../store.js';
+import { pageHeader, kpiCard, aiChip, esc, badge, COLORS, clearCharts, bar, donut, line, utilColor } from '../components.js';
 import { icon } from '../icons.js';
-import { attritionSummary } from '../ai.js';
-import { TRACKS, TZ_MAP, TZ_LANGUAGES, PROGRAMS } from '../../data/generate.js';
+import { attritionSummary, capacityForecastSummary } from '../ai.js';
+import { TRACKS, TZ_MAP, TZ_LANGUAGES, PROGRAMS, CAP_PER_CSA, BASELINE_UTILIZATION } from '../../data/generate.js';
 
-const CAP_PER_CSA = 4;
 const daysBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
+const fmtMonth = (key) => { const [y, m] = key.split('-').map(Number); return new Date(Date.UTC(y, m - 1, 1)).toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' }); };
+const HORIZON_MONTHS = 12;
 let tab = 'forecast';
 let fAtrTz = 'All';
 let fAtrFamily = 'All';
 let fAtrType = 'All';
 let fAtrResource = 'All';
+let simUtil = BASELINE_UTILIZATION;
+let simOnboard = 3;
+let simFamily = 'All';
+let simTrendOverrides = {};
 
 export function renderCapacity(container) {
-  const tabs = [['forecast', 'Forecast & Coverage'], ['hc', 'HC Tracking'], ['hiring', 'Hiring Progress'], ['attrition', 'Attrition Analysis']];
+  const tabs = [['forecast', 'Forecast & Coverage'], ['hc', 'HC Tracking'], ['hiring', 'Hiring Progress'], ['attrition', 'Attrition Analysis'], ['simulator', 'Trajectory Simulator']];
   container.innerHTML = `
     ${pageHeader({ title: 'Capacity & Forecasting', description: 'Demand forecasting and coverage, plus Active & Future headcount consolidation, hiring progress and attrition.', actions: aiChip('Planning') })}
     <div class="tabs">${tabs.map(([k, l]) => `<div class="tab ${tab === k ? 'active' : ''}" data-tab="${k}">${l}</div>`).join('')}</div>
     <div id="tabc"></div>`;
   container.querySelectorAll('[data-tab]').forEach((el) => el.addEventListener('click', () => { tab = el.getAttribute('data-tab'); renderCapacity(container); }));
-  ({ forecast: renderForecast, hc: renderHc, hiring: renderHiring, attrition: renderAttrition })[tab](container.querySelector('#tabc'));
+  ({ forecast: renderForecast, hc: renderHc, hiring: renderHiring, attrition: renderAttrition, simulator: renderSimulator })[tab](container.querySelector('#tabc'));
 }
 
 function renderForecast(tc) {
@@ -310,4 +315,109 @@ function renderAttrition(tc) {
   tc.querySelector('#atr-type').addEventListener('change', (e) => { fAtrType = e.target.value; rerender(); });
   tc.querySelector('#atr-resource').addEventListener('change', (e) => { fAtrResource = e.target.value; rerender(); });
   tc.querySelector('#atr-reset').addEventListener('click', () => { fAtrTz = 'All'; fAtrFamily = 'All'; fAtrType = 'All'; fAtrResource = 'All'; rerender(); });
+}
+
+// ---- Trajectory Simulator — targets, current HC, 3-month demand trend, and a "when do I need to
+// hire" projection driven by adjustable expected utilization, onboarding lead time and trajectory ----
+function renderSimulator(tc) {
+  clearCharts();
+  const d = store.data;
+  const forecast = computeCapacityForecast(d, { utilizationTarget: simUtil, onboardingMonths: simOnboard, trendOverrides: simTrendOverrides });
+  const summary = capacityForecastSummary(forecast);
+  const breaching = forecast.families.filter((f) => f.breach).sort((a, b) => a.breach.monthKey.localeCompare(b.breach.monthKey));
+  const soonest = breaching[0];
+  const belowTargetToday = forecast.families.filter((f) => f.currentHeadcount < f.target).length;
+  const focus = forecast.families.find((f) => f.track === simFamily);
+  const overrideActive = simFamily !== 'All' && simTrendOverrides[simFamily] != null;
+
+  const opt = (v, sel, label) => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(label)}</option>`;
+
+  tc.innerHTML = `
+    <div class="row wrap mb8" style="gap:8px;align-items:center"><strong style="font-size:15px">Capacity Trajectory Simulator</strong>${badge('what-if planning', 'tint-info')}</div>
+    <div class="muted mb16" style="font-size:12px">Projects, per Family, when required headcount (from the demand trajectory) will exceed available headcount (active + hiring pipeline − expected attrition) — and works back by the onboarding lead time to tell you when to start hiring.</div>
+
+    <div class="row wrap mb16" style="gap:16px;align-items:flex-end">
+      <label class="form-field" style="min-width:180px"><span>Expected utilization <strong>${simUtil}%</strong></span>
+        <input type="range" id="sim-util" min="60" max="100" step="1" value="${simUtil}"/>
+      </label>
+      <label class="form-field" style="min-width:180px"><span>Onboarding time <strong>${simOnboard} mo</strong></span>
+        <input type="range" id="sim-onboard" min="1" max="9" step="1" value="${simOnboard}"/>
+      </label>
+      <label class="form-field" style="min-width:200px"><span>Focus family</span>
+        <select class="select" id="sim-family">${opt('All', simFamily, 'All families')}${TRACKS.map((t) => opt(t, simFamily, t)).join('')}</select>
+      </label>
+      ${simFamily !== 'All' ? `
+      <label class="form-field" style="min-width:200px"><span>Trajectory override (%/mo) — detected ${focus.detectedTrendPct > 0 ? '+' : ''}${focus.detectedTrendPct}%</span>
+        <input type="number" id="sim-trend" step="0.5" value="${overrideActive ? simTrendOverrides[simFamily] : focus.detectedTrendPct}"/>
+      </label>
+      ${overrideActive ? '<button class="btn sm" id="sim-trend-reset">Use detected trend</button>' : ''}` : ''}
+      <button class="btn subtle sm" id="sim-reset">Reset scenario</button>
+    </div>
+
+    <div class="kpi-grid">
+      ${kpiCard({ label: 'Effective capacity / CSA', value: forecast.effectiveCapPerCsa.toFixed(1), iconName: 'people', hint: `at ${simUtil}% utilization` })}
+      ${kpiCard({ label: 'Below target today', value: belowTargetToday, iconName: 'warning', tone: belowTargetToday ? COLORS.warning : COLORS.positive, hint: 'families under theoretical target' })}
+      ${kpiCard({ label: 'Families breaching', value: breaching.length, iconName: 'trending', tone: breaching.length ? COLORS.negative : COLORS.positive, hint: `within ${HORIZON_MONTHS}mo horizon` })}
+      ${kpiCard({ label: 'Next under capacity', value: soonest ? soonest.track : '—', iconName: 'clock', tone: soonest ? COLORS.negative : COLORS.neutral, hint: soonest ? `${soonest.breach.label} (${soonest.breach.quarter})` : 'none in horizon' })}
+      ${kpiCard({ label: 'Hire by', value: soonest ? soonest.hireByMonth.label : '—', iconName: 'personAdd', tone: soonest && soonest.hireByMonth.overdue ? COLORS.negative : COLORS.warning, hint: soonest && soonest.hireByMonth.overdue ? 'overdue — start now' : 'to land in time' })}
+    </div>
+
+    <div class="card pad mb16" style="border-left:4px solid var(--brand-primary)"><div class="row mb8">${icon('sparkle', 16)}<strong>Trajectory insight</strong>${aiChip()}</div><div>${esc(summary.text)}</div></div>
+
+    <div class="section-title">By Family</div>
+    <div class="table-wrap mb16"><table class="grid"><thead><tr><th>Family</th><th>Target</th><th>Current HC</th><th>Detected trend</th><th>Trend used</th><th>Under capacity</th><th>Hire by</th><th>Gap</th></tr></thead><tbody>
+      ${forecast.families.map((f) => `<tr>
+        <td><strong>${esc(f.track)}</strong></td>
+        <td>${f.target}</td>
+        <td style="color:${f.currentHeadcount < f.target ? COLORS.warning : COLORS.positive}">${f.currentHeadcount}</td>
+        <td>${f.detectedTrendPct > 0 ? '+' : ''}${f.detectedTrendPct}%/mo</td>
+        <td>${f.trendUsedPct > 0 ? '+' : ''}${f.trendUsedPct}%/mo${simTrendOverrides[f.track] != null ? ' ' + badge('override', 'tint-info') : ''}</td>
+        <td>${f.breach ? `<span style="color:${COLORS.negative};font-weight:600">${esc(f.breach.label)} (${esc(f.breach.quarter)})</span>` : `<span style="color:${COLORS.positive}">Not in ${HORIZON_MONTHS}mo horizon</span>`}</td>
+        <td>${f.hireByMonth ? `<span style="color:${f.hireByMonth.overdue ? COLORS.negative : COLORS.warning};font-weight:600">${f.hireByMonth.overdue ? 'Now (overdue)' : esc(f.hireByMonth.label)}</span>` : '—'}</td>
+        <td>${f.breach ? `<span style="color:${COLORS.negative}">${f.breach.gap}</span>` : '0'}</td>
+      </tr>`).join('')}
+    </tbody></table></div>
+
+    ${simFamily === 'All' ? `
+    <div class="card chart-card mb16"><div class="chart-head"><strong>Months until under capacity, by Family</strong></div><div class="chart-holder" style="height:260px"><canvas id="sim-chart"></canvas></div></div>
+    ` : `
+    <div class="card chart-card mb16"><div class="chart-head"><strong>${esc(simFamily)} — demand, required &amp; available HC (actual + projected)</strong></div><div class="chart-holder" style="height:300px"><canvas id="sim-chart"></canvas></div></div>
+    `}`;
+
+  if (simFamily === 'All') {
+    const horizon = HORIZON_MONTHS;
+    const monthsToBreach = forecast.families.map((f) => f.breach ? forecast.families.find((x) => x.track === f.track).series.findIndex((s) => s.monthKey === f.breach.monthKey) + 1 : horizon + 1);
+    bar(tc.querySelector('#sim-chart'), {
+      labels: forecast.families.map((f) => f.track),
+      values: monthsToBreach,
+      color: monthsToBreach.map((n) => (n <= horizon ? (n <= 3 ? COLORS.negative : COLORS.warning) : COLORS.positive)),
+      label: 'Months until under capacity',
+    });
+  } else if (focus) {
+    const labels = [...focus.history.map((h) => fmtMonth(h.month)), ...focus.series.map((s) => s.label)];
+    const pastRequired = focus.history.map((h) => Math.ceil(h.demand / forecast.effectiveCapPerCsa));
+    const demandValues = [...focus.history.slice(0, -1).map(() => null), focus.history[focus.history.length - 1].demand, ...focus.series.map((s) => s.demand)];
+    const requiredValues = [...pastRequired, ...focus.series.map((s) => s.required)];
+    const availableValues = [...focus.history.map(() => focus.currentHeadcount), ...focus.series.map((s) => s.available)];
+    const targetValues = labels.map(() => focus.target);
+    line(tc.querySelector('#sim-chart'), {
+      labels,
+      datasets: [
+        { label: 'Demand (actual + projected)', values: demandValues, color: COLORS.info },
+        { label: 'Required HC', values: requiredValues, color: COLORS.negative },
+        { label: 'Available HC', values: availableValues, color: COLORS.positive },
+        { label: 'Target', values: targetValues, color: '#8764b8' },
+      ],
+    });
+  }
+
+  const rerender = () => renderSimulator(tc);
+  tc.querySelector('#sim-util').addEventListener('input', (e) => { simUtil = Number(e.target.value); rerender(); });
+  tc.querySelector('#sim-onboard').addEventListener('input', (e) => { simOnboard = Number(e.target.value); rerender(); });
+  tc.querySelector('#sim-family').addEventListener('change', (e) => { simFamily = e.target.value; rerender(); });
+  tc.querySelector('#sim-reset').addEventListener('click', () => { simUtil = BASELINE_UTILIZATION; simOnboard = 3; simFamily = 'All'; simTrendOverrides = {}; rerender(); });
+  const trendInput = tc.querySelector('#sim-trend');
+  if (trendInput) trendInput.addEventListener('change', (e) => { simTrendOverrides = { ...simTrendOverrides, [simFamily]: Number(e.target.value) }; rerender(); });
+  const trendReset = tc.querySelector('#sim-trend-reset');
+  if (trendReset) trendReset.addEventListener('click', () => { const { [simFamily]: _, ...rest } = simTrendOverrides; simTrendOverrides = rest; rerender(); });
 }

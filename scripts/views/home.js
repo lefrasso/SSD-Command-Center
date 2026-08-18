@@ -1,5 +1,5 @@
 // Home — Delivery Cockpit.
-import { store, computeKpis, sentimentBreakdown, hoursSince, openActions, todayISO, canonicalEntityMap } from '../store.js';
+import { store, computeKpis, sentimentBreakdown, hoursSince, openActions, todayISO } from '../store.js';
 import { PERSONAS } from '../roles.js';
 import { dailyBriefing } from '../ai.js';
 import { navigate } from '../router.js';
@@ -88,6 +88,8 @@ export function renderHome(container) {
       ${kpiCard({ label: 'Utilization', value: k.utilization + '%', iconName: 'people', tone: utilColor(k.utilization), hint: 'Healthy band 80–90%' })}
       ${kpiCard({ label: 'Net sentiment', value: k.netSentiment > 0 ? '+' + k.netSentiment : k.netSentiment, iconName: 'emoji', tone: k.netSentiment >= 0 ? COLORS.positive : COLORS.negative, hint: 'Across channels' })}
       ${kpiCard({ label: 'Open actions', value: openActs.length, iconName: 'flag', tone: overdueActs > 0 ? COLORS.warning : COLORS.neutral, hint: `${overdueActs} overdue` })}
+      ${kpiCard({ label: 'FTC resources', value: resourceMix.FTC, iconName: 'people', hint: 'pCSAs / partner-sourced' })}
+      ${kpiCard({ label: 'FTE resources', value: resourceMix.FTE, iconName: 'people', hint: 'Nebula + GSCD employees' })}
     </div>
 
     <div class="card pad mb16">
@@ -178,150 +180,7 @@ export function renderHome(container) {
           <div class="pod-stat"><span>Avg CPE</span><strong style="color:${scoreColor(avgCpe)}">${avgCpe.toFixed(1)}</strong></div>
           <div class="pod-stat"><span>At-risk / Open esc.</span><strong>${atRisk} / ${openEsc}</strong></div>
         </div>`).join('')}
-    </div>
-
-    <section class="card pad mb16" aria-label="Resource mix and platform overview">
-      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
-        <strong style="font-size:16px">Resource mix</strong>
-        ${badge('FTC = pCSAs · FTE = Nebula / GSCD', 'tint-info')}
-      </div>
-      <div class="record-grid">
-        <div class="record-card">
-          <div class="record-label">FTC resources</div>
-          <div class="record-value">${resourceMix.FTC}</div>
-          <div class="record-foot">pCSAs / partner-sourced</div>
-        </div>
-        <div class="record-card">
-          <div class="record-label">FTE resources</div>
-          <div class="record-value">${resourceMix.FTE}</div>
-          <div class="record-foot">Nebula + GSCD employees</div>
-        </div>
-        <div class="record-card">
-          <div class="record-label">Active engagements</div>
-          <div class="record-value">${k.activeEngagements}</div>
-          <div class="record-foot">Delivery demand in flight</div>
-        </div>
-        <div class="record-card">
-          <div class="record-label">Open escalations</div>
-          <div class="record-value">${k.openEscalations}</div>
-          <div class="record-foot">SLA and issue watchlist</div>
-        </div>
-      </div>
-    </section>
-
-    <section class="card pad mb16" aria-label="Operational workflow">
-      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
-        <strong style="font-size:16px">Operational flow</strong>
-        ${badge('Source → SSD IQ → Action → Insight', 'tint-info')}
-      </div>
-      <div class="workflow-steps">
-        <div class="workflow-step">
-          <div class="workflow-number">1</div>
-          <div class="workflow-body">
-            <div class="workflow-title">Intake</div>
-            <div class="workflow-text">Requests, surveys, labor, capacity, and offerings feed the platform.</div>
-          </div>
-        </div>
-        <div class="workflow-step">
-          <div class="workflow-number">2</div>
-          <div class="workflow-body">
-            <div class="workflow-title">Normalize in SSD IQ</div>
-            <div class="workflow-text">People, targets, KPIs, and operational records become the canonical source of truth.</div>
-          </div>
-        </div>
-        <div class="workflow-step">
-          <div class="workflow-number">3</div>
-          <div class="workflow-body">
-            <div class="workflow-title">Drive action</div>
-            <div class="workflow-text">Dispatch, escalations, lifecycle moves, and assigned work operate from those records.</div>
-          </div>
-        </div>
-        <div class="workflow-step">
-          <div class="workflow-number">4</div>
-          <div class="workflow-body">
-            <div class="workflow-title">Reporting & AI</div>
-            <div class="workflow-text">Insights, MBRs, and agent-generated recommendations are derived from the governed data layer.</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="card pad mb16" aria-label="System of record overview">
-      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
-        <strong style="font-size:16px">System of record</strong>
-        ${badge('SSD IQ canonical model', 'tint-info')}
-      </div>
-      <div class="record-grid">
-        <div class="record-card">
-          <div class="record-label">People</div>
-          <div class="record-value">${d.csas.length + d.partners.length}</div>
-          <div class="record-foot">CSAs + partner profiles</div>
-        </div>
-        <div class="record-card">
-          <div class="record-label">PODs</div>
-          <div class="record-value">${d.pods.length}</div>
-          <div class="record-foot">Org structure + coverage</div>
-        </div>
-        <div class="record-card">
-          <div class="record-label">Engagements</div>
-          <div class="record-value">${d.engagements.length}</div>
-          <div class="record-foot">Delivery demand + assignments</div>
-        </div>
-        <div class="record-card">
-          <div class="record-label">Escalations</div>
-          <div class="record-value">${d.escalations.length}</div>
-          <div class="record-foot">Issues, SLA and actions</div>
-        </div>
-        <div class="record-card">
-          <div class="record-label">Actions</div>
-          <div class="record-value">${d.actions.length}</div>
-          <div class="record-foot">Operational follow-through</div>
-        </div>
-        <div class="record-card">
-          <div class="record-label">Quality</div>
-          <div class="record-value">${d.cpe.length}</div>
-          <div class="record-foot">CPE, checks and readiness</div>
-        </div>
-      </div>
-      <div class="entity-list" style="margin-top: 14px;">
-        ${['People','PODs','Partners','Engagements','Escalations','Actions','Messages','Quality','Capacity','Sentiment'].map((name) => `<span class="entity-pill">${name}</span>`).join('')}
-      </div>
-      <div class="governance-list" style="margin-top: 14px;">
-        ${canonicalEntityMap(d).map(({ entity, owner, source, count }) => `
-          <div class="governance-item">
-            <div class="governance-meta">${esc(entity)}</div>
-            <div class="governance-owner">${esc(owner)}</div>
-            <div class="governance-source">${esc(source)}</div>
-            <div class="governance-count">${count}</div>
-          </div>
-        `).join('')}
-      </div>
-    </section>
-
-    <section class="card pad mb16" aria-label="Delivery roadmap">
-      <div class="row" style="justify-content:space-between; margin-bottom: 12px;">
-        <strong style="font-size:16px">Implementation roadmap</strong>
-        ${badge('9-stage platform rollout', 'tint-info')}
-      </div>
-      <div class="roadmap-grid">
-        ${[
-          'Design data model',
-          'Connect sources',
-          'Implement coding harnesses',
-          'Identity management',
-          'Platform basics',
-          'Implement pCSA lifecycle',
-          'Implement POD management capabilities',
-          'Capacity management',
-          'Agentic delivery automation'
-        ].map((label, index) => `
-          <div class="roadmap-step">
-            <div class="roadmap-step-number">${index + 1}</div>
-            <div class="roadmap-step-label">${esc(label)}</div>
-          </div>
-        `).join('')}
-      </div>
-    </section>`;
+    </div>`;
 
 
   // Charts

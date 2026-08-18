@@ -327,6 +327,24 @@ export function attritionSummary(d = store.data) {
   return { text, sources: regretted.slice(0, 5).map((a) => ({ id: a.id, label: a.name })), generatedAt: now() };
 }
 
+// ---- Capacity Trajectory Simulator summary (Capacity & Forecasting → Trajectory Simulator) ----
+// Takes the already-computed forecast (computeCapacityForecast) since it depends on user-adjustable
+// utilization / onboarding / trajectory inputs — this narrates that specific scenario, not a recompute.
+export function capacityForecastSummary(forecast) {
+  const breaching = forecast.families.filter((f) => f.breach).sort((a, b) => a.breach.monthKey.localeCompare(b.breach.monthKey));
+  const soonest = breaching[0];
+  const text =
+    `Scenario: ${forecast.utilizationTarget}% expected utilization (effective capacity ${forecast.effectiveCapPerCsa.toFixed(1)} engagements/CSA) ` +
+    `and a ${forecast.onboardingMonths}-month onboarding lead time. ` +
+    `${soonest
+      ? `${soonest.track} is the first Family to go under capacity, in ${soonest.breach.label} (${soonest.breach.quarter}) — a gap of ${soonest.breach.gap}. ` +
+        `${soonest.hireByMonth.overdue ? `You are already past the hire-by date (${soonest.hireByMonth.label}) — start hiring now. ` : `Start hiring by ${soonest.hireByMonth.label} to land in time. `}` +
+        `${breaching.length > 1 ? `${breaching.length - 1} other Family/Families also go under capacity within the horizon: ${breaching.slice(1).map((f) => `${f.track} (${f.breach.label})`).join(', ')}. ` : ''}`
+      : 'No Family is projected to go under capacity within the horizon at this trajectory and utilization. '}` +
+    `This is a simulated projection from a detected 3-month demand trend — validate before opening requisitions.`;
+  return { text, sources: breaching.slice(0, 5).map((f) => ({ id: f.track, label: f.track })), generatedAt: now() };
+}
+
 // ---- Partner performance summary (Delivery Partners / Reporting → Partner Performance) ----
 export function partnerPerformanceSummary(d = store.data) {
   const perf = computePartnerPerformance(d);

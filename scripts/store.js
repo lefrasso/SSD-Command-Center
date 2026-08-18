@@ -1,5 +1,5 @@
 // In-memory SSD IQ store + derived KPIs and selectors.
-import { dataset, IP_TAGS } from '../data/generate.js';
+import { dataset, IP_TAGS, TRACKS, CAP_PER_CSA, BASELINE_UTILIZATION } from '../data/generate.js';
 import { MODULES, moduleById } from './nav.js';
 
 export const store = {
@@ -211,6 +211,69 @@ export function computePartnerPerformance(d = store.data) {
       onTimePct, openEsc, slaBreach, avgCpe, avgQuality, util, netSentiment, deliveryRate, s500ReadyPct, s500Flags, attritionCount, score, tier,
     };
   });
+}
+
+// ---- Capacity Trajectory Simulator ----
+// Projects, per Family, when required headcount (driven by the demand trajectory and expected
+// utilization) will exceed available headcount (active + hiring pipeline − expected attrition),
+// and works back by the onboarding lead time to say when a hire must be started.
+const monthAdd = (key, delta) => { const [y, m] = key.split('-').map(Number); return new Date(Date.UTC(y, m - 1 + delta, 1)).toISOString().slice(0, 7); };
+const monthLabel = (key) => { const [y, m] = key.split('-').map(Number); return new Date(Date.UTC(y, m - 1, 1)).toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' }); };
+const fiscalQuarter = (key) => {
+  const [y, m] = key.split('-').map(Number);
+  const fyYear = m >= 7 ? y + 1 : y;
+  const q = m >= 7 && m <= 9 ? 1 : m >= 10 && m <= 12 ? 2 : m >= 1 && m <= 3 ? 3 : 4;
+  return `FY${String(fyYear).slice(-2)} Q${q}`;
+};
+function detectTrend(history) {
+  const last = history.slice(-3);
+  const deltas = [];
+  for (let i = 1; i < last.length; i++) {
+    if (last[i - 1].demand > 0) deltas.push((last[i].demand - last[i - 1].demand) / last[i - 1].demand);
+  }
+  return deltas.length ? deltas.reduce((s, v) => s + v, 0) / deltas.length : 0;
+}
+export function computeCapacityForecast(d = store.data, opts = {}) {
+  const { horizonMonths = 12, utilizationTarget = BASELINE_UTILIZATION, onboardingMonths = 3, trendOverrides = {} } = opts;
+  const effectiveCapPerCsa = CAP_PER_CSA * (utilizationTarget / BASELINE_UTILIZATION);
+  const active = d.csas.filter((c) => c.lifecycle === 'active');
+  const openReqs = (d.hiring || []).filter((h) => h.stage !== 'Hired');
+  const currentMonth = todayISO().slice(0, 7);
+
+  const families = TRACKS.map((track) => {
+    const history = d.demandHistory[track] || [];
+    const detectedTrendPct = Math.round(detectTrend(history) * 1000) / 10;
+    const trend = (trendOverrides[track] != null ? trendOverrides[track] : detectedTrendPct) / 100;
+    const currentHeadcount = active.filter((c) => c.tracks.includes(track)).length;
+    const target = d.capacityTargets[track] || currentHeadcount;
+    const baseDemand = history.length ? history[history.length - 1].demand : 0;
+    const attritionPerMonth = d.attrition.filter((a) => a.family === track && hoursSince(a.exitDate) <= 8760).length / 12;
+
+    let projectedDemand = baseDemand;
+    let cumulativeHires = 0;
+    let cumulativeAttrition = 0;
+    let breach = null;
+    const series = [];
+    for (let m = 1; m <= horizonMonths; m++) {
+      const monthKey = monthAdd(currentMonth, m);
+      projectedDemand *= (1 + trend);
+      const required = Math.max(0, Math.ceil(projectedDemand / effectiveCapPerCsa));
+      cumulativeHires += openReqs.filter((h) => h.family === track && h.targetStart.slice(0, 7) === monthKey).length;
+      cumulativeAttrition += attritionPerMonth;
+      const available = Math.max(0, Math.round(currentHeadcount + cumulativeHires - cumulativeAttrition));
+      const gap = required - available;
+      if (breach == null && gap > 0) breach = { monthKey, gap, required, available };
+      series.push({ monthKey, label: monthLabel(monthKey), demand: Math.round(projectedDemand), required, available });
+    }
+    const hireByMonth = breach ? monthAdd(breach.monthKey, -onboardingMonths) : null;
+    return {
+      track, target, currentHeadcount, detectedTrendPct, trendUsedPct: Math.round(trend * 1000) / 10,
+      history, series, breach: breach ? { ...breach, label: monthLabel(breach.monthKey), quarter: fiscalQuarter(breach.monthKey) } : null,
+      hireByMonth: hireByMonth ? { key: hireByMonth, label: monthLabel(hireByMonth), quarter: fiscalQuarter(hireByMonth), overdue: hireByMonth < currentMonth } : null,
+    };
+  });
+
+  return { effectiveCapPerCsa, utilizationTarget, onboardingMonths, currentMonth, families };
 }
 
 // POD - IP Kit Feedback: each engagement has its own IP Kit (derived from its Program) — not a shared
