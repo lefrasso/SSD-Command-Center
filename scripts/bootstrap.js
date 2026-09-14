@@ -82,7 +82,7 @@ function renderNav() {
   const { id: activeId } = parseHash();
 
   const navGroups = NAV_GROUPS.map((group) => {
-    const sectionItems = items.filter((m) => group.ids.includes(m.id));
+    const sectionItems = group.ids.map((id) => items.find((m) => m.id === id)).filter(Boolean);
     if (!sectionItems.length) return '';
 
     return `

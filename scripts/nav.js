@@ -54,9 +54,9 @@ export const MODULES = [
 
 // Single source of truth for nav-rail sectioning — shared by the nav rail and the Admin Roles & Permissions matrix.
 export const NAV_GROUPS = [
-  { title: '', ids: ['home'] },
+  { title: '', ids: ['home', 'messages', 'reporting'] },
   { title: 'Operations', ids: ['pods', 'lifecycle', 'capacity', 'engagements', 'enablement', 'reports-pending'] },
-  { title: 'Delivery', ids: ['agentic', 'ip-feedback', 'success-stories', 'messages', 'quality', 'escalations', 'reporting', 'sentiment'] },
+  { title: 'Delivery', ids: ['agentic', 'ip-feedback', 'success-stories', 'quality', 'escalations', 'sentiment'] },
   { title: 'Platform', ids: ['ssdiq', 'capabilities'] },
   { title: 'People', ids: ['delivery-partners', 'performance', 'admin-access'] },
   { title: 'Customer Success', ids: ['csam-escalation'] },
