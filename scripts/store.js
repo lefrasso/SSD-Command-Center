@@ -86,7 +86,7 @@ export const CANONICAL_ENTITIES = [
   { entity: 'Capacity', owner: 'Capacity planning', source: 'Forecast + hiring plan', key: 'hiring', count: (d) => d.hiring.length },
   { entity: 'Financials', owner: 'SSD business management', source: 'Finance / Power BI', key: 'financials', count: (d) => d.financials.length },
   { entity: 'Strategy & IP', owner: 'Tech strategy & IP leads', source: 'Portfolio Management', key: 'initiatives', count: (d) => d.initiatives.length },
-  { entity: 'Sentiment Signals', owner: 'Voice of customer', source: 'AI Services', key: 'sentimentSignals', count: (d) => d.sentimentSignals.length },
+  { entity: 'Session Health Signals', owner: 'Delivery health', source: 'AI Services', key: 'sessionHealthSignals', count: (d) => d.sessionHealthSignals.length },
   { entity: 'Sentiment', owner: 'Voice of customer', source: 'AI sentiment rollup', key: 'sentiment', count: (d) => d.sentiment.length },
   { entity: 'Shadow Requests', owner: 'Enablement', source: 'Shadowing program', key: 'shadowRequests', count: (d) => d.shadowRequests.length },
   { entity: 'KYPL Sessions', owner: 'Enablement', source: 'Partner CSA onboarding', key: 'kyplSessions', count: (d) => d.kyplSessions.length },
@@ -118,8 +118,9 @@ export function computeKpis(d = store.data) {
   return { activeEngagements: active, onTimePct, rollingCpe, openEscalations: open.length, slaBreaches, utilization, netSentiment, deliveriesCompleted: d.deliveries.length, attritionRate };
 }
 
-export function sentimentBreakdown(d = store.data) {
-  const src = d.sentimentSignals.map((signal) => signal.score >= 0.15 ? 'positive' : signal.score <= -0.15 ? 'negative' : 'neutral');
+// Breakdown of Session Health Signals (POD/track/channel-scoped — never tied to a specific customer engagement).
+export function sessionHealthBreakdown(d = store.data) {
+  const src = d.sessionHealthSignals.map((signal) => signal.score >= 0.15 ? 'positive' : signal.score <= -0.15 ? 'negative' : 'neutral');
   return {
     positive: src.filter((s) => s === 'positive').length,
     neutral: src.filter((s) => s === 'neutral').length,
@@ -534,16 +535,16 @@ export function deleteSuccessStory(id) {
 }
 export function setEscalationStatus(escId, status) { const e = byId(store.data.escalations, escId); if (e) e.status = status; emit('data'); }
 export function setActionStatus(actId, status) { const a = byId(store.data.actions, actId); if (a) a.status = status; emit('data'); }
-export function acknowledgeSentimentAlert(signalId) {
-  const signal = byId(store.data.sentimentSignals, signalId);
-  if (!signal) throw new Error(`Sentiment signal ${signalId} was not found.`);
-  if (signal.alertStatus !== 'open') throw new Error(`Sentiment signal ${signalId} does not have an open alert.`);
+export function acknowledgeSessionHealthAlert(signalId) {
+  const signal = byId(store.data.sessionHealthSignals, signalId);
+  if (!signal) throw new Error(`Session health signal ${signalId} was not found.`);
+  if (signal.alertStatus !== 'open') throw new Error(`Session health signal ${signalId} does not have an open alert.`);
   const now = new Date().toISOString();
   signal.alertStatus = 'acknowledged';
   signal.acknowledgedBy = store.role;
   signal.acknowledgedAt = now;
   signal.updatedAt = now.slice(0, 10);
-  signal.audit.push({ at: now, who: store.role, action: 'sentiment alert acknowledged' });
+  signal.audit.push({ at: now, who: store.role, action: 'session health alert acknowledged' });
   emit('data');
 }
 export function addEscalation({ engagementId, severity, summary, ownerName, sdmName, raisedBy = null, channel = 'internal' }) {
@@ -932,10 +933,10 @@ export function addMessage(threadId, engagementId, from, to, body, sentiment) {
   store.data.messages.push({ id, threadId, engagementId, from, to, body, timestamp: new Date().toISOString(), sentiment: sentiment || 'neutral', sourceOfTruth: 'Teams', updatedAt: new Date().toISOString().slice(0, 10), audit: [{ at: new Date().toISOString(), who: 'you', action: 'message sent' }] });
   emit('data');
 }
-export function addAction({ engagementId = null, threadId = null, escalationId = null, cpeId = null, successStoryId = null, sentimentSignalId = null, kyplSessionId = null, readinessPlanId = null, source = null, title, ownerName, due, status }) {
+export function addAction({ engagementId = null, threadId = null, escalationId = null, cpeId = null, successStoryId = null, sessionHealthSignalId = null, kyplSessionId = null, readinessPlanId = null, source = null, title, ownerName, due, status }) {
   const id = `ACT${actSeq++}`;
-  const actionSource = source || (escalationId ? 'escalation' : sentimentSignalId ? 'sentiment' : threadId ? 'message' : cpeId ? 'success-story' : readinessPlanId ? 'readiness-plan' : kyplSessionId ? 'kypl' : 'action');
-  store.data.actions.unshift({ id, escalationId, threadId, engagementId, cpeId, successStoryId, sentimentSignalId, kyplSessionId, readinessPlanId, title: title || 'Follow-up action', ownerName: ownerName || 'Unassigned', due: due || daysFromNowISO(7), status: status || 'open', source: actionSource, sourceOfTruth: 'Azure DevOps', updatedAt: todayISO(), audit: [{ at: new Date().toISOString(), who: 'you', action: 'action assigned' }] });
+  const actionSource = source || (escalationId ? 'escalation' : sessionHealthSignalId ? 'session-health' : threadId ? 'message' : cpeId ? 'success-story' : readinessPlanId ? 'readiness-plan' : kyplSessionId ? 'kypl' : 'action');
+  store.data.actions.unshift({ id, escalationId, threadId, engagementId, cpeId, successStoryId, sessionHealthSignalId, kyplSessionId, readinessPlanId, title: title || 'Follow-up action', ownerName: ownerName || 'Unassigned', due: due || daysFromNowISO(7), status: status || 'open', source: actionSource, sourceOfTruth: 'Azure DevOps', updatedAt: todayISO(), audit: [{ at: new Date().toISOString(), who: 'you', action: 'action assigned' }] });
   if (escalationId) { const e = byId(store.data.escalations, escalationId); if (e) (e.actionIds = e.actionIds || []).push(id); }
   emit('data');
   return id;

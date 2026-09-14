@@ -25,7 +25,7 @@ import { renderEscalations } from './views/escalations.js';
 import { renderPerformance } from './views/performance.js';
 import { renderCsamEscalation } from './views/csamescalation.js';
 import { renderReporting } from './views/reporting.js';
-import { renderSentiment } from './views/sentiment.js';
+import { renderSessionHealth } from './views/sentiment.js';
 import { renderAdminRoles } from './views/adminroles.js';
 import { renderPlaceholder } from './views/placeholder.js';
 import { renderCopilot } from './copilot.js';
@@ -135,7 +135,7 @@ function renderView() {
     case 'escalations': renderEscalations(view); break;
     case 'performance': can(store.role, 'view:pip') ? renderPerformance(view) : renderPlaceholder(view, mod, true); break;
     case 'reporting': renderReporting(view); break;
-    case 'sentiment': renderSentiment(view, params.get('tab')); break;
+    case 'sentiment': renderSessionHealth(view, params.get('tab')); break;
     case 'ssdiq': renderSsdIq(view, params.get('q') || ''); break;
     case 'capabilities': renderCapabilities(view); break;
     case 'agentic': renderAgentic(view); break;

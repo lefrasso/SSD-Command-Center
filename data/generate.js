@@ -474,16 +474,17 @@ function build() {
     }
   });
 
-  const sentimentSignals = [];
-  const addSignal = ({ engagementId, channel, timestamp, text, score, language, sourceId }) => {
-    const engagement = engagements.find((item) => item.id === engagementId);
-    const csa = engagement?.assignedTo ? csas.find((item) => item.id === engagement.assignedTo) : null;
+  // Session Health Signals — aggregate delivery-health scoring across CPE, Teams and escalation
+  // channels. Legal/privacy: signals are attributed to a POD/track/partner, never to a specific
+  // customer or engagement, and never store verbatim customer text — only a generic note + themes.
+  const sessionHealthSignals = [];
+  const addSignal = ({ podId, track, partnerId, channel, timestamp, note, score, language }) => {
     const normalizedScore = Math.round(clamp(score, -1, 1) * 100) / 100;
     const level = sentimentLevel(normalizedScore);
-    sentimentSignals.push({
-      id: `SIG${String(sentimentSignals.length + 1).padStart(4, '0')}`, engagementId, sourceId,
-      customer: engagement?.customer ?? 'Unknown customer', partnerId: csa?.partnerId ?? null,
-      channel, timestamp, text, score: normalizedScore, level,
+    sessionHealthSignals.push({
+      id: `SHS${String(sessionHealthSignals.length + 1).padStart(4, '0')}`,
+      podId: podId || null, track: track || null, partnerId: partnerId || null,
+      channel, timestamp, note, score: normalizedScore, level,
       confidence: Math.round((0.72 + rng() * 0.27) * 100) / 100,
       language: language || 'English', translated: Boolean(language && language !== 'English'),
       themes: pickN(THEMES, int(1, 3)),
@@ -496,8 +497,8 @@ function build() {
     const engagement = engagements.find((candidate) => candidate.id === item.engagementId);
     const csa = engagement?.assignedTo ? csas.find((candidate) => candidate.id === engagement.assignedTo) : null;
     addSignal({
-      engagementId: item.engagementId, sourceId: item.id, channel: 'CPE Survey',
-      timestamp: `${item.date}T12:00:00Z`, text: item.verbatim,
+      podId: csa?.podId, track: engagement?.track, partnerId: csa?.partnerId,
+      channel: 'CPE Survey', timestamp: `${item.date}T12:00:00Z`, note: 'CPE survey response scored',
       score: (item.score - 3) / 2, language: csa?.languages?.[0] || 'English',
     });
   });
@@ -510,12 +511,15 @@ function build() {
       : negativeText ? -(0.4 + rng() * 0.55)
         : item.sentiment === 'positive' ? 0.25 + rng() * 0.45
           : item.sentiment === 'negative' ? -(0.25 + rng() * 0.45) : (rng() - 0.5) * 0.24;
-    addSignal({ engagementId: item.engagementId, sourceId: item.id, channel: 'Teams', timestamp: item.timestamp, text: item.body, score, language: csa?.languages?.[0] || 'English' });
+    addSignal({ podId: csa?.podId, track: engagement?.track, partnerId: csa?.partnerId, channel: 'Teams', timestamp: item.timestamp, note: 'Team check-in tone scored', score, language: csa?.languages?.[0] || 'English' });
   });
   escalations.forEach((item) => {
+    const engagement = engagements.find((candidate) => candidate.id === item.engagementId);
+    const csa = engagement?.assignedTo ? csas.find((candidate) => candidate.id === engagement.assignedTo) : null;
     const severityScore = { sev1: -0.95, sev2: -0.78, sev3: -0.56, sev4: -0.32 }[item.severity];
-    addSignal({ engagementId: item.engagementId, sourceId: item.id, channel: 'Escalation', timestamp: `${item.opened}T09:00:00Z`, text: item.summary, score: severityScore + (rng() - 0.5) * 0.08, language: 'English' });
+    addSignal({ podId: csa?.podId, track: engagement?.track, partnerId: csa?.partnerId, channel: 'Escalation', timestamp: `${item.opened}T09:00:00Z`, note: 'Escalation risk scored', score: severityScore + (rng() - 0.5) * 0.08, language: 'English' });
   });
+
 
   const pipCandidates = [...activeCsas].sort((a, b) => a.quality - b.quality).slice(0, 4);
   const randomPipObjective = (csa) => {
@@ -798,7 +802,7 @@ function build() {
     { id: 'INI006', type: 'Platform', name: 'SSD IQ reporting semantic model', area: 'Reporting', stage: 'Pilot', ownerName: 'Robin Ellis', targetRelease: 'FY27 Q2', status: 'on-track', impact: 'Reconciles MBR metrics and enables governed drill-through.', nextStep: 'Reconcile Power BI measures.' },
   ].map((initiative) => ({ ...initiative, ...gov('Portfolio Management') }));
 
-  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, sentimentSignals, pips, shadowRequests, kyplSessions, readinessPlans: [], ipFeedback, ipFeedbackCases, engagementFeedback, sentiment, deliveries, hiring, attrition, financials, initiatives, capacityTargets, demandHistory };
+  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, sessionHealthSignals, pips, shadowRequests, kyplSessions, readinessPlans: [], ipFeedback, ipFeedbackCases, engagementFeedback, sentiment, deliveries, hiring, attrition, financials, initiatives, capacityTargets, demandHistory };
 }
 
 export const dataset = build();

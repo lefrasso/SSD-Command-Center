@@ -27,7 +27,7 @@ export function phaseForEngagement(e) {
 
 // Common agents work every engagement, regardless of track — the "always-on" crew.
 export const COMMON_AGENTS = [
-  { id: 'signal-scout', name: 'Signal Scout', role: 'Account & sentiment insights', icon: 'database', blurb: 'Pulls MSX account context, CXObserve sentiment and Engage Center activity into one read.' },
+  { id: 'signal-scout', name: 'Signal Scout', role: 'Account & CPE insights', icon: 'database', blurb: 'Pulls MSX account context, CPE trend and Engage Center activity into one read.' },
   { id: 'outreach-concierge', name: 'Outreach Concierge', role: 'CSAM & customer communications', icon: 'send', blurb: 'Tracks the outreach cadence and drafts the next CSAM or customer email.' },
   { id: 'chronicle-keeper', name: 'Chronicle Keeper', role: 'Content prep & close-out', icon: 'report', blurb: 'Prepares kickoff content, milestone deliverables and the close-out package.' },
   { id: 'survey-herald', name: 'Survey Herald', role: 'CPE/VSAT survey reminders', icon: 'star', blurb: 'Times the CPE/VSAT survey ask and chases a response if one is missing.' },
@@ -112,10 +112,13 @@ export const EXPERT_AGENTS = {
 };
 
 function signalScout(engagement, d, phase) {
-  const customerSignals = d.sentimentSignals.filter((s) => s.engagementId === engagement.id && s.channel !== 'Teams');
+  // CPE (not the decoupled Session Health Signals) is the one system of record legitimately scoped
+  // to this specific engagement/customer, so it's the read used here — see Session Health Signals'
+  // POD/track-only attribution policy.
+  const cpeForEng = d.cpe.filter((c) => c.engagementId === engagement.id);
   const activity = d.messages.filter((m) => m.engagementId === engagement.id);
-  const avg = customerSignals.length ? customerSignals.reduce((sum, s) => sum + s.score, 0) / customerSignals.length : null;
-  const cxRead = avg == null ? 'no CXObserve signal on file yet' : avg >= 0.15 ? `CXObserve trending positive (${avg.toFixed(2)} avg across ${customerSignals.length} signal(s))` : avg <= -0.15 ? `CXObserve trending negative (${avg.toFixed(2)} avg across ${customerSignals.length} signal(s)) — watch closely` : `CXObserve steady/neutral (${avg.toFixed(2)} avg across ${customerSignals.length} signal(s))`;
+  const avg = cpeForEng.length ? cpeForEng.reduce((sum, c) => sum + c.score, 0) / cpeForEng.length : null;
+  const cxRead = avg == null ? 'no CPE signal on file yet' : avg >= 4.3 ? `CPE trending positive (${avg.toFixed(1)}/5 avg across ${cpeForEng.length} response(s))` : avg <= 3.6 ? `CPE trending negative (${avg.toFixed(1)}/5 avg across ${cpeForEng.length} response(s)) — watch closely` : `CPE steady/neutral (${avg.toFixed(1)}/5 avg across ${cpeForEng.length} response(s))`;
   const account = `MSX: ${engagement.customer}${engagement.s500Customer ? ' — S500 strategic account' : ''}, ${engagement.program} (${engagement.track})`;
   const engage = `Engage Center: ${activity.length} logged touchpoint(s)${activity.length ? ` — last on ${activity[activity.length - 1].timestamp.slice(0, 10)}` : ''}.`;
   const lead = phase === 'pre-delivery' ? 'Baseline read before kickoff.' : phase === 'delivery' ? 'Mid-engagement pulse check.' : 'Final read for the close-out record.';

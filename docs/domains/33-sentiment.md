@@ -1,7 +1,8 @@
-# Domain: Sentiment
+# Domain: Session Health Signals
 
-> Cross-channel sentiment over messages, CPE verbatims and escalation notes — theme-clustered and
-> correlated with CPE and escalations for actionable **early warnings**.
+> Cross-channel delivery health scoring over Teams, CPE and escalation signals — theme-clustered and
+> correlated for actionable **early warnings**. Legal/privacy: signals are attributed to a POD/track
+> only, never to a named customer or engagement, and never store verbatim customer text.
 
 ## 1. At a glance
 
@@ -14,7 +15,7 @@
 | Source-of-truth systems (target) | AI Services (NLP), SSD IQ |
 | Upstream domains (depends on) | Messages (40), Quality/CPE (30), Escalations (31), AI (03) |
 | Downstream domains (consumed by) | Cockpit (10), Reporting (41) |
-| Prototype source | `scripts/views/sentiment.js`, `scripts/ai.js` (`earlyWarnings`), `scripts/store.js` (`sentimentBreakdown`) |
+| Prototype source | `scripts/views/sentiment.js` (`renderSessionHealth`), `scripts/ai.js` (`earlyWarnings`), `scripts/store.js` (`sessionHealthBreakdown`) |
 
 ## 2. Purpose & problem statement
 
@@ -45,7 +46,11 @@
 
 - **Sentiment Rollup** entity (SoT = AI Services): `scope`, `scopeType` (partner/track), `period`,
   `net`, `positive`, `neutral`, `negative`, `themes[]`.
-- Live breakdown derived from **messages** + **CPE** sentiment (`sentimentBreakdown`).
+- **Session Health Signal** entity (SoT = AI Services): `podId`, `track`, `partnerId`, `channel`,
+  `timestamp`, `note` (generic, non-identifying descriptor — never a verbatim customer quote), `score`,
+  `level`, `confidence`, `language`, `translated`, `themes[]`, `alertStatus`. **No `engagementId` or
+  customer field** — by design, per the legal/privacy constraint above.
+- Live breakdown derived from **Teams**, **CPE** and **Escalation** signals (`sessionHealthBreakdown`).
 
 ## 6. Features (current prototype)
 
@@ -106,17 +111,22 @@
 
 ## 13. Non-functional requirements
 
-- **Privacy:** verbatims/messages may contain PII/customer data — govern access.
+- **Legal/privacy (hard constraint):** Session Health Signals must never be attributed to, or joinable
+  with, a specific customer or engagement record, and must never store verbatim customer text. Scoring
+  and display are POD/track/channel-level only. CPE verbatims themselves remain governed separately by
+  Quality & CPE (30), which is engagement-scoped by design as an established system of record.
 - **Accuracy:** validated NLP model; monitor drift.
 - **Explainability:** show the signals behind a warning.
 
 ## 14. Prototype → production gaps
 
 - [ ] Real **NLP sentiment + topic modelling** across all channels.
-- [ ] **Correlation** engine (sentiment ↔ CPE ↔ escalations) with drill-through.
+- [ ] **Correlation** engine (session health ↔ CPE ↔ escalations) with drill-through, kept at the
+      POD/track level.
 - [ ] **Alerting** on early warnings (route to owner) + acknowledgement.
-- [ ] Per-**engagement/customer** sentiment (not only partner/track).
 - [ ] Model monitoring (accuracy, drift, bias).
+- Explicitly **out of scope**: per-engagement/customer-identified signals — excluded by the legal/
+  privacy constraint, not a gap to close.
 
 ## 15. Backlog (epics → stories)
 

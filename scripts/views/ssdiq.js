@@ -35,8 +35,8 @@ const CFG = [
     columns: [['id', 'ID'], ['csaId', 'CSA', (r) => csaName(r.csaId)], ['status', 'Status', (r) => statusPill(r.status)], ['outcome', 'Outcome']] },
   { key: 'sentiment', name: 'Sentiment Rollup', description: 'AI sentiment aggregates.', source: 'AI Services', icon: 'emoji', label: (r) => `${r.scope} · ${r.period}`,
     columns: [['id', 'ID'], ['scope', 'Scope'], ['period', 'Period'], ['net', 'Net']] },
-  { key: 'sentimentSignals', name: 'Sentiment Signal', description: 'Interaction-level seven-intensity sentiment with alerts.', source: 'AI Services', icon: 'emoji', label: (r) => `${r.customer} · ${r.level}`,
-    columns: [['id', 'ID'], ['customer', 'Customer'], ['channel', 'Channel'], ['level', 'Intensity'], ['score', 'Score'], ['confidence', 'Confidence'], ['language', 'Language'], ['alertStatus', 'Alert'], ['timestamp', 'Timestamp']] },
+  { key: 'sessionHealthSignals', name: 'Session Health Signal', description: 'Interaction-level seven-intensity delivery health scoring, attributed to a POD/track only — not to a specific customer or engagement.', source: 'AI Services', icon: 'emoji', label: (r) => `${r.channel} · ${r.level}`,
+    columns: [['id', 'ID'], ['podId', 'POD', (r) => podName(r.podId)], ['track', 'Family'], ['channel', 'Channel'], ['level', 'Intensity'], ['score', 'Score'], ['confidence', 'Confidence'], ['language', 'Language'], ['alertStatus', 'Alert'], ['timestamp', 'Timestamp']] },
   { key: 'deliveries', name: 'Delivery', description: 'Completed deliveries.', source: 'Power BI', icon: 'check', label: (r) => r.type,
     columns: [['id', 'ID'], ['engagementId', 'Customer', (r) => engCustomer(r.engagementId)], ['type', 'Type'], ['completedDate', 'Completed'], ['track', 'Family']] },
   { key: 'hiring', name: 'Requisition', description: 'HC consolidation — hiring requisitions (Active & Future).', source: 'HC Consolidation', icon: 'personAdd', label: (r) => `${r.family} · ${r.stage}`,
@@ -269,7 +269,7 @@ function relationshipsFor(key, r) {
         { label: 'Escalation', items: r.escalationId ? [{ key: 'escalations', id: r.escalationId, label: r.escalationId }] : [] },
         { label: 'VSAT / CPE evidence', items: r.cpeId ? [{ key: 'cpe', id: r.cpeId, label: r.cpeId }] : [] },
         { label: 'Success story', items: r.successStoryId ? [{ key: 'successStories', id: r.successStoryId, label: r.successStoryId }] : [] },
-        { label: 'Sentiment signal', items: r.sentimentSignalId ? [{ key: 'sentimentSignals', id: r.sentimentSignalId, label: r.sentimentSignalId }] : [] },
+        { label: 'Session health signal', items: r.sessionHealthSignalId ? [{ key: 'sessionHealthSignals', id: r.sessionHealthSignalId, label: r.sessionHealthSignalId }] : [] },
       ];
     case 'cpe':
       return [
@@ -278,11 +278,11 @@ function relationshipsFor(key, r) {
       ];
     case 'messages':
       return [{ label: 'Engagement', items: r.engagementId ? [{ key: 'engagements', id: r.engagementId, label: engCustomer(r.engagementId) }] : [] }];
-    case 'sentimentSignals':
+    case 'sessionHealthSignals':
       return [
-        { label: 'Engagement', items: r.engagementId ? [{ key: 'engagements', id: r.engagementId, label: engCustomer(r.engagementId) }] : [] },
+        { label: 'POD', items: r.podId ? [{ key: 'pods', id: r.podId, label: podName(r.podId) }] : [] },
         { label: 'Partner', items: r.partnerId ? [{ key: 'partners', id: r.partnerId, label: lk(d.partners, r.partnerId, (partner) => partner.name) }] : [] },
-        { label: 'Follow-up actions', items: d.actions.filter((action) => action.sentimentSignalId === r.id).map((action) => ({ key: 'actions', id: action.id, label: action.title })) },
+        { label: 'Follow-up actions', items: d.actions.filter((action) => action.sessionHealthSignalId === r.id).map((action) => ({ key: 'actions', id: action.id, label: action.title })) },
       ];
     case 'pips':
       return [{ label: 'CSA', items: [{ key: 'csas', id: r.csaId, label: csaName(r.csaId) }] }];

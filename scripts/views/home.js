@@ -1,5 +1,5 @@
 // Home — Delivery Cockpit.
-import { store, computeKpis, sentimentBreakdown, hoursSince, openActions, todayISO } from '../store.js';
+import { store, computeKpis, sessionHealthBreakdown, hoursSince, openActions, todayISO } from '../store.js';
 import { PERSONAS } from '../roles.js';
 import { dailyBriefing } from '../ai.js';
 import { navigate } from '../router.js';
@@ -24,7 +24,7 @@ export function renderHome(container) {
   const persona = PERSONAS[role];
   const k = computeKpis(d);
   const briefing = dailyBriefing(role, d);
-  const sent = sentimentBreakdown(d);
+  const sent = sessionHealthBreakdown(d);
   const resourceMix = d.csas.reduce((acc, c) => {
     const type = c.resourceType || (c.vendor === 'Nebula' || c.vendor === 'GSCD' ? 'FTE' : 'FTC');
     acc[type] = (acc[type] || 0) + 1;
@@ -178,7 +178,7 @@ export function renderHome(container) {
           <div class="chart-holder" style="height:200px"><canvas id="c-status"></canvas></div>
         </div>
         <div class="card chart-card">
-          <div class="chart-head"><strong>Sentiment mix</strong>${aiChip('NLP')}</div>
+          <div class="chart-head"><strong>Session health mix</strong>${aiChip('NLP')}</div>
           <div class="chart-holder" style="height:200px"><canvas id="c-sent"></canvas></div>
         </div>
       </div>

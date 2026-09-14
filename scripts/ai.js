@@ -104,25 +104,29 @@ export function askData(question, d = store.data) {
 }
 
 export function earlyWarnings(d = store.data) {
-  const signals = d.sentimentSignals || [];
+  const signals = d.sessionHealthSignals || [];
   const negative = signals.filter((signal) => signal.score <= -0.4);
   const themeCounts = negative.flatMap((signal) => signal.themes).reduce((acc, theme) => { acc[theme] = (acc[theme] || 0) + 1; return acc; }, {});
   const worstTheme = Object.entries(themeCounts).sort((a, b) => b[1] - a[1])[0];
-  const byEngagement = new Map();
+  const byPod = new Map();
   signals.forEach((signal) => {
-    const items = byEngagement.get(signal.engagementId) || [];
+    const items = byPod.get(signal.podId) || [];
     items.push(signal);
-    byEngagement.set(signal.engagementId, items);
+    byPod.set(signal.podId, items);
   });
-  const rapidDeclines = [...byEngagement.values()].filter((items) => {
+  const rapidDeclines = [...byPod.values()].filter((items) => {
     const sorted = items.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
     return sorted.length > 1 && sorted[0].score - sorted[1].score < -0.35;
   }).length;
   const critical = negative.filter((signal) => signal.score <= -0.75 && signal.alertStatus === 'open').length;
   const text = negative.length
-    ? `Early warning: ${negative.length} negative/very-negative signals${worstTheme ? `, led by ${worstTheme[0]} (${worstTheme[1]})` : ''}. ${critical} critical alerts are open and ${rapidDeclines} engagements show a rapid decline.`
-    : 'No negative sentiment concentrations detected in the selected scope.';
-  return { text, sources: negative.slice(0, 3).map((signal) => ({ id: signal.id, label: signal.customer })), generatedAt: now() };
+    ? `Early warning: ${negative.length} negative/very-negative session health signals${worstTheme ? `, led by ${worstTheme[0]} (${worstTheme[1]})` : ''}. ${critical} critical alerts are open and ${rapidDeclines} POD(s) show a rapid decline.`
+    : 'No negative session health concentrations detected in the selected scope.';
+  return { text, sources: negative.slice(0, 3).map((signal) => ({ id: signal.id, label: signal.podId ? podLabel(signal.podId, d) : signal.channel })), generatedAt: now() };
+}
+function podLabel(podId, d) {
+  const pod = d.pods.find((item) => item.id === podId);
+  return pod ? pod.name : podId;
 }
 
 export function nlSearch(query, d = store.data) {
@@ -141,7 +145,7 @@ export function nlSearch(query, d = store.data) {
   });
   d.financials.forEach((item) => m(`${item.id} ${item.period} ${item.scope} ${item.category} ${item.status}`) && hits.push({ entity: 'Financial', key: 'financials', id: item.id, label: `${item.scope} · ${item.category}`, snippet: `${item.period} · ${item.status}` }));
   d.initiatives.forEach((item) => m(`${item.id} ${item.name} ${item.type} ${item.area} ${item.stage} ${item.ownerName} ${item.status} ${item.impact} ${item.nextStep}`) && hits.push({ entity: 'Strategy / IP', key: 'initiatives', id: item.id, label: item.name, snippet: `${item.type} · ${item.stage} · ${item.status}` }));
-  d.sentimentSignals.forEach((signal) => m(`${signal.id} ${signal.customer} ${signal.engagementId} ${signal.sourceId} ${signal.channel} ${signal.level} ${signal.language} ${signal.themes.join(' ')} ${signal.text}`) && hits.push({ entity: 'Sentiment Signal', key: 'sentimentSignals', id: signal.id, label: `${signal.customer} · ${signal.level}`, snippet: `${signal.channel} · ${signal.language} · ${signal.alertStatus}` }));
+  d.sessionHealthSignals.forEach((signal) => m(`${signal.id} ${signal.channel} ${signal.level} ${signal.language} ${signal.themes.join(' ')} ${signal.note}`) && hits.push({ entity: 'Session Health Signal', key: 'sessionHealthSignals', id: signal.id, label: `${signal.channel} · ${signal.level}`, snippet: `${signal.channel} · ${signal.language} · ${signal.alertStatus}` }));
   d.escalations.forEach((e) => m(`${e.id} ${e.summary} ${e.adoRef} ${e.severity}`) && hits.push({ entity: 'Escalation', key: 'escalations', id: e.id, label: e.id, snippet: `${e.severity} · ${e.summary}` }));
   return hits.slice(0, 25);
 }
@@ -156,8 +160,8 @@ export function dataQualityFlags(d = store.data) {
   if (uncoveredVsats.length) flags.push({ severity: 'medium', message: `${uncoveredVsats.length} VSAT engagements have no linked success story.`, ref: uncoveredVsats[0].id });
   d.financials.filter((item) => item.status === 'over-plan').forEach((item) => flags.push({ severity: 'medium', message: `${item.scope} ${item.category} is over plan for ${item.period}.`, ref: item.id }));
   d.initiatives.filter((item) => item.status === 'watch').forEach((item) => flags.push({ severity: 'low', message: `Initiative ${item.name} is on watch (${item.targetRelease}).`, ref: item.id }));
-  const criticalSentiment = d.sentimentSignals.filter((signal) => signal.score <= -0.75 && signal.alertStatus === 'open');
-  if (criticalSentiment.length) flags.push({ severity: 'high', message: `${criticalSentiment.length} very-negative sentiment alerts require acknowledgement.`, ref: criticalSentiment[0].id });
+  const criticalSentiment = d.sessionHealthSignals.filter((signal) => signal.score <= -0.75 && signal.alertStatus === 'open');
+  if (criticalSentiment.length) flags.push({ severity: 'high', message: `${criticalSentiment.length} very-negative session health alerts require acknowledgement.`, ref: criticalSentiment[0].id });
   d.partners.filter((p) => p.podIds.length === 0).forEach((p) => flags.push({ severity: 'low', message: `Partner ${p.name} has no PODs mapped.`, ref: p.id }));
   return flags;
 }
