@@ -279,7 +279,7 @@ function build() {
     engagements.push({
       id: `ENG${String(i + 1).padStart(3, '0')}`, customer, csamName: pick(CSAMS),
       track, program: pick(PROGRAMS[track]), assignedTo: assignee ? assignee.id : null, status,
-      dispatchStage, outreach, milestones, dueDate: isoDay(dueOffset), atRisk, s500Customer: S500_CUSTOMERS.includes(customer), ...gov('Dispatch'),
+      dispatchStage, outreach, outreachLog: [], milestones, dueDate: isoDay(dueOffset), atRisk, s500Customer: S500_CUSTOMERS.includes(customer), ...gov('Dispatch'),
     });
   }
 

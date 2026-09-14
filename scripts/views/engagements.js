@@ -1,11 +1,28 @@
 // Engagements & Dispatch — dispatch board + engagement detail with AI dispatch.
-import { store, assignEngagement, respondShadowRequest, myCsa } from '../store.js';
+import { store, assignEngagement, respondShadowRequest, myCsa, toggleOutreachDay, executeNextOutreachStep, automateRemainingOutreach } from '../store.js';
 import { pageHeader, badge, statusPill, aiChip, esc, kanban, openDrawer, closeDrawer, COLORS } from '../components.js';
 import { icon } from '../icons.js';
 import { recommendCSA, draftOutreach } from '../ai.js';
 import { navigate } from '../router.js';
+import { can, PERSONAS } from '../roles.js';
 
 const COLS = [['new', 'New'], ['assigned', 'Assigned'], ['in-delivery', 'In delivery'], ['complete', 'Complete']];
+export const OUTREACH_DAYS = ['day0', 'day1', 'day2', 'day3'];
+// Short simulated note for what the Outreach Concierge "does" when a step is executed/automated.
+export const OUTREACH_NOTE = {
+  day0: (e) => `Kickoff introduction sent to ${e.csamName} — proposing a Day 1 alignment sync.`,
+  day1: (e) => `Day 1 stakeholder sync scheduled with ${e.csamName}; scope & success criteria on the agenda.`,
+  day2: (e) => `Milestone plan and success criteria confirmed with the customer.`,
+  day3: (e) => `Cadence check-in logged — engagement moved to fully engaged status.`,
+};
+function relativeTime(iso) {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.round(hrs / 24)}d ago`;
+}
 
 export function renderEngagements(container) {
   const d = store.data;
@@ -34,14 +51,31 @@ export function renderEngagements(container) {
   container.querySelectorAll('.kan-card').forEach((el) => el.addEventListener('click', () => openEngagement(el.getAttribute('data-id'))));
 }
 
-function openEngagement(id) {
+export function openEngagement(id) {
   const d = store.data;
   const e = d.engagements.find((x) => x.id === id);
   if (!e) return;
   const csa = d.csas.find((c) => c.id === e.assignedTo);
   const stories = d.successStories.filter((story) => story.engagementIds.includes(e.id));
   const shadowRequests = d.shadowRequests.filter((s) => s.engagementId === e.id);
-  const outreach = ['day0', 'day1', 'day2', 'day3'].map((k, i) => `<span class="badge ${e.outreach[k] ? 'tint-info' : 'outline'}">Day ${i} ${e.outreach[k] ? '✓' : '—'}</span>`).join(' ');
+  const my = myCsa(store.role, d);
+  // The assigned CSA runs their own cadence; POD Lead/CSA Manager can act on any engagement.
+  const canManageOutreach = (my && my.id === e.assignedTo) || can(store.role, 'edit:dispatch');
+  const remaining = OUTREACH_DAYS.filter((k) => !e.outreach[k]);
+  const outreach = OUTREACH_DAYS.map((k, i) => canManageOutreach
+    ? `<button class="badge ${e.outreach[k] ? 'tint-info' : 'outline'}" data-outreach-day="${k}" style="cursor:pointer;border:none">Day ${i} ${e.outreach[k] ? '✓' : '—'}</button>`
+    : `<span class="badge ${e.outreach[k] ? 'tint-info' : 'outline'}">Day ${i} ${e.outreach[k] ? '✓' : '—'}</span>`).join(' ');
+  const automation = !canManageOutreach ? '' : remaining.length === 0
+    ? `<div class="muted mt8" style="font-size:12px">${icon('check', 12)} Full Day 0–3 cadence complete — engagement is fully engaged.</div>`
+    : `<div class="row wrap mt8" style="gap:6px">
+        <button class="btn sm" id="exec-next">${icon('sparkle', 14)} Execute next outreach step</button>
+        ${remaining.length > 1 ? `<button class="btn sm subtle" id="exec-auto">${icon('send', 14)} Automate remaining cadence (${remaining.length})</button>` : ''}
+      </div>`;
+  const log = (e.outreachLog || []).slice(0, 6).map((l) => {
+    const dayLabel = `Day ${OUTREACH_DAYS.indexOf(l.day)}`;
+    const modeLabel = l.mode === 'automated' ? 'Automated' : l.mode === 'manual-complete' ? 'Marked done' : 'Reopened';
+    return `<div class="muted" style="font-size:12px">${icon(l.mode === 'automated' ? 'sparkle' : 'check', 11)} ${dayLabel} — ${modeLabel} by ${esc(l.by)} · ${relativeTime(l.at)}${l.note ? `<br><span style="padding-left:16px">“${esc(l.note)}”</span>` : ''}</div>`;
+  }).join('');
   const milestones = e.milestones.map((m) => `<div class="check-item"><span class="check-box ${m.done ? 'done' : ''}">${m.done ? icon('check', 12) : ''}</span><span>${esc(m.label)} <span class="muted">· ${m.done ? 'done' : 'due ' + m.due}</span></span></div>`).join('');
 
   const body = `
@@ -51,7 +85,11 @@ function openEngagement(id) {
     <div class="field"><span class="field-key">Family / Program</span><span class="field-val">${esc(e.track)} · ${esc(e.program)}</span></div>
     <div class="field"><span class="field-key">Assigned CSA</span><span class="field-val">${csa ? esc(csa.name) + ' (' + esc(csa.vendor) + ')' : 'Unassigned'}</span></div>
     <div class="field"><span class="field-key">Due</span><span class="field-val">${esc(e.dueDate)}</span></div>
-    <div class="section-title">Day 0–3 outreach</div><div class="row wrap" style="gap:6px">${outreach}</div>
+    <div class="section-title">Day 0–3 outreach</div>
+    <div class="muted" style="font-size:12px">${canManageOutreach ? 'Click a day to mark it done, or let the Outreach Concierge execute the cadence for you.' : 'The assigned Partner CSA owns this cadence.'}</div>
+    <div class="row wrap mt8" style="gap:6px">${outreach}</div>
+    ${automation}
+    ${log ? `<div class="col-stack mt8" style="gap:4px">${log}</div>` : ''}
     <div class="section-title">Milestones</div>${milestones}
     <div class="section-title">Success stories</div>
     ${stories.length ? `<div class="col-stack" style="gap:6px">${stories.map((story) => `<button class="btn" data-story-link="${story.id}" style="justify-content:space-between">${esc(story.title)} ${statusPill(story.status)}</button>`).join('')}</div>` : '<div class="muted">No success story is linked to this engagement.</div>'}
@@ -75,6 +113,23 @@ function openEngagement(id) {
     }));
     dr.querySelectorAll('[data-shadow-confirm]').forEach((b) => b.addEventListener('click', () => { respondShadowRequest(b.getAttribute('data-shadow-confirm'), 'confirmed'); closeDrawer(); openEngagement(e.id); }));
     dr.querySelectorAll('[data-shadow-decline]').forEach((b) => b.addEventListener('click', () => { respondShadowRequest(b.getAttribute('data-shadow-decline'), 'declined'); closeDrawer(); openEngagement(e.id); }));
+    dr.querySelectorAll('[data-outreach-day]').forEach((b) => b.addEventListener('click', () => {
+      toggleOutreachDay(e.id, b.getAttribute('data-outreach-day'), PERSONAS[store.role].name);
+      closeDrawer(); openEngagement(e.id);
+    }));
+    const execBtn = dr.querySelector('#exec-next');
+    if (execBtn) execBtn.addEventListener('click', () => {
+      const next = OUTREACH_DAYS.find((k) => !e.outreach[k]);
+      if (!next) return;
+      executeNextOutreachStep(e.id, OUTREACH_NOTE[next](e), 'Outreach Concierge');
+      closeDrawer(); openEngagement(e.id);
+    });
+    const autoBtn = dr.querySelector('#exec-auto');
+    if (autoBtn) autoBtn.addEventListener('click', () => {
+      const notes = {}; OUTREACH_DAYS.forEach((k) => { notes[k] = OUTREACH_NOTE[k](e); });
+      automateRemainingOutreach(e.id, notes, 'Outreach Concierge');
+      closeDrawer(); openEngagement(e.id);
+    });
     dr.querySelector('#rec').addEventListener('click', () => {
       const r = recommendCSA(e, d);
       out.innerHTML = `<div class="card pad" style="background:var(--bg-2)"><div class="row mb8">${aiChip()}</div><div>${esc(r.text)}</div>

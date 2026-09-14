@@ -342,6 +342,54 @@ export function assignEngagement(engId, csaId) {
   emit('data');
 }
 export function setEngagementStatus(engId, status) { const e = byId(store.data.engagements, engId); if (e) e.status = status; emit('data'); }
+
+// ---- Proactive Dispatch (T-3W) — interactive outreach cadence + one-click / auto execution ----
+const OUTREACH_DAYS = ['day0', 'day1', 'day2', 'day3'];
+function stageForOutreach(e) {
+  const doneCount = OUTREACH_DAYS.filter((k) => e.outreach[k]).length;
+  return doneCount >= 4 ? 'engaged' : `Day ${doneCount}`;
+}
+function logOutreach(e, day, mode, by, note) {
+  if (!e.outreachLog) e.outreachLog = [];
+  e.outreachLog.unshift({ day, at: new Date().toISOString(), by: by || 'you', mode, note: note || null });
+}
+// Manual check/uncheck of a single Day 0-3 touch — the CSA (or POD Lead) confirming it happened.
+export function toggleOutreachDay(engId, day, by) {
+  const e = byId(store.data.engagements, engId);
+  if (!e || !OUTREACH_DAYS.includes(day)) return;
+  e.outreach[day] = !e.outreach[day];
+  logOutreach(e, day, e.outreach[day] ? 'manual-complete' : 'manual-reopen', by);
+  if (e.dispatchStage !== 'engaged' || !e.outreach[day]) e.dispatchStage = stageForOutreach(e);
+  emit('data');
+}
+// One-click execution: complete the next outstanding touch and log the (AI-drafted) note used.
+export function executeNextOutreachStep(engId, note, by) {
+  const e = byId(store.data.engagements, engId);
+  if (!e) return null;
+  const day = OUTREACH_DAYS.find((k) => !e.outreach[k]);
+  if (!day) return null;
+  e.outreach[day] = true;
+  logOutreach(e, day, 'automated', by || 'Outreach Concierge', note);
+  e.dispatchStage = stageForOutreach(e);
+  emit('data');
+  return day;
+}
+// Automate the whole remaining cadence for this one engagement in one go.
+export function automateRemainingOutreach(engId, notesByDay, by) {
+  const e = byId(store.data.engagements, engId);
+  if (!e) return [];
+  const done = [];
+  OUTREACH_DAYS.forEach((day) => {
+    if (!e.outreach[day]) {
+      e.outreach[day] = true;
+      logOutreach(e, day, 'automated', by || 'Outreach Concierge', notesByDay ? notesByDay[day] : null);
+      done.push(day);
+    }
+  });
+  if (done.length) e.dispatchStage = stageForOutreach(e);
+  emit('data');
+  return done;
+}
 const STORY_STATUSES = new Set(['draft', 'sdm-review', 'pod-review', 'leadership-review', 'approved', 'published', 'archived']);
 export const SUCCESS_STORY_TRANSITIONS = {
   draft: ['sdm-review'],

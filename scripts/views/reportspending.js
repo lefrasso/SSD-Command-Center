@@ -1,11 +1,13 @@
 // Reports Pending — overdue delivery reports + T-3W proactive engagement tracking.
 // The proactive dispatch process (Day 0-3 outreach owned by the Partner CSA) should
 // prevent reports from becoming pending; this module tracks both the problem and the prevention.
-import { store } from '../store.js';
+import { store, executeNextOutreachStep, automateRemainingOutreach, myCsa } from '../store.js';
 import { pageHeader, kpiCard, aiChip, esc, COLORS, clearCharts, bar, donut } from '../components.js';
 import { icon } from '../icons.js';
 import { TRACKS, TZ_MAP } from '../../data/generate.js';
 import { computeT3W, T3W_WINDOW_DAYS, daysUntilDue, outreachCount, t3wReason } from '../t3w.js';
+import { openEngagement, OUTREACH_DAYS, OUTREACH_NOTE } from './engagements.js';
+import { can } from '../roles.js';
 
 let fTrack = 'All';
 let fTz = 'All';
@@ -21,6 +23,7 @@ const reason = t3wReason;
 export function renderReportsPending(container) {
   clearCharts();
   const d = store.data;
+  const my = myCsa(store.role, d);
   const match = (e) => (fTrack === 'All' || e.track === fTrack) && (fTz === 'All' || tzOf(e) === fTz);
   const active = d.engagements.filter((e) => e.status !== 'complete' && match(e));
   const overdue = active.filter((e) => daysUntilDue(e) < 0);
@@ -73,20 +76,38 @@ export function renderReportsPending(container) {
     </tbody></table></div>
 
     <div class="section-title">T-3W Proactive engagement tracker (${inWindow.length})</div>
-    <div class="muted mb8" style="font-size:12px">Engagements due within 3 weeks. The Partner CSA owns the Day 0–3 proactive outreach cadence to prevent the report becoming pending.</div>
-    <div class="table-wrap"><table class="grid"><thead><tr><th>Customer</th><th>CSA</th><th>Family</th><th>Due in</th><th>Day 0</th><th>Day 1</th><th>Day 2</th><th>Day 3</th><th>Proactive status</th></tr></thead><tbody>
-      ${inWindow.slice().sort((a, b) => daysUntilDue(a) - daysUntilDue(b)).map((e) => { const c = csaOf(e); const dd = daysUntilDue(e); const ps = proStatus(e); return `<tr>
+    <div class="muted mb8" style="font-size:12px">Engagements due within 3 weeks. The Partner CSA owns the Day 0–3 proactive outreach cadence to prevent the report becoming pending — execute or automate it right here.</div>
+    <div class="table-wrap"><table class="grid"><thead><tr><th>Customer</th><th>CSA</th><th>Family</th><th>Due in</th><th>Day 0</th><th>Day 1</th><th>Day 2</th><th>Day 3</th><th>Proactive status</th><th>Proactive action</th></tr></thead><tbody>
+      ${inWindow.slice().sort((a, b) => daysUntilDue(a) - daysUntilDue(b)).map((e) => { const c = csaOf(e); const dd = daysUntilDue(e); const ps = proStatus(e); const canAct = (my && my.id === e.assignedTo) || can(store.role, 'edit:dispatch'); const remaining = OUTREACH_DAYS.filter((k) => !e.outreach[k]); return `<tr>
         <td><strong>${esc(e.customer)}</strong></td>
         <td>${esc(c ? c.name : 'Unassigned')}</td>
         <td>${esc(e.track)}</td>
         <td>${dd}d</td>
         <td>${chip(e.outreach.day0)}</td><td>${chip(e.outreach.day1)}</td><td>${chip(e.outreach.day2)}</td><td>${chip(e.outreach.day3)}</td>
         <td><span class="pill" style="color:${ps.color}"><span class="pill-label">${esc(ps.label)}</span></span></td>
-      </tr>`; }).join('') || '<tr><td colspan="9" class="muted" style="padding:16px">No engagements in the T-3W window.</td></tr>'}
+        <td><div class="row" style="gap:4px">
+          <button class="btn sm subtle" data-rp-open="${e.id}" title="Open engagement">${icon('chevronRight', 12)}</button>
+          ${canAct && remaining.length ? `<button class="btn sm" data-rp-exec="${e.id}" title="Execute next outreach step">${icon('sparkle', 12)}</button>` : ''}
+          ${canAct && remaining.length > 1 ? `<button class="btn sm subtle" data-rp-auto="${e.id}" title="Automate remaining cadence">${icon('send', 12)}</button>` : ''}
+        </div></td>
+      </tr>`; }).join('') || '<tr><td colspan="10" class="muted" style="padding:16px">No engagements in the T-3W window.</td></tr>'}
     </tbody></table></div>`;
 
   bar(container.querySelector('#rp-age'), { labels: buckets.map((b) => b[0]), values: bucketVals, color: COLORS.sev2, label: 'Pending' });
   donut(container.querySelector('#rp-pro'), { labels: ['On track', 'In progress', 'Not started', 'Overdue'], values: proDist, colors: [COLORS.positive, COLORS.warning, COLORS.negative, COLORS.sev1] });
+
+  container.querySelectorAll('[data-rp-open]').forEach((b) => b.addEventListener('click', () => openEngagement(b.getAttribute('data-rp-open'))));
+  container.querySelectorAll('[data-rp-exec]').forEach((b) => b.addEventListener('click', () => {
+    const eng = d.engagements.find((x) => x.id === b.getAttribute('data-rp-exec'));
+    const next = eng && OUTREACH_DAYS.find((k) => !eng.outreach[k]);
+    if (eng && next) executeNextOutreachStep(eng.id, OUTREACH_NOTE[next](eng), 'Outreach Concierge');
+  }));
+  container.querySelectorAll('[data-rp-auto]').forEach((b) => b.addEventListener('click', () => {
+    const eng = d.engagements.find((x) => x.id === b.getAttribute('data-rp-auto'));
+    if (!eng) return;
+    const notes = {}; OUTREACH_DAYS.forEach((k) => { notes[k] = OUTREACH_NOTE[k](eng); });
+    automateRemainingOutreach(eng.id, notes, 'Outreach Concierge');
+  }));
 
   container.querySelector('#rp-track').addEventListener('change', (e) => { fTrack = e.target.value; renderReportsPending(container); });
   container.querySelector('#rp-tz').addEventListener('change', (e) => { fTz = e.target.value; renderReportsPending(container); });
