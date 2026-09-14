@@ -19,10 +19,10 @@ const CAPS = [
     { name: 'Success Story Management', status: 'live', to: '/success-stories', note: 'Engagement-linked capture, editorial review, publishing and archiving.' },
   ] },
   { group: 'Quality', items: [
-    { name: 'Quality Management', status: 'live', to: '/quality', note: 'CPE & Recommended Practices scoring.' },
+    { name: 'CPE Management', status: 'live', to: '/cpe', note: 'CPE & Recommended Practices scoring, DSAT close-the-loop.' },
     { name: 'Delivery Quality', status: 'live', to: '/quality', note: 'Quality Checks form + reporting.' },
     { name: 'Deliverables Quality', status: 'live', to: '/quality', note: 'Mock Deliveries QC guide & tracking.' },
-    { name: 'Feedback Management', status: 'live', to: '/quality', note: 'CPE feedback & verbatims.' },
+    { name: 'Feedback Management', status: 'live', to: '/cpe', note: 'CPE feedback & verbatims.' },
   ] },
   { group: 'Escalation & risk', items: [
     { name: 'Escalation Management', status: 'live', to: '/escalations', note: 'Triage, SLA timers, actions, AI severity.' },

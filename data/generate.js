@@ -383,6 +383,8 @@ function build() {
       id, engagementId: eng.id, score, class: feedbackClass, surveyStatus: 'Completed', track: eng.track,
       verbatim: pick(VERBATIMS[sentiment]), rootCauseCategory: feedbackClass === 'DSAT' ? DSAT_ROOT_CAUSES[cIdx % DSAT_ROOT_CAUSES.length] : null,
       rootCauseAction: feedbackClass === 'DSAT' ? pick(['POD Lead coaching and delivery-plan review', 'Re-baseline scope and stakeholder expectations', 'Validate source data and repeat the findings review', 'Assign follow-up action with the CSAM']) : null,
+      // Close-the-loop tracking for 1-2 star (DSAT) responses only — null for everything else.
+      loopStatus: score <= 2 ? 'open' : null, loopLog: [],
       date: feedbackDate, sentiment, ...gov('CPE/Forms'),
     });
   }

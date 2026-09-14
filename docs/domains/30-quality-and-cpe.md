@@ -1,7 +1,10 @@
 # Domain: Quality & CPE
 
 > Experience management, quality checks and mock-delivery QC — all measured against the **Proactive
-> Delivery CPE Recommended Practices**.
+> Delivery CPE Recommended Practices**. **Split across two nav modules:** `#/quality` (**Quality
+> Checks** — QC form/reporting + Mock Deliveries, under Operations) and `#/cpe` (**CPE Management** —
+> CPE trends, Recommended Practices scoring and **DSAT close-the-loop** for 1–2★ responses, under
+> Delivery).
 
 > **Source alignment — POD Lead Report.** Production CPE adds **VSAT/DSAT** classification, **CPE surveys
 > received**, **Avg satisfaction score**, **unanswered CPE surveys**, and a **Received CPEs** list (PFE
@@ -13,8 +16,8 @@
 
 | Field | Value |
 |---|---|
-| Domain ID | `quality` |
-| Module route | `#/quality` |
+| Domain ID | `quality` / `cpe` |
+| Module route | `#/quality` (Quality Checks), `#/cpe` (CPE Management) |
 | Prototype status | Implemented |
 | Primary personas | POD Lead, Partner CSA, SDM, business-lt |
 | Source-of-truth systems (target) | CPE/Forms, SSD IQ |

@@ -21,6 +21,7 @@ import { renderSuccessStories } from './views/successstories.js';
 import { renderReportsPending } from './views/reportspending.js';
 import { renderMessages } from './views/messages.js';
 import { renderQuality } from './views/quality.js';
+import { renderCpe } from './views/cpe.js';
 import { renderEscalations } from './views/escalations.js';
 import { renderPerformance } from './views/performance.js';
 import { renderCsamEscalation } from './views/csamescalation.js';
@@ -132,6 +133,7 @@ function renderView() {
     case 'reports-pending': renderReportsPending(view); break;
     case 'messages': renderMessages(view, params.get('thread') || params.get('q') || ''); break;
     case 'quality': renderQuality(view); break;
+    case 'cpe': renderCpe(view); break;
     case 'escalations': renderEscalations(view); break;
     case 'performance': can(store.role, 'view:improvementPlan') ? renderPerformance(view) : renderPlaceholder(view, mod, true); break;
     case 'reporting': renderReporting(view); break;

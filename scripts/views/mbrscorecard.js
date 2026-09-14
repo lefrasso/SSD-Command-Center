@@ -317,7 +317,7 @@ function renderQuality(host, c) {
     return { label, score, responses: applicable.length };
   }).sort((a, b) => a.score - b.score);
   host.innerHTML = `
-    <div class="row wrap mb8" style="justify-content:space-between"><div><strong class="mbr-section-title">Quality</strong><div class="muted">CPE, VSAT/DSAT, root causes, QC discipline, and criteria deep dives.</div></div><button class="btn sm" data-nav="/quality">Quality & CPE</button></div>
+    <div class="row wrap mb8" style="justify-content:space-between"><div><strong class="mbr-section-title">Quality</strong><div class="muted">CPE, VSAT/DSAT, root causes, QC discipline, and criteria deep dives.</div></div><button class="btn sm" data-nav="/cpe">CPE Management</button></div>
     <div class="kpi-grid">
       ${kpiCard({ label: 'CPE responses', value: c.currentCpe.length, iconName: 'report', hint: periodLabel(selectedPeriod) })}
       ${kpiCard({ label: 'VSAT', value: `${c.vsatRate}%`, iconName: 'thumbUp', tone: c.vsatRate >= 75 ? COLORS.positive : COLORS.warning, hint: 'Target ≥ 75%' })}
@@ -372,7 +372,7 @@ function renderStrategy(host, c) {
   const openActions = c.d.actions.filter((item) => item.status !== 'done').sort((a, b) => String(a.due).localeCompare(String(b.due))).slice(0, 12);
   const ltApproved = c.d.successStories.filter((item) => item.ltApproved).length;
   const priorities = [
-    { priority: `Recover VSAT toward 75% (currently ${c.vsatRate}%)`, owner: 'Quality & CPE Lead', measure: 'VSAT ≥75%; DSAT ≤5%' },
+    { priority: `Recover VSAT toward 75% (currently ${c.vsatRate}%)`, owner: 'CPE Management Lead', measure: 'VSAT ≥75%; DSAT ≤5%' },
     { priority: `Close ${c.pending.length} pending reports`, owner: 'POD Leads', measure: 'Pending aging down MoM' },
     { priority: `Fill ${c.hiring.length} open roles`, owner: 'Operations Managers', measure: 'Coverage gaps = 0' },
     { priority: 'Reconcile the SSD IQ semantic model with Power BI', owner: 'Business Manager', measure: 'All MBR measures reconciled' },

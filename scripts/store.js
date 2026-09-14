@@ -82,7 +82,7 @@ export const CANONICAL_ENTITIES = [
   { entity: 'Escalations', owner: 'Escalation triage', source: 'Azure DevOps + service desk', key: 'escalations', count: (d) => d.escalations.length },
   { entity: 'Actions', owner: 'Ops follow-through', source: 'Action backlog', key: 'actions', count: (d) => d.actions.length },
   { entity: 'Messages', owner: 'Communications', source: 'Teams thread hub', key: 'messages', count: (d) => d.messages.length },
-  { entity: 'Quality', owner: 'Quality & CPE', source: 'CPE / quality program', key: 'cpe', count: (d) => d.cpe.length },
+  { entity: 'Quality', owner: 'CPE Management', source: 'CPE / quality program', key: 'cpe', count: (d) => d.cpe.length },
   { entity: 'Capacity', owner: 'Capacity planning', source: 'Forecast + hiring plan', key: 'hiring', count: (d) => d.hiring.length },
   { entity: 'Financials', owner: 'SSD business management', source: 'Finance / Power BI', key: 'financials', count: (d) => d.financials.length },
   { entity: 'Strategy & IP', owner: 'Tech strategy & IP leads', source: 'Portfolio Management', key: 'initiatives', count: (d) => d.initiatives.length },
@@ -343,6 +343,30 @@ export function assignEngagement(engId, csaId) {
   emit('data');
 }
 export function setEngagementStatus(engId, status) { const e = byId(store.data.engagements, engId); if (e) e.status = status; emit('data'); }
+
+// ---- CPE — DSAT close-the-loop (1-2 star responses only) ----
+export function addCpeLoopUpdate(cpeId, note, by) {
+  const item = byId(store.data.cpe, cpeId);
+  if (!item) throw new Error(`CPE response ${cpeId} was not found.`);
+  const text = String(note || '').trim();
+  if (!text) throw new Error('A note is required to log an update.');
+  if (!item.loopLog) item.loopLog = [];
+  item.loopLog.unshift({ at: new Date().toISOString(), by: by || store.role, note: text });
+  if (item.loopStatus === 'open') item.loopStatus = 'in-progress';
+  emit('data');
+}
+export function closeCpeLoop(cpeId, note, by) {
+  const item = byId(store.data.cpe, cpeId);
+  if (!item) throw new Error(`CPE response ${cpeId} was not found.`);
+  const text = String(note || '').trim();
+  if (!text) throw new Error('A closing note is required to close the loop.');
+  if (!item.loopLog) item.loopLog = [];
+  item.loopLog.unshift({ at: new Date().toISOString(), by: by || store.role, note: text });
+  item.loopStatus = 'closed';
+  item.loopClosedAt = new Date().toISOString();
+  item.loopClosedBy = by || store.role;
+  emit('data');
+}
 
 // ---- Proactive Dispatch (T-3W) — interactive outreach cadence + one-click / auto execution ----
 const OUTREACH_DAYS = ['day0', 'day1', 'day2', 'day3'];
