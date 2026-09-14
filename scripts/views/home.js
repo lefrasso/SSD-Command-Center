@@ -6,7 +6,7 @@ import { navigate } from '../router.js';
 import { TRACKS, LEADERSHIP } from '../../data/generate.js';
 import { daysUntilDue } from '../t3w.js';
 import {
-  pageHeader, kpiCard, aiChip, badge, severityPill, esc,
+  pageHeader, kpiCard, aiChip, badge, severityPill, statusPill, esc,
   scoreColor, utilColor, COLORS, CHART_PALETTE, clearCharts, donut, bar,
 } from '../components.js';
 import { icon } from '../icons.js';
@@ -69,6 +69,13 @@ export function renderHome(container) {
     const openEsc = d.escalations.filter((e) => e.status !== 'resolved' && engs.some((x) => x.id === e.engagementId)).length;
     return { pod, avgUtil, avgCpe, atRisk, openEsc, headcount: active.length };
   });
+
+  // A POD Lead runs exactly one POD, so True North shows their roster (one card per person)
+  // instead of the portfolio-wide POD grid TZ Leads/Managers get.
+  const myPod = store.role.startsWith('pod-lead')
+    ? (d.pods.find((p) => p.leadName === persona.name) || d.pods.find((p) => p.tz === persona.tz) || d.pods[0])
+    : null;
+  const myRoster = myPod ? d.csas.filter((c) => c.podId === myPod.id).sort((a, b) => a.name.localeCompare(b.name)) : [];
 
   // "POD Lead superpowers" — the True North proof strip: each tile is a real, live read of the
   // automation/visibility the platform already delivers, not an aspiration (see the vision brief:
@@ -212,9 +219,21 @@ export function renderHome(container) {
       <div class="chart-holder" style="height:220px"><canvas id="c-cpe"></canvas></div>
     </div>
 
-    <div class="section-title">POD health</div>
+    <div class="section-title">${myPod ? `${esc(myPod.name)} \u2014 my POD roster` : 'POD health'}</div>
     <div class="pod-grid">
-      ${podHealth.map(({ pod, avgUtil, avgCpe, atRisk, openEsc, headcount }) => `
+      ${myPod ? myRoster.map((c) => `
+        <div class="card pod-card">
+          <div class="row" style="justify-content:space-between">
+            <strong>${esc(c.name)}</strong>
+            <span class="dot" style="background:${utilColor(c.utilization)}"></span>
+          </div>
+          <div class="muted" style="font-size:12px">${esc(c.vendor)} · ${esc(c.resourceType)} · ${esc(c.tracks.join(', '))}</div>
+          <hr class="divider"/>
+          <div class="pod-stat"><span>Utilization</span><strong style="color:${utilColor(c.utilization)}">${c.utilization}%</strong></div>
+          <div class="pod-stat"><span>CPE</span><strong style="color:${scoreColor(c.cpe)}">${c.cpe.toFixed(1)}</strong></div>
+          <div class="pod-stat"><span>Quality</span><strong style="color:${scoreColor(c.quality)}">${c.quality.toFixed(1)}</strong></div>
+          <div class="pod-stat"><span>Status</span>${statusPill(c.lifecycle)}</div>
+        </div>`).join('') || '<div class="muted">No one is currently rostered to this POD.</div>' : podHealth.map(({ pod, avgUtil, avgCpe, atRisk, openEsc, headcount }) => `
         <div class="card pod-card">
           <div class="row" style="justify-content:space-between">
             <strong>${esc(pod.name)}</strong>
