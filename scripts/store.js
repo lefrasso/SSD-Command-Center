@@ -663,6 +663,71 @@ export function evaluateKyplSession(csaId, { rating, readiness, strengths = '', 
   return session.evaluation;
 }
 
+// ---- Readiness Plan — structured SDM follow-up on a Partner CSA's progress after KYPL ----
+export const READINESS_OBJECTIVES_DEFAULT = [
+  'Shadow two live deliveries in the assigned track',
+  'Complete a supervised delivery with POD Lead sign-off',
+  'Maintain on-time Day 0–3 outreach across two consecutive engagements',
+  'Pass a quality/QC review on delivered artifacts',
+  'Readiness review sign-off with the SDM',
+];
+let rdpSeq = store.data.readinessPlans.reduce((max, p) => Math.max(max, Number(p.id.replace(/^RDP/, '')) || 0), 0) + 1;
+export const readinessPlanForCsa = (csaId, d = store.data) => d.readinessPlans.find((p) => p.csaId === csaId && p.status !== 'closed') || null;
+export const readinessPlansForSdm = (sdmName, d = store.data) => d.readinessPlans.filter((p) => p.sdmName === sdmName);
+export function createReadinessPlan(csaId, { sdmName, targetDate, objectives, createdBy = '' } = {}) {
+  const csa = byId(store.data.csas, csaId);
+  if (!csa) throw new Error(`CSA ${csaId} was not found.`);
+  const session = store.data.kyplSessions.find((k) => k.csaId === csaId);
+  if (!session || session.status !== 'completed') throw new Error('Complete the KYPL session before creating a readiness plan.');
+  if (!sdmName) throw new Error('Select an SDM to own the readiness plan.');
+  if (store.data.readinessPlans.some((p) => p.csaId === csaId && p.status !== 'closed')) throw new Error('An active readiness plan already exists for this Partner CSA.');
+  const objs = (objectives && objectives.length ? objectives : READINESS_OBJECTIVES_DEFAULT).map((label) => ({ label: String(label).trim(), done: false })).filter((o) => o.label);
+  if (!objs.length) throw new Error('At least one objective is required.');
+  const now = new Date().toISOString();
+  const id = `RDP${String(rdpSeq++).padStart(3, '0')}`;
+  const by = createdBy || store.role;
+  store.data.readinessPlans.unshift({
+    id, csaId, kyplSessionId: session.id, sdmName, createdBy: by,
+    status: 'active', targetDate: targetDate || daysFromNowISO(30),
+    objectives: objs, checkIns: [], outcome: 'in-progress',
+    sourceOfTruth: 'Enablement', createdAt: now, updatedAt: now,
+    audit: [{ at: now, who: by, action: `readiness plan created, owned by ${sdmName}` }],
+  });
+  if (session.evaluation) session.evaluation.readinessPlanId = id;
+  addAction({ title: `Readiness plan review — ${csa.name}`, ownerName: sdmName, due: targetDate || daysFromNowISO(30), status: 'open', source: 'readiness-plan', readinessPlanId: id });
+  emit('data');
+  return id;
+}
+export function toggleReadinessObjective(planId, index, by = '') {
+  const plan = byId(store.data.readinessPlans, planId);
+  const obj = plan && plan.objectives[index];
+  if (!obj) return;
+  obj.done = !obj.done;
+  plan.updatedAt = todayISO();
+  plan.audit.push({ at: new Date().toISOString(), who: by || store.role, action: `objective "${obj.label}" marked ${obj.done ? 'done' : 'open'}` });
+  emit('data');
+}
+export function addReadinessCheckIn(planId, note, by = '') {
+  const plan = byId(store.data.readinessPlans, planId);
+  if (!plan) throw new Error(`Readiness plan ${planId} was not found.`);
+  const text = String(note || '').trim();
+  if (!text) throw new Error('A check-in note is required.');
+  plan.checkIns.unshift({ date: todayISO(), note: text, by: by || store.role });
+  plan.updatedAt = todayISO();
+  plan.audit.push({ at: new Date().toISOString(), who: by || store.role, action: 'check-in added' });
+  emit('data');
+}
+export function closeReadinessPlan(planId, outcome, by = '') {
+  const plan = byId(store.data.readinessPlans, planId);
+  if (!plan) throw new Error(`Readiness plan ${planId} was not found.`);
+  if (!['ready', 'extended'].includes(outcome)) throw new Error('Outcome must be "ready" or "extended".');
+  plan.status = 'closed';
+  plan.outcome = outcome;
+  plan.updatedAt = todayISO();
+  plan.audit.push({ at: new Date().toISOString(), who: by || store.role, action: `readiness plan closed (${outcome})` });
+  emit('data');
+}
+
 let ipfSeq = store.data.ipFeedback.reduce((max, f) => Math.max(max, Number(f.id.replace(/^IPF/, '')) || 0), 0) + 1;
 export function addIpFeedback({ engagementId, rating, tag, comment }) {
   const eng = byId(store.data.engagements, engagementId);
@@ -819,10 +884,10 @@ export function addMessage(threadId, engagementId, from, to, body, sentiment) {
   store.data.messages.push({ id, threadId, engagementId, from, to, body, timestamp: new Date().toISOString(), sentiment: sentiment || 'neutral', sourceOfTruth: 'Teams', updatedAt: new Date().toISOString().slice(0, 10), audit: [{ at: new Date().toISOString(), who: 'you', action: 'message sent' }] });
   emit('data');
 }
-export function addAction({ engagementId = null, threadId = null, escalationId = null, cpeId = null, successStoryId = null, sentimentSignalId = null, kyplSessionId = null, source = null, title, ownerName, due, status }) {
+export function addAction({ engagementId = null, threadId = null, escalationId = null, cpeId = null, successStoryId = null, sentimentSignalId = null, kyplSessionId = null, readinessPlanId = null, source = null, title, ownerName, due, status }) {
   const id = `ACT${actSeq++}`;
-  const actionSource = source || (escalationId ? 'escalation' : sentimentSignalId ? 'sentiment' : threadId ? 'message' : cpeId ? 'success-story' : kyplSessionId ? 'kypl' : 'action');
-  store.data.actions.unshift({ id, escalationId, threadId, engagementId, cpeId, successStoryId, sentimentSignalId, kyplSessionId, title: title || 'Follow-up action', ownerName: ownerName || 'Unassigned', due: due || daysFromNowISO(7), status: status || 'open', source: actionSource, sourceOfTruth: 'Azure DevOps', updatedAt: todayISO(), audit: [{ at: new Date().toISOString(), who: 'you', action: 'action assigned' }] });
+  const actionSource = source || (escalationId ? 'escalation' : sentimentSignalId ? 'sentiment' : threadId ? 'message' : cpeId ? 'success-story' : readinessPlanId ? 'readiness-plan' : kyplSessionId ? 'kypl' : 'action');
+  store.data.actions.unshift({ id, escalationId, threadId, engagementId, cpeId, successStoryId, sentimentSignalId, kyplSessionId, readinessPlanId, title: title || 'Follow-up action', ownerName: ownerName || 'Unassigned', due: due || daysFromNowISO(7), status: status || 'open', source: actionSource, sourceOfTruth: 'Azure DevOps', updatedAt: todayISO(), audit: [{ at: new Date().toISOString(), who: 'you', action: 'action assigned' }] });
   if (escalationId) { const e = byId(store.data.escalations, escalationId); if (e) (e.actionIds = e.actionIds || []).push(id); }
   emit('data');
   return id;

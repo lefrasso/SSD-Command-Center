@@ -23,6 +23,7 @@ function sourceMeta(a) {
   if (a.sentimentSignalId) return ['Sentiment', 'tint-warn'];
   if (a.threadId) return ['Message', 'tint-info'];
   if (a.cpeId) return ['Success story', 'tint-info'];
+  if (a.readinessPlanId) return ['Readiness Plan', 'tint-info'];
   if (a.kyplSessionId) return ['KYPL', 'tint-info'];
   return ['Action', 'outline'];
 }

@@ -1,5 +1,9 @@
 // Enablement — accreditations, S500 eligibility, SDM onboarding, Know Your POD Lead, user voice, shadowing.
-import { store, hoursSince, requestShadow, respondShadowRequest, computeS500, s500FlaggedEngagements, myCsa, kyplSessionForCsa, scheduleKyplSession, completeKyplSession, evaluateKyplSession, daysFromNowISO } from '../store.js';
+import {
+  store, hoursSince, requestShadow, respondShadowRequest, computeS500, s500FlaggedEngagements, myCsa,
+  kyplSessionForCsa, scheduleKyplSession, completeKyplSession, evaluateKyplSession, daysFromNowISO,
+  readinessPlanForCsa, readinessPlansForSdm, createReadinessPlan, toggleReadinessObjective, addReadinessCheckIn, closeReadinessPlan, READINESS_OBJECTIVES_DEFAULT,
+} from '../store.js';
 import { pageHeader, kpiCard, esc, badge, statusPill, openDrawer, closeDrawer, COLORS } from '../components.js';
 import { icon } from '../icons.js';
 import { actionItemHtml } from '../actions.js';
@@ -137,12 +141,65 @@ function kyplReadinessLabel(readiness) {
   return 'At risk — needs intervention';
 }
 
+function readinessPlanStatusBadge(plan) {
+  if (plan.status === 'closed') return plan.outcome === 'ready' ? badge('Ready', 'tint-info') : badge('Extended', 'tint-warn');
+  return badge('Active', 'tint-warn');
+}
+function readinessPlanCardHtml(plan, csa, interactive = true) {
+  const done = plan.objectives.filter((o) => o.done).length;
+  return `<div class="card pad mb16" style="background:var(--bg-2)" data-rdp-card="${plan.id}">
+    <div class="row wrap mb8" style="justify-content:space-between;gap:8px">
+      <strong>Readiness plan${csa ? ` · ${esc(csa.name)}` : ''}</strong>
+      ${readinessPlanStatusBadge(plan)}
+    </div>
+    <div class="field"><span class="field-key">Owner (SDM)</span><span class="field-val">${esc(plan.sdmName)}</span></div>
+    <div class="field"><span class="field-key">Target review</span><span class="field-val">${esc(plan.targetDate)}</span></div>
+    <div class="section-title" style="font-size:13px;margin-top:10px">Objectives (${done}/${plan.objectives.length})</div>
+    ${plan.objectives.map((o, i) => `<div class="check-item">${interactive ? `<button class="btn sm subtle" data-rdp-obj="${plan.id}:${i}" aria-label="Toggle objective"><span class="check-box ${o.done ? 'done' : ''}">${o.done ? icon('check', 12) : ''}</span></button>` : `<span class="check-box ${o.done ? 'done' : ''}">${o.done ? icon('check', 12) : ''}</span>`}<span>${esc(o.label)}</span></div>`).join('')}
+    <div class="section-title" style="font-size:13px;margin-top:10px">Check-ins</div>
+    ${plan.checkIns.length ? plan.checkIns.map((ci) => `<div class="check-item"><span>${esc(ci.note)} <span class="muted">· ${esc(ci.by)} · ${esc(ci.date)}</span></span></div>`).join('') : '<div class="muted" style="font-size:12px">No check-ins yet.</div>'}
+    ${plan.status !== 'closed' && interactive ? `
+    <textarea data-rdp-note="${plan.id}" style="width:100%;min-height:50px;border:1px solid var(--stroke-1);border-radius:4px;padding:8px;font-family:inherit;margin:8px 0" placeholder="Add a progress check-in…"></textarea>
+    <div class="row wrap" style="gap:6px">
+      <button class="btn sm" data-rdp-checkin="${plan.id}">${icon('chat', 14)} Add check-in</button>
+      <button class="btn sm primary" data-rdp-close="${plan.id}:ready">${icon('check', 14)} Mark ready</button>
+      <button class="btn sm subtle" data-rdp-close="${plan.id}:extended">${icon('clock', 14)} Extend plan</button>
+    </div>` : ''}
+    <div data-rdp-error="${plan.id}"></div>
+  </div>`;
+}
+function wireReadinessPlanControls(root, onChange) {
+  root.querySelectorAll('[data-rdp-obj]').forEach((b) => b.addEventListener('click', () => {
+    const [planId, idx] = b.getAttribute('data-rdp-obj').split(':');
+    toggleReadinessObjective(planId, Number(idx), PERSONAS[store.role].name);
+    onChange();
+  }));
+  root.querySelectorAll('[data-rdp-checkin]').forEach((b) => b.addEventListener('click', () => {
+    const planId = b.getAttribute('data-rdp-checkin');
+    const note = root.querySelector(`[data-rdp-note="${planId}"]`);
+    try {
+      addReadinessCheckIn(planId, note ? note.value : '', PERSONAS[store.role].name);
+      onChange();
+    } catch (err) {
+      const out = root.querySelector(`[data-rdp-error="${planId}"]`);
+      if (out) out.innerHTML = `<div class="muted" style="color:${COLORS.negative};font-size:12px;margin-top:6px">${esc(err.message)}</div>`;
+    }
+  }));
+  root.querySelectorAll('[data-rdp-close]').forEach((b) => b.addEventListener('click', () => {
+    const [planId, outcome] = b.getAttribute('data-rdp-close').split(':');
+    closeReadinessPlan(planId, outcome, PERSONAS[store.role].name);
+    onChange();
+  }));
+}
+
 function renderKypl(tc, container) {
   const d = store.data;
   const mentees = d.csas.filter((c) => c.resourceType === 'FTC' && c.lifecycle === 'onboarding');
   const statusOf = (c) => (kyplSessionForCsa(c.id, d) || { status: 'not-scheduled' }).status;
   const scheduled = mentees.filter((c) => statusOf(c) === 'scheduled').length;
   const completed = mentees.filter((c) => statusOf(c) === 'completed').length;
+  const persona = PERSONAS[store.role];
+  const myPlans = store.role === 'sdm' ? readinessPlansForSdm(persona.name, d) : [];
   tc.innerHTML = `
     <div class="muted mb8" style="font-size:12px">The Know Your POD Lead (KYPL) session is the new Partner CSA's first structured meeting with their POD Lead — scheduled right after their Microsoft account is provisioned, before tools &amp; access setup.</div>
     <div class="kpi-grid">
@@ -150,6 +207,10 @@ function renderKypl(tc, container) {
       ${kpiCard({ label: 'KYPL scheduled', value: scheduled, iconName: 'clock', tone: COLORS.warning })}
       ${kpiCard({ label: 'KYPL completed', value: completed, iconName: 'check', tone: COLORS.positive })}
     </div>
+    ${store.role === 'sdm' ? `
+    <div class="section-title">My readiness plans</div>
+    <div class="muted mb8" style="font-size:12px">Readiness plans a POD Lead has assigned to you (${esc(persona.name)}) to follow up on a Partner CSA's progress after their KYPL session.</div>
+    ${myPlans.length ? myPlans.map((p) => readinessPlanCardHtml(p, d.csas.find((c) => c.id === p.csaId))).join('') : `<div class="muted mb16" style="font-size:12px">No readiness plans assigned to you yet.</div>`}` : ''}
     <div class="section-title">Onboarding Partner CSAs</div>
     <div class="table-wrap mb16"><table class="grid"><thead><tr><th>Partner CSA</th><th>Vendor</th><th>POD Lead</th><th>Status</th><th>Session date</th><th>Evaluation</th><th></th></tr></thead><tbody>
       ${mentees.length ? mentees.map((c) => {
@@ -173,6 +234,7 @@ function renderKypl(tc, container) {
     <div class="section-title">Session agenda</div>
     <div class="card pad">${KYPL_AGENDA.map((t) => `<div class="check-item"><span class="check-box"></span><span>${esc(t)}</span></div>`).join('')}</div>`;
   tc.querySelectorAll('[data-kypl]').forEach((b) => b.addEventListener('click', () => openKyplDrawer(b.getAttribute('data-kypl'), tc, container)));
+  wireReadinessPlanControls(tc, () => renderKypl(tc, container));
 }
 
 function openKyplDrawer(csaId, tc, container) {
@@ -228,6 +290,21 @@ function openKyplDrawer(csaId, tc, container) {
     <button class="btn sm primary" id="kypl-eval-submit">${icon('check', 14)} Save evaluation</button>
     <div id="kypl-eval-error"></div>` : '<div class="muted" style="font-size:12px">Awaiting POD Lead evaluation.</div>';
 
+  const plan = session && session.evaluation ? readinessPlanForCsa(csaId, d) : null;
+  const canManagePlan = !!plan && (canEvaluate || PERSONAS[store.role].name === plan.sdmName);
+  const readinessSection = !session || !session.evaluation ? '' : plan ? readinessPlanCardHtml(plan, null, canManagePlan) : canEvaluate ? `
+    <div class="section-title">Create a readiness plan</div>
+    <div class="muted mb8" style="font-size:12px">A structured plan the SDM tracks until this Partner CSA is ready for unsupervised delivery.</div>
+    <label class="muted" style="font-size:12px">SDM owner</label>
+    <select class="select" id="rdp-sdm" style="width:100%;margin-bottom:10px">${SDMS.map((s) => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}</select>
+    <label class="muted" style="font-size:12px">Target readiness review date</label>
+    <input class="input" type="date" id="rdp-target" style="width:100%;margin-bottom:10px" value="${daysFromNowISO(30)}"/>
+    <label class="muted" style="font-size:12px">Objectives</label>
+    <div class="card pad mb8">${READINESS_OBJECTIVES_DEFAULT.map((o) => `<label class="check-item" style="cursor:pointer"><input type="checkbox" class="rdp-obj-check" checked value="${esc(o)}" style="margin-right:8px"/>${esc(o)}</label>`).join('')}</div>
+    <textarea id="rdp-custom" style="width:100%;min-height:40px;border:1px solid var(--stroke-1);border-radius:4px;padding:8px;font-family:inherit;margin:8px 0 10px" placeholder="Add a custom objective (optional)"></textarea>
+    <button class="btn sm primary" id="rdp-create">${icon('flag', 14)} Create readiness plan</button>
+    <div id="rdp-create-error"></div>` : '';
+
   const body = `
     <div class="field"><span class="field-key">Partner CSA</span><span class="field-val">${esc(c.name)}</span></div>
     <div class="field"><span class="field-key">Vendor</span><span class="field-val">${esc(c.vendor)}</span></div>
@@ -245,9 +322,11 @@ function openKyplDrawer(csaId, tc, container) {
       ${status === 'scheduled' ? `<button class="btn sm" id="kypl-complete">${icon('check', 14)} Mark completed</button>` : ''}
     </div>
     <div id="kypl-error"></div>` : `<div class="muted" style="font-size:12px">Completed on ${esc(session.completedAt)}.</div>`}
-    ${evaluationSection}`;
+    ${evaluationSection}
+    ${readinessSection}`;
 
   openDrawer(`Know Your POD Lead · ${esc(c.name)}`, body, (dr) => {
+    wireReadinessPlanControls(dr, () => openKyplDrawer(csaId, tc, container));
     const scheduleBtn = dr.querySelector('#kypl-schedule');
     if (scheduleBtn) scheduleBtn.addEventListener('click', () => {
       try {
@@ -284,6 +363,23 @@ function openKyplDrawer(csaId, tc, container) {
         openKyplDrawer(csaId, tc, container);
       } catch (err) {
         dr.querySelector('#kypl-eval-error').innerHTML = `<div class="muted" style="color:${COLORS.negative};font-size:12px;margin-top:6px">${esc(err.message)}</div>`;
+      }
+    });
+    const rdpCreateBtn = dr.querySelector('#rdp-create');
+    if (rdpCreateBtn) rdpCreateBtn.addEventListener('click', () => {
+      try {
+        const objectives = [...dr.querySelectorAll('.rdp-obj-check:checked')].map((el) => el.value);
+        const custom = dr.querySelector('#rdp-custom').value.trim();
+        if (custom) objectives.push(custom);
+        createReadinessPlan(csaId, {
+          sdmName: dr.querySelector('#rdp-sdm').value,
+          targetDate: dr.querySelector('#rdp-target').value,
+          objectives,
+          createdBy: PERSONAS[store.role].name,
+        });
+        openKyplDrawer(csaId, tc, container);
+      } catch (err) {
+        dr.querySelector('#rdp-create-error').innerHTML = `<div class="muted" style="color:${COLORS.negative};font-size:12px;margin-top:6px">${esc(err.message)}</div>`;
       }
     });
   });
