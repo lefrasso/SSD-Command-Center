@@ -203,19 +203,22 @@ function build() {
     contractRef: `MOSA-2026-${String(1000 + i * 7).padStart(4, '0')}`, podIds: [], ...gov('MOSA'),
   }));
 
+  // Each POD Lead runs exactly one POD (unique leadName per pod, already true above), sized to
+  // 7-13 Partner CSAs (FTC) — a realistic single-POD span of control, not a random headcount.
+  pods.forEach((pod) => { pod.targetFtc = int(7, 13); });
+  const FTC_COUNT = pods.reduce((sum, pod) => sum + pod.targetFtc, 0);
+  const FTE_COUNT = 24;
+
   const usedNames = new Set();
   const csas = [];
-  const FTC_COUNT = 202;
-  const FTE_COUNT = 24;
-  for (let i = 0; i < FTC_COUNT + FTE_COUNT; i++) {
+  let csaSeq = 0;
+  function makeCsa(pod, resourceType) {
     const partner = pick(partners);
-    const pod = pick(pods);
     const tracks = pickN(pod.tracks, int(1, pod.tracks.length));
     const trackPrograms = tracks.flatMap((t) => PROGRAMS[t] || []);
     const accreditations = pickN(trackPrograms, Math.min(trackPrograms.length, int(2, 5)));
     const tzLangs = TZ_LANGUAGES[pod.tz] || ALL_LANGUAGES;
     const languages = pickN(tzLangs, int(1, 3));
-    const resourceType = i < FTC_COUNT ? 'FTC' : 'FTE';
     const utilization = clamp(Math.round(84 + (rng() - 0.5) * 26), 62, 98);
     const cpe = round1(clamp(3.9 + rng() * 0.9, 1, 5));
     const quality = round1(clamp(3.7 + rng() * 1.1, 1, 5));
@@ -225,14 +228,19 @@ function build() {
     // S500 readiness is marked independently (e.g. in SharePoint) and then reconciled against computed eligibility.
     const s500Eligible = cpe >= 4.4 && quality >= 4.4 && tenureMonths >= 6;
     const s500Ready = s500Eligible ? chance(0.85) : chance(0.08);
+    csaSeq++;
     csas.push({
-      id: `CSA${String(i + 1).padStart(3, '0')}`, name: fullName(usedNames), vendor: vendorName,
+      id: `CSA${String(csaSeq).padStart(3, '0')}`, name: fullName(usedNames), vendor: vendorName,
       resourceType, partnerId: partner.id, podId: pod.id, tracks, accreditations, languages, skills: pickN(SKILLS, int(3, 6)),
       capacity: int(3, 6), utilization, tenureMonths, lifecycle, cpe, quality,
       s500Ready, s500Reconciled: s500Ready === s500Eligible,
       sentiment: sentimentFromScore(cpe), ...gov('Operations'),
     });
   }
+  // Partner CSAs (FTC) are assigned per-POD to its own target count — not pooled randomly — so every
+  // POD lands in the 7-13 band. Internal FTE headcount (Nebula/GSCD) still spreads randomly across PODs.
+  pods.forEach((pod) => { for (let n = 0; n < pod.targetFtc; n++) makeCsa(pod, 'FTC'); });
+  for (let i = 0; i < FTE_COUNT; i++) makeCsa(pick(pods), 'FTE');
 
   for (const p of partners) {
     const own = csas.filter((c) => c.partnerId === p.id);
