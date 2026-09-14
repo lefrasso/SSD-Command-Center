@@ -4,7 +4,9 @@ import { pageHeader, badge, aiChip, esc, kanban, openDrawer, meter, COLORS, sent
 import { icon } from '../icons.js';
 
 const STAGES = ['sourcing', 'selection', 'onboarding', 'active', 'offboarding'];
+export const LIFECYCLE_STAGES = STAGES;
 const STAGE_LABEL = { sourcing: 'Sourcing', selection: 'Selection', onboarding: 'Onboarding', active: 'Active delivery', offboarding: 'Offboarding' };
+export const LIFECYCLE_STAGE_LABEL = STAGE_LABEL;
 const ONBOARDING_PLAN = [
   { phase: 'Pre-boarding', owner: 'DPSM / Ops', tasks: ['Vendor validation & MOSA confirmation', 'Background & NDA verification', 'Provision Microsoft account & MFA'] },
   { phase: 'POD Introduction', owner: 'POD Lead', tasks: ['Know Your POD Lead (KYPL) session'] },
@@ -16,6 +18,13 @@ const ONBOARDING_PLAN = [
 const OFFBOARD_TASKS = ['Reassign open engagements', 'Knowledge transfer', 'Access removal', 'Vendor validation & sign-off'];
 
 const seedOf = (id) => [...id].reduce((a, ch) => a + ch.charCodeAt(0), 0);
+// Deterministic onboarding progress for a CSA — shared by the Resource Lifecycle drawer and the
+// POD Management onboarding summary, so both surfaces always agree on the same readiness read.
+export function onboardingReadiness(c) {
+  const total = ONBOARDING_PLAN.flatMap((p) => p.tasks).length;
+  const done = (c.lifecycle === 'active' || c.lifecycle === 'offboarding') ? total : seedOf(c.id) % (total + 1);
+  return { done, total, pct: Math.round((done / total) * 100) };
+}
 
 export function renderLifecycle(container) {
   const d = store.data;
@@ -72,7 +81,7 @@ export function renderLifecycle(container) {
   container.querySelectorAll('.kan-card').forEach((el) => el.addEventListener('click', () => openProfile(el.getAttribute('data-id'))));
 }
 
-function openProfile(id) {
+export function openProfile(id) {
   const d = store.data;
   const c = d.csas.find((x) => x.id === id);
   if (!c) return;
@@ -83,9 +92,7 @@ function openProfile(id) {
 
   const seed = seedOf(c.id);
   const ALL_ONBOARD = ONBOARDING_PLAN.flatMap((p) => p.tasks);
-  const total = ALL_ONBOARD.length;
-  const onboardDone = (c.lifecycle === 'active' || c.lifecycle === 'offboarding') ? total : seed % (total + 1);
-  const readiness = Math.round((onboardDone / total) * 100);
+  const { done: onboardDone, total, pct: readiness } = onboardingReadiness(c);
   const offDone = c.lifecycle === 'offboarding' ? seed % (OFFBOARD_TASKS.length + 1) : 0;
 
   const timeline = `<div class="timeline">${STAGES.map((s, i) => `<div class="tl-item"><div style="font-weight:${i === idx ? 700 : 400};color:${i <= idx ? 'var(--fg-1)' : 'var(--fg-4)'}">${STAGE_LABEL[s]}${i === idx ? ' · current' : ''}</div></div>`).join('')}</div>`;

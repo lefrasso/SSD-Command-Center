@@ -4,6 +4,7 @@ import { pageHeader, kpiCard, badge, statusPill, aiChip, esc, meter, utilColor, 
 import { icon } from '../icons.js';
 import { TZ_MAP, LEADERSHIP } from '../../data/generate.js';
 import { PERSONAS } from '../roles.js';
+import { LIFECYCLE_STAGES, LIFECYCLE_STAGE_LABEL, onboardingReadiness, openProfile as openCsaProfile } from './lifecycle.js';
 
 const TIER_BADGE = { Leading: 'tint-info', 'On track': 'outline', 'Needs attention': 'tint-danger' };
 
@@ -31,6 +32,14 @@ export function renderPods(container) {
 
   const avgUtil = active.length ? Math.round(active.reduce((s, c) => s + c.utilization, 0) / active.length) : 0;
   const podPerf = computePodPerformance(d).filter((p) => myPod ? p.id === myPod.id : ((tz === 'All' || p.tz === tz) && (podFilter === 'All' || p.id === podFilter))).sort((a, b) => b.score - a.score);
+
+  // Resource lifecycle summary + onboarding detail, scoped the same way as the roster below.
+  const lifecycleScope = myPod ? d.csas.filter((c) => c.podId === myPod.id) : d.csas.filter((c) => {
+    const pod = d.pods.find((p) => p.id === c.podId);
+    return (tz === 'All' || (pod && pod.tz === tz)) && (podFilter === 'All' || c.podId === podFilter);
+  });
+  const stageCounts = LIFECYCLE_STAGES.map((stage) => ({ stage, label: LIFECYCLE_STAGE_LABEL[stage], count: lifecycleScope.filter((c) => c.lifecycle === stage).length }));
+  const onboardingCsas = lifecycleScope.filter((c) => c.lifecycle === 'onboarding');
 
   // Skills coverage
   const skillCount = {};
@@ -79,6 +88,32 @@ export function renderPods(container) {
     <div class="card pad mb16">
       <div class="row mb8">${icon('sparkle', 18)}<strong>Capacity & skills insight</strong>${aiChip()}</div>
       <div>${esc(aiText)}</div>
+    </div>
+
+    <div class="section-title">Resource lifecycle${myPod ? ` — ${esc(myPod.name)}` : ''}</div>
+    <div class="card pad mb16">
+      <div class="muted mb8" style="font-size:12px">Where every FTC/FTE in scope sits today, from sourcing through offboarding.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+        ${stageCounts.map(({ label, count }) => `<div class="record-card">
+          <div class="record-label">${esc(label)}</div>
+          <div class="record-value">${count}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="section-title">Onboarding (${onboardingCsas.length})</div>
+    <div class="card pad mb16">
+      ${onboardingCsas.length ? `<div class="table-wrap"><table class="grid"><thead><tr><th>Name</th><th>Vendor</th><th>POD</th><th>Families</th><th>Tenure</th><th>Readiness</th><th></th></tr></thead><tbody>
+        ${onboardingCsas.map((c) => { const pod = d.pods.find((p) => p.id === c.podId); const r = onboardingReadiness(c); return `<tr>
+          <td><strong>${esc(c.name)}</strong></td>
+          <td>${esc(c.vendor)}</td>
+          <td>${esc(pod ? pod.name : '—')}</td>
+          <td>${esc(c.tracks.join(', '))}</td>
+          <td>${c.tenureMonths} mo</td>
+          <td><div class="row" style="gap:6px">${meter(r.pct, r.pct >= 80 ? COLORS.positive : r.pct >= 40 ? COLORS.warning : COLORS.negative)}<span>${r.done}/${r.total}</span></div></td>
+          <td><button class="btn sm" data-onboard="${c.id}">Details</button></td>
+        </tr>`; }).join('')}
+      </tbody></table></div>` : '<div class="muted">No one is currently onboarding in this scope.</div>'}
     </div>
 
     ${myPod ? '' : `<div class="card pad mb16">
@@ -166,4 +201,5 @@ export function renderPods(container) {
   const fPod = container.querySelector('#f-pod');
   if (fTz) fTz.addEventListener('change', (e) => { tz = e.target.value; podFilter = 'All'; renderPods(container); });
   if (fPod) fPod.addEventListener('change', (e) => { podFilter = e.target.value; renderPods(container); });
+  container.querySelectorAll('[data-onboard]').forEach((b) => b.addEventListener('click', () => openCsaProfile(b.getAttribute('data-onboard'))));
 }
