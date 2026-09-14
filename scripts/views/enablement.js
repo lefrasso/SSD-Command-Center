@@ -199,11 +199,15 @@ function wireReadinessPlanControls(root, onChange) {
 
 function renderKypl(tc, container) {
   const d = store.data;
-  const mentees = d.csas.filter((c) => c.resourceType === 'FTC' && c.lifecycle === 'onboarding');
+  const persona = PERSONAS[store.role];
+  // POD Leads only see the onboarding Partner CSAs in their own POD, mirroring pods.js's myPod scoping.
+  const myPod = store.role.startsWith('pod-lead')
+    ? (d.pods.find((p) => p.leadName === persona.name) || d.pods.find((p) => p.tz === persona.tz) || d.pods[0])
+    : null;
+  const mentees = d.csas.filter((c) => c.resourceType === 'FTC' && c.lifecycle === 'onboarding' && (!myPod || c.podId === myPod.id));
   const statusOf = (c) => (kyplSessionForCsa(c.id, d) || { status: 'not-scheduled' }).status;
   const scheduled = mentees.filter((c) => statusOf(c) === 'scheduled').length;
   const completed = mentees.filter((c) => statusOf(c) === 'completed').length;
-  const persona = PERSONAS[store.role];
   const myPlans = store.role === 'sdm' ? readinessPlansForSdm(persona.name, d) : [];
   tc.innerHTML = `
     <div class="muted mb8" style="font-size:12px">The Know Your POD Lead (KYPL) session is the new Partner CSA's first structured meeting with their POD Lead — scheduled right after their Microsoft account is provisioned, before tools &amp; access setup.</div>
@@ -216,7 +220,7 @@ function renderKypl(tc, container) {
     <div class="section-title">My readiness plans</div>
     <div class="muted mb8" style="font-size:12px">Readiness plans a POD Lead has assigned to you (${esc(persona.name)}) to follow up on a Partner CSA's progress after their KYPL session.</div>
     ${myPlans.length ? myPlans.map((p) => readinessPlanCardHtml(p, d.csas.find((c) => c.id === p.csaId))).join('') : `<div class="muted mb16" style="font-size:12px">No readiness plans assigned to you yet.</div>`}` : ''}
-    <div class="section-title">Onboarding Partner CSAs</div>
+    <div class="section-title">Onboarding Partner CSAs${myPod ? ` — ${esc(myPod.name)}` : ''}</div>
     <div class="table-wrap mb16"><table class="grid"><thead><tr><th>Partner CSA</th><th>Vendor</th><th>POD Lead</th><th>Status</th><th>Session date</th><th>Evaluation</th><th></th></tr></thead><tbody>
       ${mentees.length ? mentees.map((c) => {
         const pod = d.pods.find((p) => p.id === c.podId);
@@ -234,7 +238,7 @@ function renderKypl(tc, container) {
           <td>${evalBadge}</td>
           <td><button class="btn sm" data-kypl="${c.id}">${btnLabel}</button></td>
         </tr>`;
-      }).join('') : '<tr><td colspan="7" class="muted" style="padding:16px">No Partner CSAs currently in onboarding.</td></tr>'}
+      }).join('') : `<tr><td colspan="7" class="muted" style="padding:16px">No Partner CSAs currently in onboarding${myPod ? ' in your POD' : ''}.</td></tr>`}
     </tbody></table></div>
     <div class="section-title">Session agenda</div>
     <div class="card pad">${KYPL_AGENDA.map((t) => `<div class="check-item"><span class="check-box"></span><span>${esc(t)}</span></div>`).join('')}</div>`;
