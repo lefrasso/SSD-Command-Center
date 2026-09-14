@@ -1,7 +1,9 @@
 // Enablement — accreditations, S500 eligibility, SDM onboarding, Know Your POD Lead, user voice, shadowing.
-import { store, hoursSince, requestShadow, respondShadowRequest, computeS500, s500FlaggedEngagements, myCsa, kyplSessionForCsa, scheduleKyplSession, completeKyplSession } from '../store.js';
+import { store, hoursSince, requestShadow, respondShadowRequest, computeS500, s500FlaggedEngagements, myCsa, kyplSessionForCsa, scheduleKyplSession, completeKyplSession, evaluateKyplSession, daysFromNowISO } from '../store.js';
 import { pageHeader, kpiCard, esc, badge, statusPill, openDrawer, closeDrawer, COLORS } from '../components.js';
 import { icon } from '../icons.js';
+import { actionItemHtml } from '../actions.js';
+import { PERSONAS, can } from '../roles.js';
 import { PROGRAMS, TRACKS } from '../../data/generate.js';
 
 const SDM_ONBOARD = ['Role & scope orientation', 'Escalation process training', 'ADO & Power BI access', 'Partner health dashboards', 'Shadow live escalations', 'Readiness sign-off'];
@@ -124,6 +126,17 @@ function kyplStatusBadge(status) {
   return badge('Not scheduled', 'outline');
 }
 
+function kyplReadinessBadge(readiness) {
+  if (readiness === 'ready') return badge('Ready', 'tint-info');
+  if (readiness === 'needs-support') return badge('Needs support', 'tint-warn');
+  return badge('At risk', 'tint-danger');
+}
+function kyplReadinessLabel(readiness) {
+  if (readiness === 'ready') return 'Ready for unsupervised delivery';
+  if (readiness === 'needs-support') return 'Needs more support / shadowing';
+  return 'At risk — needs intervention';
+}
+
 function renderKypl(tc, container) {
   const d = store.data;
   const mentees = d.csas.filter((c) => c.resourceType === 'FTC' && c.lifecycle === 'onboarding');
@@ -138,21 +151,24 @@ function renderKypl(tc, container) {
       ${kpiCard({ label: 'KYPL completed', value: completed, iconName: 'check', tone: COLORS.positive })}
     </div>
     <div class="section-title">Onboarding Partner CSAs</div>
-    <div class="table-wrap mb16"><table class="grid"><thead><tr><th>Partner CSA</th><th>Vendor</th><th>POD Lead</th><th>Status</th><th>Session date</th><th></th></tr></thead><tbody>
+    <div class="table-wrap mb16"><table class="grid"><thead><tr><th>Partner CSA</th><th>Vendor</th><th>POD Lead</th><th>Status</th><th>Session date</th><th>Evaluation</th><th></th></tr></thead><tbody>
       ${mentees.length ? mentees.map((c) => {
         const pod = d.pods.find((p) => p.id === c.podId);
         const session = kyplSessionForCsa(c.id, d);
         const status = session ? session.status : 'not-scheduled';
         const dateLabel = status === 'completed' ? (session.completedAt || '—') : status === 'scheduled' ? (session.scheduledAt || '—') : '—';
+        const evalBadge = session && session.evaluation ? kyplReadinessBadge(session.evaluation.readiness) : status === 'completed' ? badge('Not evaluated', 'outline') : '—';
+        const btnLabel = status === 'not-scheduled' ? 'Schedule' : status === 'scheduled' ? 'Manage' : (session && session.evaluation) ? 'View' : can(store.role, 'edit:kyplEvaluation') ? 'Evaluate' : 'View';
         return `<tr>
           <td><strong>${esc(c.name)}</strong></td>
           <td>${esc(c.vendor)}</td>
           <td>${esc(pod ? pod.leadName : '—')}</td>
           <td>${kyplStatusBadge(status)}</td>
           <td>${esc(dateLabel)}</td>
-          <td><button class="btn sm" data-kypl="${c.id}">${status === 'not-scheduled' ? 'Schedule' : status === 'scheduled' ? 'Manage' : 'View'}</button></td>
+          <td>${evalBadge}</td>
+          <td><button class="btn sm" data-kypl="${c.id}">${btnLabel}</button></td>
         </tr>`;
-      }).join('') : '<tr><td colspan="6" class="muted" style="padding:16px">No Partner CSAs currently in onboarding.</td></tr>'}
+      }).join('') : '<tr><td colspan="7" class="muted" style="padding:16px">No Partner CSAs currently in onboarding.</td></tr>'}
     </tbody></table></div>
     <div class="section-title">Session agenda</div>
     <div class="card pad">${KYPL_AGENDA.map((t) => `<div class="check-item"><span class="check-box"></span><span>${esc(t)}</span></div>`).join('')}</div>`;
@@ -166,6 +182,52 @@ function openKyplDrawer(csaId, tc, container) {
   const pod = d.pods.find((p) => p.id === c.podId);
   const session = kyplSessionForCsa(csaId, d);
   const status = session ? session.status : 'not-scheduled';
+  const canEvaluate = can(store.role, 'edit:kyplEvaluation');
+  const linkedAction = session && session.evaluation && session.evaluation.actionId ? d.actions.find((a) => a.id === session.evaluation.actionId) : null;
+
+  const evaluationSection = status !== 'completed' ? '' : session.evaluation ? `
+    <div class="section-title">PCSA evaluation</div>
+    <div class="card pad mb16" style="background:var(--bg-2)">
+      <div class="row wrap mb8" style="justify-content:space-between;gap:8px">
+        <div class="row" style="gap:6px">${kyplReadinessBadge(session.evaluation.readiness)}<strong>${session.evaluation.rating}/5</strong></div>
+        <span class="muted" style="font-size:12px">${esc(session.evaluation.evaluatedBy)} · ${esc(session.evaluation.evaluatedAt.slice(0, 10))}</span>
+      </div>
+      <div style="font-size:13px;margin-bottom:6px">${esc(kyplReadinessLabel(session.evaluation.readiness))}</div>
+      ${session.evaluation.strengths ? `<div class="field"><span class="field-key">Strengths</span><span class="field-val">${esc(session.evaluation.strengths)}</span></div>` : ''}
+      ${session.evaluation.concerns ? `<div class="field"><span class="field-key">Concerns</span><span class="field-val">${esc(session.evaluation.concerns)}</span></div>` : ''}
+      ${linkedAction ? `<div class="mt8">${actionItemHtml(linkedAction)}</div>` : ''}
+    </div>` : canEvaluate ? `
+    <div class="section-title">Evaluate Partner CSA</div>
+    <label class="muted" style="font-size:12px">Overall rating</label>
+    <select class="select" id="kypl-eval-rating" style="width:100%;margin-bottom:10px">
+      <option value="5">5 — Excellent first impression</option>
+      <option value="4">4 — Strong</option>
+      <option value="3" selected>3 — Solid, some follow-up needed</option>
+      <option value="2">2 — Concerns raised</option>
+      <option value="1">1 — Significant concerns</option>
+    </select>
+    <label class="muted" style="font-size:12px">Readiness call</label>
+    <select class="select" id="kypl-eval-readiness" style="width:100%;margin-bottom:10px">
+      <option value="ready">Ready for unsupervised delivery</option>
+      <option value="needs-support" selected>Needs more support / shadowing</option>
+      <option value="not-ready">At risk — needs intervention</option>
+    </select>
+    <label class="muted" style="font-size:12px">Strengths (optional)</label>
+    <textarea id="kypl-eval-strengths" style="width:100%;min-height:50px;border:1px solid var(--stroke-1);border-radius:4px;padding:8px;font-family:inherit;margin:6px 0 10px" placeholder="What stood out positively?"></textarea>
+    <label class="muted" style="font-size:12px">Concerns / follow-up needed (optional)</label>
+    <textarea id="kypl-eval-concerns" style="width:100%;min-height:50px;border:1px solid var(--stroke-1);border-radius:4px;padding:8px;font-family:inherit;margin:6px 0 10px" placeholder="Anything that needs follow-up?"></textarea>
+    <label class="row" style="gap:6px;font-size:13px;margin:4px 0 10px"><input type="checkbox" id="kypl-eval-assign"/> Assign a follow-up activity to the SDM</label>
+    <div id="kypl-eval-assign-fields" hidden>
+      <label class="muted" style="font-size:12px">SDM</label>
+      <select class="select" id="kypl-eval-sdm" style="width:100%;margin-bottom:10px">${SDMS.map((s) => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}</select>
+      <label class="muted" style="font-size:12px">Activity</label>
+      <textarea id="kypl-eval-activity" style="width:100%;min-height:50px;border:1px solid var(--stroke-1);border-radius:4px;padding:8px;font-family:inherit;margin:6px 0 10px" placeholder="e.g. Check in on ${esc(c.name)}'s ramp-up in 2 weeks.">${esc(`Follow up on ${c.name}'s KYPL evaluation`)}</textarea>
+      <label class="muted" style="font-size:12px">Due date</label>
+      <input class="input" type="date" id="kypl-eval-due" style="width:100%;margin-bottom:10px" value="${daysFromNowISO(7)}"/>
+    </div>
+    <button class="btn sm primary" id="kypl-eval-submit">${icon('check', 14)} Save evaluation</button>
+    <div id="kypl-eval-error"></div>` : '<div class="muted" style="font-size:12px">Awaiting POD Lead evaluation.</div>';
+
   const body = `
     <div class="field"><span class="field-key">Partner CSA</span><span class="field-val">${esc(c.name)}</span></div>
     <div class="field"><span class="field-key">Vendor</span><span class="field-val">${esc(c.vendor)}</span></div>
@@ -182,7 +244,8 @@ function openKyplDrawer(csaId, tc, container) {
       <button class="btn sm primary" id="kypl-schedule">${icon('clock', 14)} ${status === 'scheduled' ? 'Update schedule' : 'Schedule session'}</button>
       ${status === 'scheduled' ? `<button class="btn sm" id="kypl-complete">${icon('check', 14)} Mark completed</button>` : ''}
     </div>
-    <div id="kypl-error"></div>` : `<div class="muted" style="font-size:12px">Completed on ${esc(session.completedAt)}.</div>`}`;
+    <div id="kypl-error"></div>` : `<div class="muted" style="font-size:12px">Completed on ${esc(session.completedAt)}.</div>`}
+    ${evaluationSection}`;
 
   openDrawer(`Know Your POD Lead · ${esc(c.name)}`, body, (dr) => {
     const scheduleBtn = dr.querySelector('#kypl-schedule');
@@ -200,6 +263,28 @@ function openKyplDrawer(csaId, tc, container) {
       completeKyplSession(csaId, dr.querySelector('#kypl-notes').value);
       closeDrawer();
       renderKypl(tc, container);
+    });
+    const assignToggle = dr.querySelector('#kypl-eval-assign');
+    if (assignToggle) assignToggle.addEventListener('change', () => { dr.querySelector('#kypl-eval-assign-fields').hidden = !assignToggle.checked; });
+    const evalBtn = dr.querySelector('#kypl-eval-submit');
+    if (evalBtn) evalBtn.addEventListener('click', () => {
+      try {
+        const assignActivity = dr.querySelector('#kypl-eval-assign').checked;
+        evaluateKyplSession(csaId, {
+          rating: dr.querySelector('#kypl-eval-rating').value,
+          readiness: dr.querySelector('#kypl-eval-readiness').value,
+          strengths: dr.querySelector('#kypl-eval-strengths').value,
+          concerns: dr.querySelector('#kypl-eval-concerns').value,
+          assignActivity,
+          sdmName: assignActivity ? dr.querySelector('#kypl-eval-sdm').value : '',
+          activityTitle: assignActivity ? dr.querySelector('#kypl-eval-activity').value : '',
+          due: assignActivity ? dr.querySelector('#kypl-eval-due').value : '',
+          evaluatedBy: PERSONAS[store.role].name,
+        });
+        openKyplDrawer(csaId, tc, container);
+      } catch (err) {
+        dr.querySelector('#kypl-eval-error').innerHTML = `<div class="muted" style="color:${COLORS.negative};font-size:12px;margin-top:6px">${esc(err.message)}</div>`;
+      }
     });
   });
 }

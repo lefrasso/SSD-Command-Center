@@ -5,6 +5,7 @@ import { pageHeader, aiChip, esc, sentimentPill } from '../components.js';
 import { icon } from '../icons.js';
 import { suggestReply, toneCheck, summarizeThread } from '../ai.js';
 import { openAssignActionDrawer, actionItemHtml, wireActionToggles } from '../actions.js';
+import { navigate } from '../router.js';
 
 const TEMPLATES = {
   '': '',
@@ -43,9 +44,17 @@ export function renderMessages(container, threadParam = '') {
   const me = PERSONAS[store.role].name;
   const acts = cur ? actionsByThread(cur.tid).slice().sort((a, b) => (a.status === 'done') - (b.status === 'done') || String(a.due).localeCompare(String(b.due))) : [];
   const openCount = acts.filter((a) => a.status !== 'done').length;
+  const myActions = d.actions.filter((a) => a.ownerName === me).sort((a, b) => (a.status === 'done') - (b.status === 'done') || String(a.due).localeCompare(String(b.due)));
+  const myOpenCount = myActions.filter((a) => a.status !== 'done').length;
 
   container.innerHTML = `
     ${pageHeader({ title: 'Messages Console', description: 'Every thread is tied to an engagement record in SSD IQ, with action follow-through and communication history tracked as part of the platform source-of-truth.' })}
+
+    <div class="card pad mb16" id="my-assignments">
+      <div class="row mb8" style="justify-content:space-between"><strong style="font-size:14px">${icon('flag', 16)} My assignments</strong><span class="muted" style="font-size:12px">${esc(PERSONAS[store.role].title)} · ${myOpenCount} open</span></div>
+      ${myActions.length ? myActions.slice(0, 8).map((a) => actionItemHtml(a, { showSource: true, withOpen: true })).join('') : `<div class="muted" style="font-size:12px">No activities are currently assigned to ${esc(me)}. Switch roles (top-right) to demo another persona's assignments — e.g. assign a KYPL follow-up to an SDM in Enablement, then switch to that SDM here.</div>`}
+    </div>
+
     <div class="msg-layout">
       <div class="thread-list">
         ${list.map((t) => `<div class="thread-item ${t.tid === selectedThread ? 'active' : ''}" data-tid="${t.tid}">
@@ -83,8 +92,15 @@ export function renderMessages(container, threadParam = '') {
     </div>`;
 
   container.querySelectorAll('[data-tid]').forEach((el) => el.addEventListener('click', () => { selectedThread = el.getAttribute('data-tid'); aiNote = ''; renderMessages(container); }));
+  wireActionToggles(container, () => renderMessages(container));
+  const myAssignEl = container.querySelector('#my-assignments');
+  if (myAssignEl) myAssignEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-open]'); if (!btn) return;
+    const v = btn.getAttribute('data-open');
+    if (v.startsWith('thread:')) { selectedThread = v.slice(7); appliedParam = null; renderMessages(container); }
+    else if (v === 'esc') navigate('/escalations');
+  });
   if (!cur) return;
-  wireActionToggles(container);
   container.querySelector('#assign-action').addEventListener('click', () => openAssignActionDrawer({ engagementId: cur.eng.id, threadId: cur.tid }));
   container.querySelectorAll('.assign-from-msg').forEach((b) => b.addEventListener('click', () => {
     const m = cur.msgs.find((x) => x.id === b.getAttribute('data-msg'));

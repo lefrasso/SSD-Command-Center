@@ -638,6 +638,30 @@ export function completeKyplSession(csaId, notes = '') {
   session.audit.push({ at: now, who: store.role, action: 'KYPL session completed' });
   emit('data');
 }
+const KYPL_READINESS = ['ready', 'needs-support', 'not-ready'];
+export function evaluateKyplSession(csaId, { rating, readiness, strengths = '', concerns = '', assignActivity = false, sdmName = '', activityTitle = '', due = '', evaluatedBy = '' } = {}) {
+  const session = store.data.kyplSessions.find((k) => k.csaId === csaId);
+  if (!session) throw new Error('Schedule and complete the KYPL session before evaluating.');
+  if (session.status !== 'completed') throw new Error('Complete the KYPL session before evaluating.');
+  const ratingNum = Number(rating);
+  if (!Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) throw new Error('Rating must be between 1 and 5.');
+  if (!KYPL_READINESS.includes(readiness)) throw new Error('Select a readiness call.');
+  let actionId = null;
+  if (assignActivity) {
+    if (!sdmName) throw new Error('Select an SDM to assign the activity to.');
+    if (!String(activityTitle || '').trim()) throw new Error('Describe the activity for the SDM.');
+    actionId = addAction({ title: activityTitle.trim(), ownerName: sdmName, due: due || undefined, status: 'open', source: 'kypl', kyplSessionId: session.id });
+  }
+  const now = new Date().toISOString();
+  session.evaluation = {
+    rating: ratingNum, readiness, strengths: String(strengths || '').trim(), concerns: String(concerns || '').trim(),
+    evaluatedBy: evaluatedBy || store.role, evaluatedAt: now, actionId,
+  };
+  session.updatedAt = now;
+  session.audit.push({ at: now, who: evaluatedBy || store.role, action: `PCSA evaluated (${readiness}, rating ${ratingNum}/5)${actionId ? ` — activity assigned to ${sdmName}` : ''}` });
+  emit('data');
+  return session.evaluation;
+}
 
 let ipfSeq = store.data.ipFeedback.reduce((max, f) => Math.max(max, Number(f.id.replace(/^IPF/, '')) || 0), 0) + 1;
 export function addIpFeedback({ engagementId, rating, tag, comment }) {
@@ -795,10 +819,10 @@ export function addMessage(threadId, engagementId, from, to, body, sentiment) {
   store.data.messages.push({ id, threadId, engagementId, from, to, body, timestamp: new Date().toISOString(), sentiment: sentiment || 'neutral', sourceOfTruth: 'Teams', updatedAt: new Date().toISOString().slice(0, 10), audit: [{ at: new Date().toISOString(), who: 'you', action: 'message sent' }] });
   emit('data');
 }
-export function addAction({ engagementId = null, threadId = null, escalationId = null, cpeId = null, successStoryId = null, sentimentSignalId = null, source = null, title, ownerName, due, status }) {
+export function addAction({ engagementId = null, threadId = null, escalationId = null, cpeId = null, successStoryId = null, sentimentSignalId = null, kyplSessionId = null, source = null, title, ownerName, due, status }) {
   const id = `ACT${actSeq++}`;
-  const actionSource = source || (escalationId ? 'escalation' : sentimentSignalId ? 'sentiment' : threadId ? 'message' : cpeId ? 'success-story' : 'action');
-  store.data.actions.unshift({ id, escalationId, threadId, engagementId, cpeId, successStoryId, sentimentSignalId, title: title || 'Follow-up action', ownerName: ownerName || 'Unassigned', due: due || daysFromNowISO(7), status: status || 'open', source: actionSource, sourceOfTruth: 'Azure DevOps', updatedAt: todayISO(), audit: [{ at: new Date().toISOString(), who: 'you', action: 'action assigned' }] });
+  const actionSource = source || (escalationId ? 'escalation' : sentimentSignalId ? 'sentiment' : threadId ? 'message' : cpeId ? 'success-story' : kyplSessionId ? 'kypl' : 'action');
+  store.data.actions.unshift({ id, escalationId, threadId, engagementId, cpeId, successStoryId, sentimentSignalId, kyplSessionId, title: title || 'Follow-up action', ownerName: ownerName || 'Unassigned', due: due || daysFromNowISO(7), status: status || 'open', source: actionSource, sourceOfTruth: 'Azure DevOps', updatedAt: todayISO(), audit: [{ at: new Date().toISOString(), who: 'you', action: 'action assigned' }] });
   if (escalationId) { const e = byId(store.data.escalations, escalationId); if (e) (e.actionIds = e.actionIds || []).push(id); }
   emit('data');
   return id;

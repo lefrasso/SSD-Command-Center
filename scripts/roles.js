@@ -31,7 +31,7 @@ export const ALL_PERMISSIONS = [
   'edit:successStories', 'assign:successStoryActions', 'review:successStories',
   'approve:podSuccessStories', 'approve:leadershipSuccessStories', 'approve:ltSuccessStories', 'publish:successStories',
   'view:pip', 'edit:pip', 'edit:dispatch', 'edit:escalation', 'edit:capacity', 'raise:escalation',
-  'decide:ipFeedback',
+  'decide:ipFeedback', 'edit:kyplEvaluation',
   'manage:accessControl',
 ];
 export const PERMISSION_LABELS = {
@@ -52,14 +52,15 @@ export const PERMISSION_LABELS = {
   'edit:capacity': 'Edit capacity plans & headcount mapping',
   'raise:escalation': 'Raise a delivery concern (CSAM intake)',
   'decide:ipFeedback': 'Confirm, reject or postpone IP Feedback changes (IP Lead)',
+  'edit:kyplEvaluation': 'Evaluate a Partner CSA after their KYPL session (POD Lead)',
   'manage:accessControl': 'Manage roles & permissions (Platform Admin)',
 };
 
 const ROLE_PERMISSIONS = {
   'ww-lead': ['view:portfolio', 'view:allPartners', 'run:mbr', 'view:pip', 'edit:successStories', 'approve:leadershipSuccessStories', 'approve:ltSuccessStories'],
   'tz-lead': ['view:portfolio', 'view:allPartners', 'run:mbr', 'view:pip', 'edit:successStories', 'approve:leadershipSuccessStories', 'approve:ltSuccessStories'],
-  'csa-manager': ['view:portfolio', 'view:pip', 'edit:pip', 'edit:dispatch', 'edit:escalation', 'edit:capacity', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:podSuccessStories', 'publish:successStories', 'assign:successStoryActions'],
-  'pod-lead': ['view:portfolio', 'view:pip', 'edit:pip', 'edit:dispatch', 'edit:escalation', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:podSuccessStories', 'publish:successStories', 'assign:successStoryActions'],
+  'csa-manager': ['view:portfolio', 'view:pip', 'edit:pip', 'edit:dispatch', 'edit:escalation', 'edit:capacity', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:podSuccessStories', 'publish:successStories', 'assign:successStoryActions', 'edit:kyplEvaluation'],
+  'pod-lead': ['view:portfolio', 'view:pip', 'edit:pip', 'edit:dispatch', 'edit:escalation', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:podSuccessStories', 'publish:successStories', 'assign:successStoryActions', 'edit:kyplEvaluation'],
   'business-manager': ['view:portfolio', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:leadershipSuccessStories', 'approve:ltSuccessStories'],
   csa: ['edit:successStories'],
   'adoption-lead': ['view:portfolio'],
