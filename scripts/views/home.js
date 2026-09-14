@@ -4,6 +4,7 @@ import { PERSONAS } from '../roles.js';
 import { dailyBriefing } from '../ai.js';
 import { navigate } from '../router.js';
 import { TRACKS, LEADERSHIP } from '../../data/generate.js';
+import { daysUntilDue } from '../t3w.js';
 import {
   pageHeader, kpiCard, aiChip, badge, severityPill, esc,
   scoreColor, utilColor, COLORS, CHART_PALETTE, clearCharts, donut, bar,
@@ -69,6 +70,31 @@ export function renderHome(container) {
     return { pod, avgUtil, avgCpe, atRisk, openEsc, headcount: active.length };
   });
 
+  // "POD Lead superpowers" — the True North proof strip: each tile is a real, live read of the
+  // automation/visibility the platform already delivers, not an aspiration (see the vision brief:
+  // less chaos, more impact — smarter tools, automation, visibility, peace of mind).
+  const podsHealthy = podHealth.filter((p) => p.avgUtil >= 76 && p.avgUtil <= 92).length;
+  const podsAllGreen = podHealth.filter((p) => p.atRisk === 0 && p.openEsc === 0).length;
+  const qcIssues = d.cpe.filter((c) => c.score < 3.6).length;
+  const atRiskCount = filteredEngs.filter((e) => e.atRisk).length;
+  const shadowTotal = d.shadowRequests.length;
+  const shadowConfirmed = d.shadowRequests.filter((s) => s.status === 'confirmed').length;
+  const kyplTotal = d.kyplSessions.length;
+  const kyplDone = d.kyplSessions.filter((s) => s.status === 'completed').length;
+  const reportsPending = d.engagements.filter((e) => e.status !== 'complete' && daysUntilDue(e) < 0).length;
+  const superpowers = [
+    { label: 'QC', iconName: 'check', title: 'Auto-detected issues', detail: `${qcIssues} flagged automatically`, tone: qcIssues ? COLORS.warning : COLORS.positive, to: '/quality' },
+    { label: 'Escalations', iconName: 'warning', title: 'Categorized & prioritized', detail: `${k.openEscalations} open · ${k.slaBreaches} breaching SLA`, tone: k.slaBreaches ? COLORS.negative : k.openEscalations ? COLORS.warning : COLORS.positive, to: '/escalations' },
+    { label: 'PODs', iconName: 'people', title: 'Healthy, aligned & visible', detail: `${podsHealthy}/${podHealth.length} in the healthy utilization band`, tone: podsHealthy === podHealth.length ? COLORS.positive : COLORS.warning, to: '/pods' },
+    { label: 'Deliveries', iconName: 'send', title: 'On track & risk-free', detail: `${k.onTimePct}% on-time · ${atRiskCount} at risk`, tone: atRiskCount ? COLORS.warning : COLORS.positive, to: '/engagements' },
+    { label: 'Shadows', iconName: 'sun', title: 'Scheduled automatically', detail: `${shadowConfirmed}/${shadowTotal} shadow requests confirmed`, tone: shadowTotal && shadowConfirmed < shadowTotal ? COLORS.warning : COLORS.positive, to: '/pods' },
+    { label: 'Onboarding', iconName: 'personAdd', title: 'Tracked & complete — no follow-ups', detail: `${kyplDone}/${kyplTotal} KYPL sessions complete`, tone: kyplTotal && kyplDone < kyplTotal ? COLORS.warning : COLORS.positive, to: '/enablement?tab=kypl' },
+    { label: 'CSAMs', iconName: 'emoji', title: 'Happy & complimentary', detail: `Net sentiment ${k.netSentiment > 0 ? '+' + k.netSentiment : k.netSentiment}`, tone: k.netSentiment >= 0 ? COLORS.positive : COLORS.negative, to: '/sentiment' },
+    { label: 'Reports', iconName: 'report', title: 'Auto-generated — while you sleep', detail: `${reportsPending} pending report${reportsPending === 1 ? '' : 's'}`, tone: reportsPending ? COLORS.negative : COLORS.positive, to: '/reports-pending' },
+    { label: 'QBRs', iconName: 'trending', title: 'Slides ready in one click', detail: 'One-click MBR deck export is live', tone: COLORS.positive, to: '/reporting' },
+    { label: 'POD Health', iconName: 'grid', title: 'All green', detail: `${podsAllGreen}/${podHealth.length} pods all green`, tone: podsAllGreen === podHealth.length ? COLORS.positive : COLORS.warning, to: '/pods' },
+  ];
+
   const trackOpts = ['All', ...TRACKS].map((t) => `<option value="${esc(t)}" ${t === track ? 'selected' : ''}>${t === 'All' ? 'All families' : esc(t)}</option>`).join('');
   const partnerOpts = ['All', ...d.partners.map((p) => p.id)].map((p) => { const label = p === 'All' ? 'All partners' : d.partners.find((x) => x.id === p).name; return `<option value="${esc(p)}" ${p === partner ? 'selected' : ''}>${esc(label)}</option>`; }).join('');
 
@@ -79,6 +105,26 @@ export function renderHome(container) {
       actions: `<select class="select" id="f-track" aria-label="Filter by family">${trackOpts}</select>
                 <select class="select" id="f-partner" aria-label="Filter by partner">${partnerOpts}</select>`,
     })}
+
+    <div class="card pad mb16">
+      <div class="row wrap" style="justify-content:space-between;gap:8px">
+        <strong style="font-size:16px">POD Lead superpowers, unlocked</strong>
+        <span class="muted" style="font-size:12px">Smarter tools · automation · visibility · peace of mind — less chaos, more impact.</span>
+      </div>
+      <hr class="divider"/>
+      <div class="pod-grid mt8" id="superpowers-grid">
+        ${superpowers.map((s) => `
+          <div class="card pod-card" data-nav="${esc(s.to)}" style="cursor:pointer">
+            <div class="row" style="justify-content:space-between">
+              <span style="color:${s.tone}">${icon(s.iconName, 18)}</span>
+              <span class="dot" style="background:${s.tone}"></span>
+            </div>
+            <strong style="font-size:13px">${esc(s.label)}</strong>
+            <div class="muted" style="font-size:11px">${esc(s.title)}</div>
+            <div style="font-size:12px;font-weight:600">${esc(s.detail)}</div>
+          </div>`).join('')}
+      </div>
+    </div>
 
     <div class="kpi-grid">
       ${kpiCard({ label: 'Active engagements', value: k.activeEngagements, iconName: 'send', hint: 'Assigned + in delivery' })}
@@ -199,6 +245,10 @@ export function renderHome(container) {
   // Events
   container.querySelector('#f-track').addEventListener('change', (e) => { track = e.target.value; renderHome(container); });
   container.querySelector('#f-partner').addEventListener('change', (e) => { partner = e.target.value; renderHome(container); });
+  container.querySelector('#superpowers-grid').addEventListener('click', (e) => {
+    const card = e.target.closest('[data-nav]');
+    if (card) navigate(card.getAttribute('data-nav'));
+  });
   container.querySelector('#attn-list').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-q]');
     if (btn) navigate(`/ssdiq?q=${encodeURIComponent(btn.getAttribute('data-q'))}`);
