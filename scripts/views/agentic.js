@@ -2,15 +2,20 @@
 // post-delivery, plus in-flight feedback and an urgent "ask for support" fast path.
 import {
   store, addIpFeedback, engagementFeedbackFor, addEngagementFeedback, addEscalation,
+  syncAgentSchedule, runAgentNow, runAllAgentsNow, setAgentSchedule,
 } from '../store.js';
 import { pageHeader, kpiCard, aiChip, esc, badge, sentimentPill, COLORS, openDrawer } from '../components.js';
 import { icon } from '../icons.js';
 import { generateDeliverable } from '../ai.js';
 import { PERSONAS } from '../roles.js';
 import { IP_ASSETS, IP_TAGS } from '../../data/generate.js';
-import { PHASES, COMMON_AGENTS, EXPERT_AGENTS, phaseForEngagement, buildEngagementSupport } from '../agenticSupportAgents.js';
+import { PHASES, COMMON_AGENTS, EXPERT_AGENTS, SCHEDULES, phaseForEngagement, agentsForEngagement } from '../agenticSupportAgents.js';
+import { computeT3W, T3W_WINDOW_DAYS } from '../t3w.js';
 
 let generated = 0;
+
+const T3W_RISK = { 'not-started': 'medium', 'in-progress': 'low', 'on-track': 'low' };
+const RISK_RANK = { low: 0, medium: 1, high: 2 };
 
 function phasePill(phase) {
   const label = PHASES.find(([k]) => k === phase)?.[1] || phase;
@@ -30,6 +35,53 @@ function phaseStepper(currentPhase) {
     const ic = state === 'done' ? 'check' : state === 'current' ? 'sparkle' : 'clock';
     return `${i > 0 ? `<span class="muted">${icon('chevronRight', 14)}</span>` : ''}<span class="pill" style="color:${color}">${icon(ic, 14)}<span class="pill-label">${esc(label)}</span></span>`;
   }).join('')}</div>`;
+}
+
+function relativeTime(iso) {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.round(hrs / 24)}d ago`;
+}
+function agentStatusPill(state) {
+  if (!state.lastRunAt) return badge('Not run yet', 'outline');
+  return badge(`${state.lastTrigger === 'scheduled' ? 'Auto-ran' : 'Ran'} ${relativeTime(state.lastRunAt)}`, state.lastTrigger === 'scheduled' ? 'tint-info' : 'outline');
+}
+function agentOutputHtml(output) {
+  if (output == null) return '<div class="muted" style="font-size:13px">Not run yet — click "Run now" or leave it on a schedule.</div>';
+  if (Array.isArray(output)) return output.map((t) => `<div class="check-item"><span class="check-box"></span><span>${esc(t)}</span></div>`).join('');
+  return `<div style="font-size:13px">${esc(output)}</div>`;
+}
+function agentCardHtml(agentMeta, engagementId) {
+  const state = syncAgentSchedule(engagementId, agentMeta.id);
+  return `<div class="card pad mb8" style="background:var(--bg-2)">
+    <div class="row wrap" style="justify-content:space-between;gap:8px">
+      <div class="row">${icon(agentMeta.icon, 16)}<strong>${esc(agentMeta.name)}</strong><span class="muted" style="font-size:12px">· ${esc(agentMeta.role)}</span></div>
+      ${agentStatusPill(state)}
+    </div>
+    <div class="mt8">${agentOutputHtml(state.lastOutput)}</div>
+    <div class="row wrap mt8" style="gap:6px">
+      <button class="btn sm" data-run-agent="${agentMeta.id}">${icon('sparkle', 14)} Run now</button>
+      <select class="select" data-schedule-agent="${agentMeta.id}" style="height:26px;font-size:12px">${SCHEDULES.map(([k, label]) => `<option value="${k}" ${state.schedule === k ? 'selected' : ''}>${esc(label)}</option>`).join('')}</select>
+      ${state.runCount ? `<span class="muted" style="font-size:11px">${state.runCount} run(s)</span>` : ''}
+    </div>
+  </div>`;
+}
+
+function t3wCardHtml(engagement) {
+  const t3w = computeT3W(engagement);
+  const color = t3w.status === 'overdue' || t3w.status === 'not-started' ? COLORS.negative : t3w.status === 'in-progress' ? COLORS.warning : COLORS.positive;
+  const window = t3w.inWindow ? `Due in ${t3w.daysUntil}d — within the ${T3W_WINDOW_DAYS}-day T-3W window.` : t3w.status === 'overdue' ? `${Math.abs(t3w.daysUntil)}d past due.` : `Due in ${t3w.daysUntil}d — outside the ${T3W_WINDOW_DAYS}-day T-3W window yet.`;
+  return `<div class="card pad mb16" style="border-left:4px solid ${color}">
+    <div class="row" style="justify-content:space-between">
+      <div class="row">${icon('send', 16)}<strong>T-3W proactive tracker</strong></div>
+      <span class="pill" style="color:${color}"><span class="pill-label">${esc(t3w.label)}</span></span>
+    </div>
+    <div class="mt8" style="font-size:13px">${esc(window)} ${t3w.outreach}/4 Day 0–3 outreach touches logged.</div>
+    <a class="btn sm subtle mt8" href="#/reports-pending">${icon('clock', 14)} Open T-3W tracker ${icon('chevronRight', 12)}</a>
+  </div>`;
 }
 
 export function renderAgentic(container) {
@@ -62,7 +114,12 @@ export function renderAgentic(container) {
         const c = d.csas.find((x) => x.id === e.assignedTo);
         const phase = phaseForEngagement(e);
         const openEsc = d.escalations.filter((x) => x.engagementId === e.id && x.status !== 'resolved');
-        const risk = openEsc.length ? 'high' : e.atRisk ? 'medium' : 'low';
+        let risk = openEsc.length ? 'high' : e.atRisk ? 'medium' : 'low';
+        if (phase === 'pre-delivery') {
+          const t3w = computeT3W(e);
+          const t3wRisk = t3w.status === 'overdue' ? 'high' : t3w.inWindow ? T3W_RISK[t3w.status] : 'low';
+          if (RISK_RANK[t3wRisk] > RISK_RANK[risk]) risk = t3wRisk;
+        }
         return `<tr>
         <td><strong>${esc(e.customer)}</strong>${e.s500Customer ? ` ${badge('S500', 'tint-info')}` : ''}</td>
         <td>${esc(c ? c.name : '—')}</td>
@@ -108,7 +165,8 @@ function openSupportDrawer(engagementId, container) {
   const e = d.engagements.find((x) => x.id === engagementId);
   if (!e) return;
   const csa = d.csas.find((x) => x.id === e.assignedTo);
-  const support = buildEngagementSupport(e, d);
+  const phase = phaseForEngagement(e);
+  const roster = agentsForEngagement(e);
   const feedback = [...engagementFeedbackFor(e.id, d)].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   const body = `
@@ -119,21 +177,18 @@ function openSupportDrawer(engagementId, container) {
     <div class="field"><span class="field-key">Due date</span><span class="field-val">${esc(e.dueDate)}</span></div>
 
     <div class="section-title">Delivery phase</div>
-    ${phaseStepper(support.phase)}
+    ${phaseStepper(phase)}
 
-    <div class="section-title">Common agents${aiChip()}</div>
-    ${support.common.map((c) => `<div class="card pad mb8" style="background:var(--bg-2)">
-      <div class="row mb8">${icon(c.agent.icon, 16)}<strong>${esc(c.agent.name)}</strong><span class="muted" style="font-size:12px">· ${esc(c.agent.role)}</span></div>
-      <div style="font-size:13px">${esc(c.text)}</div>
-    </div>`).join('')}
+    ${phase === 'pre-delivery' ? t3wCardHtml(e) : ''}
 
-    ${support.expert ? `<div class="section-title">${esc(support.expert.agent.track)} specialist</div>
-    <div class="card pad mb16" style="background:var(--bg-2)">
-      <div class="row mb8">${icon(support.expert.agent.icon, 16)}<strong>${esc(support.expert.agent.name)}</strong><span class="muted" style="font-size:12px">· ${esc(support.expert.agent.role)}</span></div>
-      ${support.expert.tips.map((t) => `<div class="check-item"><span class="check-box"></span><span>${esc(t)}</span></div>`).join('')}
-    </div>` : ''}
+    <div class="row mb8" style="justify-content:space-between">
+      <div class="section-title" style="margin:0">Delivery agents${aiChip()}</div>
+      <button class="btn sm subtle" id="sp-run-all">${icon('sparkle', 14)} Run all agents now</button>
+    </div>
+    <div class="muted mb8" style="font-size:12px">Each agent runs on its own schedule (by default, whenever the phase changes) — run one on demand, or change its schedule.</div>
+    ${roster.map((a) => agentCardHtml(a, e.id)).join('')}
 
-    <div class="section-title">Agent actions</div>
+    <div class="section-title">Other actions</div>
     <div class="row wrap mb8" style="gap:6px">
       <button class="btn sm" id="sp-generate">${icon('sparkle', 14)} Generate deliverable</button>
       <button class="btn sm subtle" id="sp-rate-kit">${icon('star', 14)} Rate IP Kit</button>
@@ -163,6 +218,18 @@ function openSupportDrawer(engagementId, container) {
     </div>`).join('')}</div>` : '<div class="muted">No feedback logged yet for this engagement.</div>'}`;
 
   openDrawer(`Support plan · ${esc(e.customer)}`, body, (dr) => {
+    dr.querySelector('#sp-run-all').addEventListener('click', () => {
+      runAllAgentsNow(e.id);
+      openSupportDrawer(e.id, container);
+    });
+    dr.querySelectorAll('[data-run-agent]').forEach((b) => b.addEventListener('click', () => {
+      runAgentNow(e.id, b.getAttribute('data-run-agent'));
+      openSupportDrawer(e.id, container);
+    }));
+    dr.querySelectorAll('[data-schedule-agent]').forEach((s) => s.addEventListener('change', () => {
+      setAgentSchedule(e.id, s.getAttribute('data-schedule-agent'), s.value);
+      openSupportDrawer(e.id, container);
+    }));
     dr.querySelector('#sp-generate').addEventListener('click', () => {
       const r = generateDeliverable(e, d);
       generated += 1;
@@ -202,7 +269,7 @@ function openSupportDrawer(engagementId, container) {
       try {
         const msg = dr.querySelector('#sp-feedback-msg').value;
         const persona = PERSONAS[store.role];
-        addEngagementFeedback({ engagementId: e.id, phase: support.phase, message: msg, authorName: persona.name, authorRole: persona.title });
+        addEngagementFeedback({ engagementId: e.id, phase, message: msg, authorName: persona.name, authorRole: persona.title });
         openSupportDrawer(e.id, container);
       } catch (err) {
         dr.querySelector('#sp-feedback-out').innerHTML = `<div class="muted" style="color:${COLORS.negative};font-size:12px;margin-top:6px">${esc(err.message)}</div>`;

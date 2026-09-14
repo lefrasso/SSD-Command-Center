@@ -1,12 +1,23 @@
 // Agentic Delivery — per-engagement support agents. SIMULATED. Deterministic, data-driven (same
 // approach as ai.js / ipFeedbackAgents.js) — no network calls, no store import (kept pure so both
 // the view and the seed-data generator can use it without a circular import).
+import { computeT3W } from './t3w.js';
 
 export const PHASES = [
   ['pre-delivery', 'Pre-delivery'],
   ['delivery', 'Delivery'],
   ['post-delivery', 'Post-delivery'],
 ];
+
+// Every agent runs under one of these schedules — "on-phase-change" (the default) re-runs an agent
+// whenever the engagement moves to a new phase; "manual" never runs itself, only on explicit request.
+export const SCHEDULES = [
+  ['on-phase-change', 'On phase change'],
+  ['daily', 'Daily'],
+  ['weekly', 'Weekly'],
+  ['manual', 'Manual only'],
+];
+export const SCHEDULE_INTERVAL_MS = { daily: 24 * 60 * 60 * 1000, weekly: 7 * 24 * 60 * 60 * 1000 };
 
 export function phaseForEngagement(e) {
   if (e.status === 'complete') return 'post-delivery';
@@ -115,7 +126,11 @@ function outreachConcierge(engagement, d, phase) {
   const o = engagement.outreach;
   if (phase === 'pre-delivery') {
     const pending = ['day0', 'day1'].filter((k) => !o[k]);
-    return { text: pending.length ? `Day 0–1 outreach still pending — ready to draft the kickoff introduction to ${engagement.csamName}.` : 'Day 0–1 outreach is logged — ready to draft the Day 1 stakeholder sync invite.' };
+    const t3w = computeT3W(engagement);
+    const t3wNote = t3w.inWindow
+      ? ` T-3W: due in ${t3w.daysUntil}d, proactive status "${t3w.label}" (${t3w.outreach}/4 outreach logged).`
+      : t3w.status === 'overdue' ? ` T-3W: ${Math.abs(t3w.daysUntil)}d past due with no report — flag it in Reports Pending.` : '';
+    return { text: `${pending.length ? `Day 0–1 outreach still pending — ready to draft the kickoff introduction to ${engagement.csamName}.` : 'Day 0–1 outreach is logged — ready to draft the Day 1 stakeholder sync invite.'}${t3wNote}` };
   }
   if (phase === 'delivery') {
     const pending = ['day2', 'day3'].filter((k) => !o[k]);
@@ -146,22 +161,39 @@ function escalationSentinel(engagement, d, phase) {
   const doneCount = engagement.milestones.filter((m) => m.done).length;
   const behind = doneCount < engagement.milestones.length && engagement.atRisk;
   if (openEsc.length) return { text: `${openEsc.length} open escalation(s) linked to this delivery — highest severity ${openEsc[0].severity.toUpperCase()}. Keep monitoring; use "Ask for support" if it needs to move faster.`, risk: 'high' };
+  if (phase === 'pre-delivery') {
+    const t3w = computeT3W(engagement);
+    if (t3w.status === 'overdue' || (t3w.inWindow && t3w.status === 'not-started')) {
+      return { text: `T-3W window: ${t3w.status === 'overdue' ? `${Math.abs(t3w.daysUntil)}d past due with no report` : `due in ${t3w.daysUntil}d with no proactive outreach yet`} — this is exactly the pattern that turns into a pending report. Prioritize Day 0 outreach now, or use "Ask for support".`, risk: 'high' };
+    }
+    if (t3w.inWindow && t3w.status === 'in-progress') {
+      return { text: `T-3W window: due in ${t3w.daysUntil}d, proactive outreach in progress (${t3w.outreach}/4) — on pace, keep the cadence going.`, risk: 'medium' };
+    }
+  }
   if (engagement.atRisk || behind) return { text: `Risk signals present (${behind ? 'milestones trailing the plan' : 'outreach or timeline slipping'}) — no open escalation yet. Consider "Ask for support" if this needs POD Lead/SDM attention.`, risk: 'medium' };
   return { text: phase === 'post-delivery' ? 'No risk signals were recorded across this delivery.' : 'No risk signals detected right now.', risk: 'low' };
 }
 
-export function buildEngagementSupport(engagement, d) {
-  const phase = phaseForEngagement(engagement);
-  const common = [
-    { agent: COMMON_AGENTS[0], ...signalScout(engagement, d, phase) },
-    { agent: COMMON_AGENTS[1], ...outreachConcierge(engagement, d, phase) },
-    { agent: COMMON_AGENTS[2], ...chronicleKeeper(engagement, d, phase) },
-    { agent: COMMON_AGENTS[3], ...surveyHerald(engagement, d, phase) },
-    { agent: COMMON_AGENTS[4], ...escalationSentinel(engagement, d, phase) },
-  ];
+// The full agent roster (common + track specialist) that applies to a given engagement.
+export function agentsForEngagement(engagement) {
   const expertDef = EXPERT_AGENTS[engagement.track];
-  const expert = expertDef
-    ? { agent: expertDef, tips: (expertDef.tips[phase] || []).filter((t) => !t.rx || t.rx.test(engagement.program)).map((t) => t.text) }
-    : null;
-  return { phase, common, expert };
+  return expertDef ? [...COMMON_AGENTS, expertDef] : COMMON_AGENTS;
+}
+
+// Executes a single agent by id against the current engagement/dataset — the "run" behind both the
+// manual Run Now action and a due scheduled run. Common agents return a string; the track specialist
+// returns an array of tip bullets.
+export function runAgentById(agentId, engagement, d, phase) {
+  switch (agentId) {
+    case 'signal-scout': return signalScout(engagement, d, phase).text;
+    case 'outreach-concierge': return outreachConcierge(engagement, d, phase).text;
+    case 'chronicle-keeper': return chronicleKeeper(engagement, d, phase).text;
+    case 'survey-herald': return surveyHerald(engagement, d, phase).text;
+    case 'escalation-sentinel': return escalationSentinel(engagement, d, phase).text;
+    default: {
+      const expertDef = Object.values(EXPERT_AGENTS).find((a) => a.id === agentId);
+      if (!expertDef) return null;
+      return (expertDef.tips[phase] || []).filter((t) => !t.rx || t.rx.test(engagement.program)).map((t) => t.text);
+    }
+  }
 }

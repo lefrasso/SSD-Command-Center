@@ -7,6 +7,7 @@ const STAGES = ['sourcing', 'selection', 'onboarding', 'active', 'offboarding'];
 const STAGE_LABEL = { sourcing: 'Sourcing', selection: 'Selection', onboarding: 'Onboarding', active: 'Active delivery', offboarding: 'Offboarding' };
 const ONBOARDING_PLAN = [
   { phase: 'Pre-boarding', owner: 'DPSM / Ops', tasks: ['Vendor validation & MOSA confirmation', 'Background & NDA verification', 'Provision Microsoft account & MFA'] },
+  { phase: 'POD Introduction', owner: 'POD Lead', tasks: ['Know Your POD Lead (KYPL) session'] },
   { phase: 'Tools & access', owner: 'Ops', tasks: ['Delivery workspace & SharePoint access', 'Azure DevOps & Power BI access', 'Teams channels & distribution lists', 'CPE tooling & Forms access'] },
   { phase: 'Bootcamp', owner: 'POD Lead', tasks: ['Delivery fundamentals bootcamp', 'Success Programs track deep-dive', 'Proactive Dispatch & Day 0–3 outreach cadence', 'CPE Recommended Practices training'] },
   { phase: 'Ramp & shadowing', owner: 'POD Lead', tasks: ['Role guidance & POD orientation', 'Shadow an active engagement', 'Mock delivery & QC review', 'First supervised delivery'] },
@@ -94,7 +95,8 @@ function openProfile(id) {
   let gi = 0;
   const onboardGroups = ONBOARDING_PLAN.map((p) => {
     const rows = p.tasks.map((t) => { const done = gi < onboardDone; gi += 1; return `<div class="check-item"><span class="check-box ${done ? 'done' : ''}">${done ? icon('check', 12) : ''}</span><span>${esc(t)}</span></div>`; }).join('');
-    return `<div class="mt8"><div class="row" style="justify-content:space-between"><strong style="font-size:13px">${esc(p.phase)}</strong><span class="badge outline">${esc(p.owner)}</span></div>${rows}</div>`;
+    const kyplLink = p.phase === 'POD Introduction' ? `<a class="btn sm subtle mt8" href="#/enablement?tab=kypl">${icon('people', 14)} Open Know Your POD Lead ${icon('chevronRight', 12)}</a>` : '';
+    return `<div class="mt8"><div class="row" style="justify-content:space-between"><strong style="font-size:13px">${esc(p.phase)}</strong><span class="badge outline">${esc(p.owner)}</span></div>${rows}${kyplLink}</div>`;
   }).join('');
 
   const stageSection = c.lifecycle === 'offboarding'

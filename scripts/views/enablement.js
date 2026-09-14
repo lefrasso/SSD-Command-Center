@@ -1,11 +1,23 @@
-// Enablement — accreditations, S500 eligibility, SDM onboarding, user voice, shadowing.
-import { store, hoursSince, requestShadow, respondShadowRequest, computeS500, s500FlaggedEngagements, myCsa } from '../store.js';
+// Enablement — accreditations, S500 eligibility, SDM onboarding, Know Your POD Lead, user voice, shadowing.
+import { store, hoursSince, requestShadow, respondShadowRequest, computeS500, s500FlaggedEngagements, myCsa, kyplSessionForCsa, scheduleKyplSession, completeKyplSession } from '../store.js';
 import { pageHeader, kpiCard, esc, badge, statusPill, openDrawer, closeDrawer, COLORS } from '../components.js';
 import { icon } from '../icons.js';
 import { PROGRAMS, TRACKS } from '../../data/generate.js';
 
 const SDM_ONBOARD = ['Role & scope orientation', 'Escalation process training', 'ADO & Power BI access', 'Partner health dashboards', 'Shadow live escalations', 'Readiness sign-off'];
 const SDMS = ['Priya Nair', 'Kenji Watanabe', 'Laura Bianchi', 'Mohammed Ali', 'Grace Park', 'Tomás Herrera'];
+// The new Partner CSA's first structured session with their POD Lead — scheduled right after their
+// Microsoft account is provisioned (Pre-boarding), ahead of tools & access setup.
+const KYPL_AGENDA = [
+  'Introductions — meet your POD Lead and teammates',
+  'POD structure, roster and time zone coverage',
+  'Communication cadence — 1:1s, POD stand-ups and Teams channels',
+  'Delivery expectations, quality bar and the CPE Recommended Practices',
+  'Escalation path — when and how to raise a delivery concern',
+  'Career growth, coaching style and feedback cadence',
+  'Tools & access walkthrough — SSD IQ, Compass, ADO, Power BI',
+  'Open Q&A and next steps',
+];
 
 let tab = 'accred';
 const userVoice = [
@@ -16,8 +28,9 @@ const userVoice = [
 ];
 const seedOf = (s) => [...s].reduce((a, ch) => a + ch.charCodeAt(0), 0);
 
-export function renderEnablement(container) {
-  const tabs = [['accred', 'Accreditations'], ['catalogue', 'Service Catalogue'], ['s500', 'S500 Eligibility'], ['sdm', 'SDM Onboarding'], ['uv', 'User Voice'], ['shadow', 'Shadowing']]
+export function renderEnablement(container, initialTab) {
+  if (['accred', 'catalogue', 's500', 'sdm', 'kypl', 'uv', 'shadow'].includes(initialTab)) tab = initialTab;
+  const tabs = [['accred', 'Accreditations'], ['catalogue', 'Service Catalogue'], ['s500', 'S500 Eligibility'], ['sdm', 'SDM Onboarding'], ['kypl', 'Know Your POD Lead'], ['uv', 'User Voice'], ['shadow', 'Shadowing']]
     .filter(([key]) => store.role !== 'adoption-lead' || key === 'accred' || key === 'shadow');
   if (!tabs.some(([key]) => key === tab)) tab = 'accred';
   container.innerHTML = `
@@ -26,7 +39,7 @@ export function renderEnablement(container) {
     <div id="tabc"></div>`;
   container.querySelectorAll('[data-tab]').forEach((el) => el.addEventListener('click', () => { tab = el.getAttribute('data-tab'); renderEnablement(container); }));
   const tc = container.querySelector('#tabc');
-  ({ accred: renderAccred, catalogue: renderCatalogue, s500: renderS500, sdm: renderSdm, uv: renderUv, shadow: renderShadow })[tab](tc, container);
+  ({ accred: renderAccred, catalogue: renderCatalogue, s500: renderS500, sdm: renderSdm, kypl: renderKypl, uv: renderUv, shadow: renderShadow })[tab](tc, container);
 }
 
 function renderAccred(tc) {
@@ -103,6 +116,92 @@ function renderSdm(tc) {
     </tbody></table></div>
     <div class="section-title">Onboarding checklist</div>
     <div class="card pad">${SDM_ONBOARD.map((t) => `<div class="check-item"><span class="check-box"></span><span>${esc(t)}</span></div>`).join('')}</div>`;
+}
+
+function kyplStatusBadge(status) {
+  if (status === 'completed') return badge('Completed', 'tint-info');
+  if (status === 'scheduled') return badge('Scheduled', 'tint-warn');
+  return badge('Not scheduled', 'outline');
+}
+
+function renderKypl(tc, container) {
+  const d = store.data;
+  const mentees = d.csas.filter((c) => c.resourceType === 'FTC' && c.lifecycle === 'onboarding');
+  const statusOf = (c) => (kyplSessionForCsa(c.id, d) || { status: 'not-scheduled' }).status;
+  const scheduled = mentees.filter((c) => statusOf(c) === 'scheduled').length;
+  const completed = mentees.filter((c) => statusOf(c) === 'completed').length;
+  tc.innerHTML = `
+    <div class="muted mb8" style="font-size:12px">The Know Your POD Lead (KYPL) session is the new Partner CSA's first structured meeting with their POD Lead — scheduled right after their Microsoft account is provisioned, before tools &amp; access setup.</div>
+    <div class="kpi-grid">
+      ${kpiCard({ label: 'Partner CSAs onboarding', value: mentees.length, iconName: 'personAdd' })}
+      ${kpiCard({ label: 'KYPL scheduled', value: scheduled, iconName: 'clock', tone: COLORS.warning })}
+      ${kpiCard({ label: 'KYPL completed', value: completed, iconName: 'check', tone: COLORS.positive })}
+    </div>
+    <div class="section-title">Onboarding Partner CSAs</div>
+    <div class="table-wrap mb16"><table class="grid"><thead><tr><th>Partner CSA</th><th>Vendor</th><th>POD Lead</th><th>Status</th><th>Session date</th><th></th></tr></thead><tbody>
+      ${mentees.length ? mentees.map((c) => {
+        const pod = d.pods.find((p) => p.id === c.podId);
+        const session = kyplSessionForCsa(c.id, d);
+        const status = session ? session.status : 'not-scheduled';
+        const dateLabel = status === 'completed' ? (session.completedAt || '—') : status === 'scheduled' ? (session.scheduledAt || '—') : '—';
+        return `<tr>
+          <td><strong>${esc(c.name)}</strong></td>
+          <td>${esc(c.vendor)}</td>
+          <td>${esc(pod ? pod.leadName : '—')}</td>
+          <td>${kyplStatusBadge(status)}</td>
+          <td>${esc(dateLabel)}</td>
+          <td><button class="btn sm" data-kypl="${c.id}">${status === 'not-scheduled' ? 'Schedule' : status === 'scheduled' ? 'Manage' : 'View'}</button></td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="6" class="muted" style="padding:16px">No Partner CSAs currently in onboarding.</td></tr>'}
+    </tbody></table></div>
+    <div class="section-title">Session agenda</div>
+    <div class="card pad">${KYPL_AGENDA.map((t) => `<div class="check-item"><span class="check-box"></span><span>${esc(t)}</span></div>`).join('')}</div>`;
+  tc.querySelectorAll('[data-kypl]').forEach((b) => b.addEventListener('click', () => openKyplDrawer(b.getAttribute('data-kypl'), tc, container)));
+}
+
+function openKyplDrawer(csaId, tc, container) {
+  const d = store.data;
+  const c = d.csas.find((x) => x.id === csaId);
+  if (!c) return;
+  const pod = d.pods.find((p) => p.id === c.podId);
+  const session = kyplSessionForCsa(csaId, d);
+  const status = session ? session.status : 'not-scheduled';
+  const body = `
+    <div class="field"><span class="field-key">Partner CSA</span><span class="field-val">${esc(c.name)}</span></div>
+    <div class="field"><span class="field-key">Vendor</span><span class="field-val">${esc(c.vendor)}</span></div>
+    <div class="field"><span class="field-key">POD Lead</span><span class="field-val">${esc(pod ? pod.leadName : '—')}</span></div>
+    <div class="field"><span class="field-key">Status</span><span class="field-val">${kyplStatusBadge(status)}</span></div>
+    <div class="section-title">Agenda</div>
+    <div class="card pad mb16">${KYPL_AGENDA.map((t) => `<div class="check-item"><span class="check-box"></span><span>${esc(t)}</span></div>`).join('')}</div>
+    ${status !== 'completed' ? `
+    <label class="muted" style="font-size:12px">Session date</label>
+    <input class="input" type="date" id="kypl-date" style="width:100%;margin-bottom:10px" value="${esc(session && session.scheduledAt ? session.scheduledAt : '')}"/>
+    <label class="muted" style="font-size:12px">Notes (optional)</label>
+    <textarea id="kypl-notes" style="width:100%;min-height:70px;border:1px solid var(--stroke-1);border-radius:4px;padding:8px;font-family:inherit;margin:6px 0 10px" placeholder="Anything specific to cover…">${esc(session ? session.notes : '')}</textarea>
+    <div class="row wrap" style="gap:6px">
+      <button class="btn sm primary" id="kypl-schedule">${icon('clock', 14)} ${status === 'scheduled' ? 'Update schedule' : 'Schedule session'}</button>
+      ${status === 'scheduled' ? `<button class="btn sm" id="kypl-complete">${icon('check', 14)} Mark completed</button>` : ''}
+    </div>
+    <div id="kypl-error"></div>` : `<div class="muted" style="font-size:12px">Completed on ${esc(session.completedAt)}.</div>`}`;
+
+  openDrawer(`Know Your POD Lead · ${esc(c.name)}`, body, (dr) => {
+    const scheduleBtn = dr.querySelector('#kypl-schedule');
+    if (scheduleBtn) scheduleBtn.addEventListener('click', () => {
+      try {
+        scheduleKyplSession({ csaId, scheduledAt: dr.querySelector('#kypl-date').value, notes: dr.querySelector('#kypl-notes').value });
+        closeDrawer();
+        renderKypl(tc, container);
+      } catch (err) {
+        dr.querySelector('#kypl-error').innerHTML = `<div class="muted" style="color:${COLORS.negative};font-size:12px;margin-top:6px">${esc(err.message)}</div>`;
+      }
+    });
+    const completeBtn = dr.querySelector('#kypl-complete');
+    if (completeBtn) completeBtn.addEventListener('click', () => {
+      completeKyplSession(csaId, dr.querySelector('#kypl-notes').value);
+      closeDrawer();
+      renderKypl(tc, container);
+    });
+  });
 }
 
 function renderUv(tc, container) {

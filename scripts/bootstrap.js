@@ -142,7 +142,7 @@ function renderView() {
     case 'ip-feedback': renderIpFeedback(view); break;
     case 'capacity': renderCapacity(view); break;
     case 'delivery-partners': renderPartners(view); break;
-    case 'enablement': renderEnablement(view); break;
+    case 'enablement': renderEnablement(view, params.get('tab')); break;
     case 'csam-escalation': renderCsamEscalation(view); break;
     case 'admin-access': renderAdminRoles(view); break;
     default: renderPlaceholder(view, mod);

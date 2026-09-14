@@ -2,6 +2,7 @@
 import { dataset, IP_TAGS, CAP_PER_CSA, BASELINE_UTILIZATION } from '../data/generate.js';
 import { MODULES, moduleById } from './nav.js';
 import { runFullPipeline } from './ipFeedbackAgents.js';
+import { runAgentById, phaseForEngagement, agentsForEngagement, SCHEDULE_INTERVAL_MS } from './agenticSupportAgents.js';
 
 export const store = {
   data: dataset,
@@ -9,6 +10,7 @@ export const store = {
   navCollapsed: false,
   copilotOpen: true,
   accessOverrides: {}, // { [role]: { [moduleId]: true|false } } — Admin-managed module access, layered over nav.js defaults
+  agentRuns: {}, // { "<engagementId>::<agentId>": { schedule, status, lastRunAt, lastTrigger, lastPhase, lastOutput, runCount, history } }
   _listeners: [],
 };
 
@@ -87,6 +89,7 @@ export const CANONICAL_ENTITIES = [
   { entity: 'Sentiment Signals', owner: 'Voice of customer', source: 'AI Services', key: 'sentimentSignals', count: (d) => d.sentimentSignals.length },
   { entity: 'Sentiment', owner: 'Voice of customer', source: 'AI sentiment rollup', key: 'sentiment', count: (d) => d.sentiment.length },
   { entity: 'Shadow Requests', owner: 'Enablement', source: 'Shadowing program', key: 'shadowRequests', count: (d) => d.shadowRequests.length },
+  { entity: 'KYPL Sessions', owner: 'Enablement', source: 'Partner CSA onboarding', key: 'kyplSessions', count: (d) => d.kyplSessions.length },
   { entity: 'IP Feedback', owner: 'IP Lead · CSAM Innovation', source: 'Agentic Delivery', key: 'ipFeedback', count: (d) => d.ipFeedback.length },
   { entity: 'IP Content Feedback', owner: 'IP Lead · CSAM Innovation', source: 'IP Feedback (agentic triage)', key: 'ipFeedbackCases', count: (d) => d.ipFeedbackCases.length },
   { entity: 'Engagement Feedback', owner: 'Delivery agents · Agentic Delivery', source: 'Agentic Delivery', key: 'engagementFeedback', count: (d) => d.engagementFeedback.length },
@@ -602,6 +605,40 @@ export function respondShadowRequest(id, status) {
   req.audit.push({ at: new Date().toISOString(), who: store.role, action: `shadow request ${status}` });
   emit('data');
 }
+
+// ---- Know Your POD Lead (KYPL) — first structured session with the POD Lead, after account creation ----
+let kypSeq = store.data.kyplSessions.reduce((max, k) => Math.max(max, Number(k.id.replace(/^KYP/, '')) || 0), 0) + 1;
+export const kyplSessionForCsa = (csaId, d = store.data) => d.kyplSessions.find((k) => k.csaId === csaId) || null;
+export function scheduleKyplSession({ csaId, scheduledAt, notes = '' }) {
+  const csa = byId(store.data.csas, csaId);
+  if (!csa) throw new Error(`CSA ${csaId} was not found.`);
+  if (!scheduledAt) throw new Error('Pick a date for the session.');
+  const now = new Date().toISOString();
+  let session = store.data.kyplSessions.find((k) => k.csaId === csaId);
+  if (!session) {
+    session = { id: `KYP${String(kypSeq++).padStart(3, '0')}`, csaId, status: 'not-scheduled', scheduledAt: null, completedAt: null, notes: '', sourceOfTruth: 'Enablement', updatedAt: now, audit: [] };
+    store.data.kyplSessions.unshift(session);
+  }
+  session.status = 'scheduled';
+  session.scheduledAt = scheduledAt;
+  session.notes = String(notes || '').trim();
+  session.updatedAt = now;
+  session.audit.push({ at: now, who: store.role, action: `KYPL session scheduled for ${scheduledAt}` });
+  emit('data');
+  return session.id;
+}
+export function completeKyplSession(csaId, notes = '') {
+  const session = store.data.kyplSessions.find((k) => k.csaId === csaId);
+  if (!session) throw new Error('Schedule the session before marking it complete.');
+  const now = new Date().toISOString();
+  session.status = 'completed';
+  session.completedAt = todayISO();
+  if (notes) session.notes = String(notes).trim();
+  session.updatedAt = now;
+  session.audit.push({ at: now, who: store.role, action: 'KYPL session completed' });
+  emit('data');
+}
+
 let ipfSeq = store.data.ipFeedback.reduce((max, f) => Math.max(max, Number(f.id.replace(/^IPF/, '')) || 0), 0) + 1;
 export function addIpFeedback({ engagementId, rating, tag, comment }) {
   const eng = byId(store.data.engagements, engagementId);
@@ -694,6 +731,63 @@ export function addEngagementFeedback({ engagementId, phase, message, authorName
   });
   emit('data');
   return id;
+}
+
+// ---- Agentic Delivery — per-agent execution & scheduling ----
+function agentRunKey(engagementId, agentId) { return `${engagementId}::${agentId}`; }
+export function getAgentRunState(engagementId, agentId) {
+  const key = agentRunKey(engagementId, agentId);
+  if (!store.agentRuns[key]) store.agentRuns[key] = { schedule: 'on-phase-change', status: 'idle', lastRunAt: null, lastTrigger: null, lastPhase: null, lastOutput: null, runCount: 0, history: [] };
+  return store.agentRuns[key];
+}
+function executeAgent(engagementId, agentId, trigger) {
+  const eng = byId(store.data.engagements, engagementId);
+  if (!eng) return null;
+  const phase = phaseForEngagement(eng);
+  const output = runAgentById(agentId, eng, store.data, phase);
+  const state = getAgentRunState(engagementId, agentId);
+  const now = new Date().toISOString();
+  state.status = 'completed';
+  state.lastRunAt = now;
+  state.lastTrigger = trigger;
+  state.lastPhase = phase;
+  state.lastOutput = output;
+  state.runCount += 1;
+  state.history.unshift({ at: now, output, trigger, phase });
+  if (state.history.length > 5) state.history.length = 5;
+  return state;
+}
+// Silent catch-up for a due schedule — mutates without emitting, safe to call during render (e.g.
+// opening the support plan) so status/output are current without triggering a re-render loop.
+export function syncAgentSchedule(engagementId, agentId) {
+  const eng = byId(store.data.engagements, engagementId);
+  if (!eng) return getAgentRunState(engagementId, agentId);
+  const state = getAgentRunState(engagementId, agentId);
+  if (state.schedule === 'manual') return state;
+  if (state.schedule === 'on-phase-change') {
+    if (state.lastPhase !== phaseForEngagement(eng)) executeAgent(engagementId, agentId, 'scheduled');
+    return state;
+  }
+  const interval = SCHEDULE_INTERVAL_MS[state.schedule];
+  const due = interval && (!state.lastRunAt || Date.now() - new Date(state.lastRunAt).getTime() >= interval);
+  if (due) executeAgent(engagementId, agentId, 'scheduled');
+  return state;
+}
+export function runAgentNow(engagementId, agentId) {
+  const state = executeAgent(engagementId, agentId, 'manual');
+  emit('data');
+  return state;
+}
+export function runAllAgentsNow(engagementId) {
+  const eng = byId(store.data.engagements, engagementId);
+  if (!eng) return;
+  agentsForEngagement(eng).forEach((a) => executeAgent(engagementId, a.id, 'manual'));
+  emit('data');
+}
+export function setAgentSchedule(engagementId, agentId, schedule) {
+  const state = getAgentRunState(engagementId, agentId);
+  state.schedule = schedule;
+  emit('data');
 }
 
 export function addMessage(threadId, engagementId, from, to, body, sentiment) {

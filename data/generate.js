@@ -562,6 +562,23 @@ function build() {
     };
   }).filter(Boolean);
 
+  // Know Your POD Lead (KYPL) — the new Partner CSA's first structured session with their POD Lead,
+  // scheduled right after their Microsoft account is provisioned (Pre-boarding), ahead of tools & access.
+  const kyplCandidates = csas.filter((c) => c.resourceType === 'FTC' && c.lifecycle === 'onboarding');
+  const KYPL_NOTES = ['Focus on POD cadence and Day 0–3 outreach expectations.', 'New hire asked to cover escalation paths in detail.', 'Standard first session — no specific asks yet.', 'Wants to discuss career growth and accreditation path early.'];
+  let kypSeq = 1;
+  const kyplSessions = pickN(kyplCandidates, Math.round(kyplCandidates.length * 0.65)).map((mentee) => {
+    const status = weighted([['completed', 0.4], ['scheduled', 0.4], ['not-scheduled', 0.2]]);
+    const scheduledAt = status === 'not-scheduled' ? null : daysAhead(int(-10, 12));
+    const completedAt = status === 'completed' ? daysAgo(int(0, 9)) : null;
+    return {
+      id: `KYP${String(kypSeq++).padStart(3, '0')}`, csaId: mentee.id, status,
+      scheduledAt: status === 'not-scheduled' ? null : scheduledAt, completedAt,
+      notes: status === 'not-scheduled' ? '' : pick(KYPL_NOTES),
+      ...gov('Enablement'),
+    };
+  });
+
   // Engagement Feedback — in-flight check-in notes logged from the Agentic Delivery support panel
   // (distinct from the IP content feedback below, and from the per-Kit rating captured after use).
   const FEEDBACK_SNIPPETS = {
@@ -781,7 +798,7 @@ function build() {
     { id: 'INI006', type: 'Platform', name: 'SSD IQ reporting semantic model', area: 'Reporting', stage: 'Pilot', ownerName: 'Robin Ellis', targetRelease: 'FY27 Q2', status: 'on-track', impact: 'Reconciles MBR metrics and enables governed drill-through.', nextStep: 'Reconcile Power BI measures.' },
   ].map((initiative) => ({ ...initiative, ...gov('Portfolio Management') }));
 
-  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, sentimentSignals, pips, shadowRequests, ipFeedback, ipFeedbackCases, engagementFeedback, sentiment, deliveries, hiring, attrition, financials, initiatives, capacityTargets, demandHistory };
+  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, sentimentSignals, pips, shadowRequests, kyplSessions, ipFeedback, ipFeedbackCases, engagementFeedback, sentiment, deliveries, hiring, attrition, financials, initiatives, capacityTargets, demandHistory };
 }
 
 export const dataset = build();
