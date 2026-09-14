@@ -1,6 +1,6 @@
 // Enablement — accreditations, S500 eligibility, SDM onboarding, Know Your POD Lead, user voice, shadowing.
 import {
-  store, hoursSince, requestShadow, respondShadowRequest, computeS500, s500FlaggedEngagements, myCsa,
+  store, hoursSince, requestShadow, respondShadowRequest, computeS500, s500FlaggedEngagements, setS500Ready, myCsa,
   kyplSessionForCsa, scheduleKyplSession, completeKyplSession, evaluateKyplSession, daysFromNowISO,
   readinessPlanForCsa, readinessPlansForSdm, createReadinessPlan, toggleReadinessObjective, addReadinessCheckIn, closeReadinessPlan, READINESS_OBJECTIVES_DEFAULT,
 } from '../store.js';
@@ -97,6 +97,7 @@ function renderS500(tc) {
   const unreconciled = rows.filter((r) => !r.reconciled);
   const flagged = s500FlaggedEngagements(d);
   const partnerName = (id) => (d.partners.find((p) => p.id === id) || {}).name || '—';
+  const canMark = can(store.role, 'edit:s500');
   tc.innerHTML = `
     <div class="kpi-grid">
       ${kpiCard({ label: 'S500 eligible', value: eligibleCount, iconName: 'check', tone: COLORS.positive })}
@@ -109,9 +110,13 @@ function renderS500(tc) {
     ${flagged.length ? `<div class="card pad mb16" style="border-left:4px solid ${COLORS.negative}"><strong style="font-size:13px">S500 customers served by a non-ready CSA</strong><div class="table-wrap mt8"><table class="grid"><thead><tr><th>Customer</th><th>Program</th><th>CSA</th><th>Partner</th></tr></thead><tbody>
       ${flagged.map((e) => { const csa = d.csas.find((c) => c.id === e.assignedTo); return `<tr><td><strong>${esc(e.customer)}</strong></td><td>${esc(e.program)}</td><td>${esc(csa ? csa.name : '—')}</td><td>${esc(csa ? partnerName(csa.partnerId) : '—')}</td></tr>`; }).join('')}
     </tbody></table></div></div>` : ''}
-    <div class="table-wrap"><table class="grid"><thead><tr><th>CSA</th><th>Vendor</th><th>CPE</th><th>Quality</th><th>Tenure</th><th>Eligible</th><th>Ready</th><th>Reconciled</th><th>Reason</th></tr></thead><tbody>
-      ${rows.slice(0, 50).map((r) => `<tr><td><strong>${esc(r.csa.name)}</strong></td><td>${esc(r.csa.vendor)}</td><td>${r.csa.cpe.toFixed(1)}</td><td>${r.csa.quality.toFixed(1)}</td><td>${r.csa.tenureMonths}mo</td><td>${r.eligible ? badge('Eligible', 'tint-info') : badge('No', 'outline')}</td><td>${r.ready ? badge('Ready', 'tint-info') : badge('Not ready', 'outline')}</td><td>${r.reconciled ? badge('Yes', 'tint-info') : badge('Gap', 'tint-warn')}</td><td class="muted" style="font-size:12px">${esc(r.reason)}</td></tr>`).join('')}
+    <div class="table-wrap"><table class="grid"><thead><tr><th>CSA</th><th>Vendor</th><th>CPE</th><th>Quality</th><th>Tenure</th><th>Eligible</th><th>Ready</th><th>Reconciled</th><th>Reason</th>${canMark ? '<th></th>' : ''}</tr></thead><tbody>
+      ${rows.slice(0, 50).map((r) => `<tr><td><strong>${esc(r.csa.name)}</strong></td><td>${esc(r.csa.vendor)}</td><td>${r.csa.cpe.toFixed(1)}</td><td>${r.csa.quality.toFixed(1)}</td><td>${r.csa.tenureMonths}mo</td><td>${r.eligible ? badge('Eligible', 'tint-info') : badge('No', 'outline')}</td><td>${r.ready ? badge('Ready', 'tint-info') : badge('Not ready', 'outline')}</td><td>${r.reconciled ? badge('Yes', 'tint-info') : badge('Gap', 'tint-warn')}</td><td class="muted" style="font-size:12px">${esc(r.reason)}</td>${canMark ? `<td><button class="btn sm ${r.ready ? 'outline' : ''}" data-mark-s500="${r.csa.id}" data-ready="${r.ready ? '0' : '1'}">${r.ready ? 'Mark not ready' : 'Mark S500 ready'}</button></td>` : ''}</tr>`).join('')}
     </tbody></table></div>`;
+  tc.querySelectorAll('[data-mark-s500]').forEach((btn) => btn.addEventListener('click', () => {
+    setS500Ready(btn.getAttribute('data-mark-s500'), btn.getAttribute('data-ready') === '1');
+    renderS500(tc);
+  }));
 }
 
 function renderSdm(tc) {

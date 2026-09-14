@@ -183,6 +183,16 @@ export function s500FlaggedEngagements(d = store.data) {
   return d.engagements.filter((e) => e.s500Customer && e.assignedTo && !readyById.get(e.assignedTo));
 }
 
+// POD Leads (and above) mark a Partner CSA's S500 readiness — reconciled against computed eligibility in computeS500().
+export function setS500Ready(csaId, ready, by = '') {
+  const csa = store.data.csas.find((c) => c.id === csaId);
+  if (!csa) throw new Error('CSA not found.');
+  csa.s500Ready = !!ready;
+  csa.s500ReadyBy = by || store.role;
+  csa.s500ReadyAt = new Date().toISOString();
+  emit('data');
+}
+
 // Composite Partner performance — same blend as computePodPerformance, rolled up to the Delivery Partner
 // (Supplier), plus S500 readiness and the S500-customer/non-ready-CSA flag (CAP-10 FR-DP-5/FR-DP-7).
 export function computePartnerPerformance(d = store.data) {

@@ -6,7 +6,9 @@ export const PERSONAS = {
   // SSD (Microsoft): WW Lead → TZ Lead → CSA Manager → POD Lead
   'ww-lead': { role: 'ww-lead', name: 'Jordan Pierce', title: 'Worldwide Lead · SSD', initials: 'JP', color: '#5c2e91', org: 'SSD', scope: 'Full visibility across Compass — global portfolio, CPE & delivery trends, session health signals, MBR roll-ups.' },
   'tz-lead': { role: 'tz-lead', name: 'Morgan Reyes', title: 'TZ Lead · ATZ', initials: 'MR', color: '#0f6cbd', org: 'SSD', scope: 'Full visibility across Compass — territory portfolio and operations across the time zone / OUs.' },
-  'csa-manager': { role: 'csa-manager', name: 'Devin Cole', title: 'CSA Manager · SSD', initials: 'DC', color: '#6b69d6', org: 'SSD', scope: 'Full visibility across Compass, similar to the TZ Lead — not region-locked; manages POD Leads, dispatch, capacity, escalations and performance.' },
+  'csa-manager': { role: 'csa-manager', name: 'Devin Cole', title: 'CSA Manager · ATZ', initials: 'DC', color: '#6b69d6', org: 'SSD', tz: 'ATZ', scope: 'Manages POD Leads, dispatch, capacity, escalations and performance for their own time zone (ATZ) only — not the full portfolio.' },
+  'csa-manager-emea': { role: 'csa-manager-emea', name: 'Bruno Alves', title: 'CSA Manager · EMEA', initials: 'BA', color: '#8764b8', org: 'SSD', tz: 'EMEA', scope: 'Manages POD Leads, dispatch, capacity, escalations and performance for their own time zone (EMEA) only — not the full portfolio.' },
+  'csa-manager-asia': { role: 'csa-manager-asia', name: 'Amir Khan', title: 'CSA Manager · ASIA', initials: 'AK', color: '#986f0b', org: 'SSD', tz: 'ASIA', scope: 'Manages POD Leads, dispatch, capacity, escalations and performance for their own time zone (ASIA) only — not the full portfolio.' },
   'pod-lead': { role: 'pod-lead', name: 'Sam Okoro', title: 'POD Lead · EMEA', initials: 'SO', color: '#2aa0a4', org: 'SSD', tz: 'EMEA', scope: 'Runs their own POD only — dispatches, coaches, owns escalations, readiness improvement plans & MBRs. No Capacity Management or Delivery Partners.' },
   'pod-lead-atz': { role: 'pod-lead-atz', name: 'Nils Berg', title: 'POD Lead · ATZ', initials: 'NB', color: '#00b7c3', org: 'SSD', tz: 'ATZ', scope: 'Runs their own POD only — dispatches, coaches, owns escalations, readiness improvement plans & MBRs. No Capacity Management or Delivery Partners.' },
   'pod-lead-asia': { role: 'pod-lead-asia', name: 'Diego Santos', title: 'POD Lead · ASIA', initials: 'DS', color: '#ca5010', org: 'SSD', tz: 'ASIA', scope: 'Runs their own POD only — dispatches, coaches, owns escalations, readiness improvement plans & MBRs. No Capacity Management or Delivery Partners.' },
@@ -25,7 +27,7 @@ export const PERSONAS = {
   admin: { role: 'admin', name: 'Alex Ito', title: 'Platform Admin · Compass', initials: 'AI', color: '#3b3a39', org: 'Platform Admin', scope: 'Full visibility across Compass, plus manages persona access to modules and capability permissions.' },
 };
 
-export const ROLE_ORDER = ['ww-lead', 'tz-lead', 'csa-manager', 'pod-lead', 'pod-lead-atz', 'pod-lead-asia', 'business-manager', 'csa', 'adoption-lead', 'partner-csa', 'sdm', 'csam', 'ip-lead', 'admin'];
+export const ROLE_ORDER = ['ww-lead', 'tz-lead', 'csa-manager', 'csa-manager-emea', 'csa-manager-asia', 'pod-lead', 'pod-lead-atz', 'pod-lead-asia', 'business-manager', 'csa', 'adoption-lead', 'partner-csa', 'sdm', 'csam', 'ip-lead', 'admin'];
 
 // Every capability permission checked anywhere in the app via can(), plus the Admin-only permission that gates Roles & Permissions.
 export const ALL_PERMISSIONS = [
@@ -33,7 +35,7 @@ export const ALL_PERMISSIONS = [
   'edit:successStories', 'assign:successStoryActions', 'review:successStories',
   'approve:podSuccessStories', 'approve:leadershipSuccessStories', 'approve:ltSuccessStories', 'publish:successStories',
   'view:improvementPlan', 'edit:improvementPlan', 'edit:dispatch', 'edit:escalation', 'edit:capacity', 'raise:escalation',
-  'decide:ipFeedback', 'edit:kyplEvaluation',
+  'decide:ipFeedback', 'edit:kyplEvaluation', 'edit:s500',
   'manage:accessControl',
 ];
 export const PERMISSION_LABELS = {
@@ -55,16 +57,19 @@ export const PERMISSION_LABELS = {
   'raise:escalation': 'Raise a delivery concern (CSAM intake)',
   'decide:ipFeedback': 'Confirm, reject or postpone IP Feedback changes (IP Lead)',
   'edit:kyplEvaluation': 'Evaluate a Partner CSA after their KYPL session (POD Lead)',
+  'edit:s500': 'Mark a Partner CSA as S500 Ready (POD Lead)',
   'manage:accessControl': 'Manage roles & permissions (Platform Admin)',
 };
 
 const ROLE_PERMISSIONS = {
   'ww-lead': ['view:portfolio', 'view:allPartners', 'run:mbr', 'view:improvementPlan', 'edit:successStories', 'approve:leadershipSuccessStories', 'approve:ltSuccessStories'],
   'tz-lead': ['view:portfolio', 'view:allPartners', 'run:mbr', 'view:improvementPlan', 'edit:successStories', 'approve:leadershipSuccessStories', 'approve:ltSuccessStories'],
-  'csa-manager': ['view:portfolio', 'view:improvementPlan', 'edit:improvementPlan', 'edit:dispatch', 'edit:escalation', 'edit:capacity', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:podSuccessStories', 'publish:successStories', 'assign:successStoryActions', 'edit:kyplEvaluation'],
-  'pod-lead': ['view:portfolio', 'view:improvementPlan', 'edit:improvementPlan', 'edit:dispatch', 'edit:escalation', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:podSuccessStories', 'publish:successStories', 'assign:successStoryActions', 'edit:kyplEvaluation'],
-  'pod-lead-atz': ['view:portfolio', 'view:improvementPlan', 'edit:improvementPlan', 'edit:dispatch', 'edit:escalation', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:podSuccessStories', 'publish:successStories', 'assign:successStoryActions', 'edit:kyplEvaluation'],
-  'pod-lead-asia': ['view:portfolio', 'view:improvementPlan', 'edit:improvementPlan', 'edit:dispatch', 'edit:escalation', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:podSuccessStories', 'publish:successStories', 'assign:successStoryActions', 'edit:kyplEvaluation'],
+  'csa-manager': ['view:portfolio', 'view:improvementPlan', 'edit:improvementPlan', 'edit:dispatch', 'edit:escalation', 'edit:capacity', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:podSuccessStories', 'publish:successStories', 'assign:successStoryActions', 'edit:kyplEvaluation', 'edit:s500'],
+  'csa-manager-emea': ['view:portfolio', 'view:improvementPlan', 'edit:improvementPlan', 'edit:dispatch', 'edit:escalation', 'edit:capacity', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:podSuccessStories', 'publish:successStories', 'assign:successStoryActions', 'edit:kyplEvaluation', 'edit:s500'],
+  'csa-manager-asia': ['view:portfolio', 'view:improvementPlan', 'edit:improvementPlan', 'edit:dispatch', 'edit:escalation', 'edit:capacity', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:podSuccessStories', 'publish:successStories', 'assign:successStoryActions', 'edit:kyplEvaluation', 'edit:s500'],
+  'pod-lead': ['view:portfolio', 'view:improvementPlan', 'edit:improvementPlan', 'edit:dispatch', 'edit:escalation', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:podSuccessStories', 'publish:successStories', 'assign:successStoryActions', 'edit:kyplEvaluation', 'edit:s500'],
+  'pod-lead-atz': ['view:portfolio', 'view:improvementPlan', 'edit:improvementPlan', 'edit:dispatch', 'edit:escalation', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:podSuccessStories', 'publish:successStories', 'assign:successStoryActions', 'edit:kyplEvaluation', 'edit:s500'],
+  'pod-lead-asia': ['view:portfolio', 'view:improvementPlan', 'edit:improvementPlan', 'edit:dispatch', 'edit:escalation', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:podSuccessStories', 'publish:successStories', 'assign:successStoryActions', 'edit:kyplEvaluation', 'edit:s500'],
   'business-manager': ['view:portfolio', 'view:allPartners', 'run:mbr', 'edit:successStories', 'approve:leadershipSuccessStories', 'approve:ltSuccessStories'],
   csa: ['edit:successStories'],
   'adoption-lead': ['view:portfolio'],

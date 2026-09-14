@@ -1,7 +1,7 @@
 // Module registry — shared by the nav rail and router.
 const SSD_LEADERS = ['ww-lead', 'tz-lead', 'business-manager'];
-const SSD_MGRS = ['csa-manager', 'pod-lead', 'pod-lead-atz', 'pod-lead-asia'];
-const ALL = ['ww-lead', 'tz-lead', 'csa-manager', 'pod-lead', 'pod-lead-atz', 'pod-lead-asia', 'business-manager', 'csa', 'adoption-lead', 'partner-csa', 'sdm', 'csam'];
+const SSD_MGRS = ['csa-manager', 'csa-manager-emea', 'csa-manager-asia', 'pod-lead', 'pod-lead-atz', 'pod-lead-asia'];
+const ALL = ['ww-lead', 'tz-lead', 'csa-manager', 'csa-manager-emea', 'csa-manager-asia', 'pod-lead', 'pod-lead-atz', 'pod-lead-asia', 'business-manager', 'csa', 'adoption-lead', 'partner-csa', 'sdm', 'csam'];
 // Partner CSA and the internal (Nebula/GSCD) CSA share one restricted delivery profile: their own
 // dispatch, enablement and escalations — no reporting/analytics, resource lifecycle, quality
 // tooling, sentiment, or the SSD IQ/Capability Map platform views. SDM extends this profile.
@@ -10,11 +10,11 @@ const CSA_DELIVERY = ['csa', 'partner-csa'];
 export const MODULES = [
   { id: 'pods', path: '/pods', label: 'POD Management', icon: 'people', roles: [...SSD_LEADERS.filter((r) => r !== 'business-manager'), ...SSD_MGRS, 'admin'], built: false,
     description: 'POD structure, capacity, utilization and skills.', ai: 'Capacity-balancing and skill-gap suggestions.' },
-  { id: 'capacity', path: '/capacity', label: 'Capacity Management', icon: 'trending', roles: [...SSD_LEADERS, 'csa-manager', 'sdm', 'admin'], built: true,
+  { id: 'capacity', path: '/capacity', label: 'Capacity Management', icon: 'trending', roles: [...SSD_LEADERS, 'csa-manager', 'csa-manager-emea', 'csa-manager-asia', 'sdm', 'admin'], built: true,
     description: 'Planning, headcount mapping/assignment and coverage.', ai: 'Demand forecast and coverage-gap detection.' },
   { id: 'lifecycle', path: '/lifecycle', label: 'Resource Lifecycle', icon: 'personAdd', roles: [...SSD_LEADERS, ...SSD_MGRS, 'admin'], built: false,
     description: 'FTC and FTE resources from sourcing to active delivery through offboarding.', ai: 'Onboarding readiness score and offboarding-risk flags.' },
-  { id: 'delivery-partners', path: '/delivery-partners', label: 'Delivery Partners', icon: 'building', roles: [...SSD_LEADERS.filter((r) => r !== 'business-manager'), 'csa-manager', 'admin'], built: true,
+  { id: 'delivery-partners', path: '/delivery-partners', label: 'Delivery Partners', icon: 'building', roles: [...SSD_LEADERS.filter((r) => r !== 'business-manager'), 'csa-manager', 'csa-manager-emea', 'csa-manager-asia', 'admin'], built: true,
     description: 'Provider/DP management, onboarding and profiles.', ai: 'Partner scorecards and onboarding tracking.' },
   { id: 'engagements', path: '/engagements', label: 'Engagements Backlog', icon: 'send', roles: [...ALL.filter((r) => r !== 'business-manager'), 'admin'], built: false,
     description: 'Proactive Dispatch and engagement delivery.', ai: 'Best-fit CSA recommendation and outreach drafts.' },
@@ -34,7 +34,7 @@ export const MODULES = [
     description: 'Accreditations, S500, SDM onboarding, User Voice, shadowing.', ai: 'Eligibility and enablement insights.' },
   { id: 'escalations', path: '/escalations', label: 'Escalations', icon: 'warning', roles: [...SSD_LEADERS, ...SSD_MGRS, 'sdm', 'adoption-lead', ...CSA_DELIVERY, 'admin'], built: false,
     description: 'Escalation management with SDMs.', ai: 'Auto-severity, similar-case retrieval, action extraction.' },
-  { id: 'performance', path: '/performance', label: 'Readiness Improvement Plans', icon: 'trending', roles: ['csa-manager', 'pod-lead', 'pod-lead-atz', 'pod-lead-asia', 'ww-lead', 'tz-lead', 'admin'], requires: 'view:improvementPlan', built: false,
+  { id: 'performance', path: '/performance', label: 'Readiness Improvement Plans', icon: 'trending', roles: ['csa-manager', 'csa-manager-emea', 'csa-manager-asia', 'pod-lead', 'pod-lead-atz', 'pod-lead-asia', 'ww-lead', 'tz-lead', 'admin'], requires: 'view:improvementPlan', built: false,
     description: 'Performance management and structured readiness improvement plans (confidential).', ai: 'Evidence-linked performance summaries (advisory only).' },
   { id: 'admin-access', path: '/admin-access', label: 'Roles & Permissions', icon: 'lock', roles: ['admin'], requires: 'manage:accessControl', built: true,
     description: 'Platform Admin only — manage which personas can access each module and which capability permissions they hold.', ai: 'Access-change summary for audit.' },

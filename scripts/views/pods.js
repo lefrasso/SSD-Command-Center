@@ -1,5 +1,5 @@
 // PODs & People — roster, capacity, utilization, skills, time-zone rollup.
-import { store, computePodPerformance } from '../store.js';
+import { store, computePodPerformance, hoursSince } from '../store.js';
 import { pageHeader, kpiCard, badge, statusPill, aiChip, esc, meter, utilColor, scoreColor, COLORS } from '../components.js';
 import { icon } from '../icons.js';
 import { TZ_MAP, LEADERSHIP } from '../../data/generate.js';
@@ -19,24 +19,33 @@ export function renderPods(container) {
   const myPod = store.role.startsWith('pod-lead')
     ? (d.pods.find((p) => p.leadName === persona.name) || d.pods.find((p) => p.tz === persona.tz) || d.pods[0])
     : null;
-  const active = (myPod ? d.csas.filter((c) => c.podId === myPod.id) : d.csas).filter((c) => c.lifecycle === 'active');
+  // Regional CSA Managers (e.g. an EMEA CSA Manager) are locked to their own time zone — they see
+  // only the PODs/POD Leads within it, never the full portfolio.
+  const myTz = !myPod && store.role.startsWith('csa-manager') && persona.tz ? persona.tz : null;
+  const effectiveTz = myTz || tz;
+  // Hard persona-scoped set (POD Lead → own POD, regional CSA Manager → own time zone); unlike the
+  // TZ/POD dropdown filters below, this always applies to the top-line KPIs and attrition roll-up.
+  const inScope = (c) => myPod ? c.podId === myPod.id : myTz ? d.pods.find((p) => p.id === c.podId)?.tz === myTz : true;
+  const active = d.csas.filter(inScope).filter((c) => c.lifecycle === 'active');
   const ftcs = active.filter((c) => c.resourceType === 'FTC');
+  const attritionCount = d.attrition.filter((a) => inScope(a) && hoursSince(a.exitDate) <= 8760).length;
+  const attritionRate = (active.length + attritionCount) ? Math.round((attritionCount / (active.length + attritionCount)) * 1000) / 10 : 0;
   const podLeadsByTz = Object.fromEntries(Object.keys(TZ_MAP).map((timeZone) => [timeZone, new Set(d.pods.filter((pod) => pod.tz === timeZone).map((pod) => pod.leadName)).size]));
 
   const podsByTz = (region) => Object.entries(TZ_MAP).find(([, i]) => i.regions.includes(region))?.[0] || 'Global';
-  const pods = myPod ? [myPod] : d.pods.filter((p) => (tz === 'All' || p.tz === tz));
+  const pods = myPod ? [myPod] : d.pods.filter((p) => (effectiveTz === 'All' || p.tz === effectiveTz));
   const roster = myPod ? active : active.filter((c) => {
     const pod = d.pods.find((p) => p.id === c.podId);
-    return (tz === 'All' || (pod && pod.tz === tz)) && (podFilter === 'All' || c.podId === podFilter);
+    return (effectiveTz === 'All' || (pod && pod.tz === effectiveTz)) && (podFilter === 'All' || c.podId === podFilter);
   });
 
   const avgUtil = active.length ? Math.round(active.reduce((s, c) => s + c.utilization, 0) / active.length) : 0;
-  const podPerf = computePodPerformance(d).filter((p) => myPod ? p.id === myPod.id : ((tz === 'All' || p.tz === tz) && (podFilter === 'All' || p.id === podFilter))).sort((a, b) => b.score - a.score);
+  const podPerf = computePodPerformance(d).filter((p) => myPod ? p.id === myPod.id : ((effectiveTz === 'All' || p.tz === effectiveTz) && (podFilter === 'All' || p.id === podFilter))).sort((a, b) => b.score - a.score);
 
   // Resource lifecycle summary + onboarding detail, scoped the same way as the roster below.
   const lifecycleScope = myPod ? d.csas.filter((c) => c.podId === myPod.id) : d.csas.filter((c) => {
     const pod = d.pods.find((p) => p.id === c.podId);
-    return (tz === 'All' || (pod && pod.tz === tz)) && (podFilter === 'All' || c.podId === podFilter);
+    return (effectiveTz === 'All' || (pod && pod.tz === effectiveTz)) && (podFilter === 'All' || c.podId === podFilter);
   });
   const stageCounts = LIFECYCLE_STAGES.map((stage) => ({ stage, label: LIFECYCLE_STAGE_LABEL[stage], count: lifecycleScope.filter((c) => c.lifecycle === stage).length }));
   const onboardingCsas = lifecycleScope.filter((c) => c.lifecycle === 'onboarding');
@@ -57,10 +66,10 @@ export function renderPods(container) {
     (gap ? `Skill-gap watch: ${gap.t} shows the highest demand-to-supply ratio — prioritise hiring/enablement there.` : '');
 
   // Org hierarchy: WW Lead → TZ Lead → CSA Manager → POD Leads (multiple POD Leads per territory/OU).
-  const tzGroups = Object.keys(TZ_MAP).map((tz) => {
-    const tzPods = d.pods.filter((p) => p.tz === tz);
+  const tzGroups = Object.keys(TZ_MAP).filter((t) => !myTz || t === myTz).map((tzKey) => {
+    const tzPods = d.pods.filter((p) => p.tz === tzKey);
     const managers = [...new Set(tzPods.map((p) => p.csaManager))];
-    return { tz, lead: TZ_MAP[tz].lead, managers: managers.map((m) => ({ m, leads: tzPods.filter((p) => p.csaManager === m).map((p) => p.leadName) })) };
+    return { tz: tzKey, lead: TZ_MAP[tzKey].lead, managers: managers.map((m) => ({ m, leads: tzPods.filter((p) => p.csaManager === m).map((p) => p.leadName) })) };
   });
 
   const tzOpts = ['All', ...Object.keys(TZ_MAP)].map((t) => `<option value="${t}" ${t === tz ? 'selected' : ''}>${t === 'All' ? 'All time zones' : t}</option>`).join('');
@@ -68,9 +77,9 @@ export function renderPods(container) {
 
   container.innerHTML = `
     ${pageHeader({
-      title: myPod ? `PODs & People — ${myPod.name}` : 'PODs & People',
-      description: myPod ? 'Your POD — roster, capacity, utilization and skills.' : 'POD structure, FTC workforce, capacity, utilization and skills — rolled up by time zone.',
-      actions: myPod ? '' : `<select class="select" id="f-tz">${tzOpts}</select><select class="select" id="f-pod">${podOpts}</select>`,
+      title: myPod ? `PODs & People — ${myPod.name}` : myTz ? `PODs & People — ${myTz}` : 'PODs & People',
+      description: myPod ? 'Your POD — roster, capacity, utilization and skills.' : myTz ? `Your time zone (${myTz}) only — POD Leads, roster, capacity, utilization and skills.` : 'POD structure, FTC workforce, capacity, utilization and skills — rolled up by time zone.',
+      actions: myPod ? '' : `${myTz ? '' : `<select class="select" id="f-tz">${tzOpts}</select>`}<select class="select" id="f-pod">${podOpts}</select>`,
     })}
 
     <div class="kpi-grid">
@@ -79,10 +88,13 @@ export function renderPods(container) {
       ${kpiCard({ label: 'Avg utilization', value: avgUtil + '%', iconName: 'trending', tone: utilColor(avgUtil), hint: 'Healthy 80–90%' })}
       ${myPod
         ? kpiCard({ label: 'Time zone', value: myPod.tz, iconName: 'database', hint: myPod.region })
-        : kpiCard({ label: 'POD Leads', value: d.pods.length, iconName: 'database', hint: Object.entries(podLeadsByTz).map(([timeZone, count]) => `${timeZone} ${count}`).join(' · ') })}
+        : myTz
+          ? kpiCard({ label: 'POD Leads', value: pods.length, iconName: 'database', hint: `${myTz} only` })
+          : kpiCard({ label: 'POD Leads', value: d.pods.length, iconName: 'database', hint: Object.entries(podLeadsByTz).map(([timeZone, count]) => `${timeZone} ${count}`).join(' · ') })}
       ${myPod
         ? kpiCard({ label: 'CSA Manager', value: myPod.csaManager, iconName: 'building' })
         : kpiCard({ label: 'Delivery Partners', value: d.partners.length, iconName: 'building' })}
+      ${kpiCard({ label: 'Attrition (12mo)', value: attritionCount, iconName: 'personAdd', tone: attritionRate > 12 ? COLORS.negative : COLORS.positive, hint: `${attritionRate}% rate${myPod ? ` · ${myPod.name}` : myTz ? ` · ${myTz}` : ' · WW'}` })}
     </div>
 
     <div class="card pad mb16">
@@ -90,7 +102,7 @@ export function renderPods(container) {
       <div>${esc(aiText)}</div>
     </div>
 
-    <div class="section-title">Resource lifecycle${myPod ? ` — ${esc(myPod.name)}` : ''}</div>
+    <div class="section-title">Resource lifecycle${myPod ? ` — ${esc(myPod.name)}` : myTz ? ` — ${esc(myTz)}` : ''}</div>
     <div class="card pad mb16">
       <div class="muted mb8" style="font-size:12px">Where every FTC/FTE in scope sits today, from sourcing through offboarding.</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
