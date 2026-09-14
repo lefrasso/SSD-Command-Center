@@ -17,11 +17,13 @@ export const PERSONAS = {
   sdm: { role: 'sdm', name: 'Priya Nair', title: 'SDM · Delivery Partner', initials: 'PN', color: '#5b5fc7', org: 'Delivery Partner', scope: 'Same profile as Partner CSA, plus Capacity Management and Reporting & AI.' },
   // Customer Success (Microsoft, customer-facing)
   csam: { role: 'csam', name: 'Julia Meyer', title: 'CSAM · Customer Success', initials: 'JM', color: '#c19c00', org: 'Customer Success', scope: 'Owns the customer relationship; raises delivery concerns as escalations for the POD Lead/SDM.' },
+  // IP & Content Leadership — owns the Delivery Guide and IP Kits; reviews AI-triaged content feedback.
+  'ip-lead': { role: 'ip-lead', name: 'Elif Kaya', title: 'IP Lead · CSAM Innovation', initials: 'EK', color: '#8764b8', org: 'CSAM Innovation', scope: 'Owns the IP Feedback backlog — reviews the agent-triaged content issues, confirms, rejects or postpones changes, and drives Delivery Guide/IP Kit updates to closure.' },
   // Platform Admin (governs Compass itself, not a delivery role)
   admin: { role: 'admin', name: 'Alex Ito', title: 'Platform Admin · Compass', initials: 'AI', color: '#3b3a39', org: 'Platform Admin', scope: 'Full visibility across Compass, plus manages persona access to modules and capability permissions.' },
 };
 
-export const ROLE_ORDER = ['ww-lead', 'tz-lead', 'csa-manager', 'pod-lead', 'business-manager', 'csa', 'adoption-lead', 'partner-csa', 'sdm', 'csam', 'admin'];
+export const ROLE_ORDER = ['ww-lead', 'tz-lead', 'csa-manager', 'pod-lead', 'business-manager', 'csa', 'adoption-lead', 'partner-csa', 'sdm', 'csam', 'ip-lead', 'admin'];
 
 // Every capability permission checked anywhere in the app via can(), plus the Admin-only permission that gates Roles & Permissions.
 export const ALL_PERMISSIONS = [
@@ -29,6 +31,7 @@ export const ALL_PERMISSIONS = [
   'edit:successStories', 'assign:successStoryActions', 'review:successStories',
   'approve:podSuccessStories', 'approve:leadershipSuccessStories', 'approve:ltSuccessStories', 'publish:successStories',
   'view:pip', 'edit:pip', 'edit:dispatch', 'edit:escalation', 'edit:capacity', 'raise:escalation',
+  'decide:ipFeedback',
   'manage:accessControl',
 ];
 export const PERMISSION_LABELS = {
@@ -48,6 +51,7 @@ export const PERMISSION_LABELS = {
   'edit:escalation': 'Manage escalations',
   'edit:capacity': 'Edit capacity plans & headcount mapping',
   'raise:escalation': 'Raise a delivery concern (CSAM intake)',
+  'decide:ipFeedback': 'Confirm, reject or postpone IP Feedback changes (IP Lead)',
   'manage:accessControl': 'Manage roles & permissions (Platform Admin)',
 };
 
@@ -62,6 +66,7 @@ const ROLE_PERMISSIONS = {
   'partner-csa': ['edit:successStories'],
   sdm: ['edit:escalation', 'view:allPartners', 'run:mbr', 'review:successStories'],
   csam: ['raise:escalation'],
+  'ip-lead': ['decide:ipFeedback'],
   admin: [...ALL_PERMISSIONS],
 };
 

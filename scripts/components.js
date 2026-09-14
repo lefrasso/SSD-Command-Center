@@ -33,6 +33,15 @@ const STATUS = {
   closed: [COLORS.neutral, 'check', 'Closed'],
   requested: [COLORS.warning, 'clock', 'Requested'], confirmed: [COLORS.positive, 'check', 'Confirmed'],
   declined: [COLORS.negative, 'x', 'Declined'],
+  submitted: [COLORS.neutral, 'clock', 'Submitted'],
+  'kit-analysis': [COLORS.info, 'sparkle', 'IP Kit analysis'],
+  drafting: [COLORS.info, 'sparkle', 'Drafting change'],
+  'expert-review': [COLORS.info, 'sparkle', 'Expert review'],
+  triage: [COLORS.info, 'sparkle', 'Triage'],
+  'resolved-by-guide': [COLORS.positive, 'check', 'Resolved by guide'],
+  backlog: [COLORS.warning, 'clock', 'In backlog'],
+  postponed: [COLORS.neutral, 'clock', 'Postponed'],
+  rejected: [COLORS.negative, 'x', 'Rejected'],
 };
 export function statusPill(status) {
   const [c, ic, label] = STATUS[status] || [COLORS.neutral, 'clock', status];

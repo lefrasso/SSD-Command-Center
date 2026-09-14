@@ -20,7 +20,7 @@ export function renderEscalations(container) {
           <div class="row" style="justify-content:space-between">${severityPill(e.severity)}${breach ? badge('SLA breached', 'tint-danger') : (e.status !== 'resolved' ? badge(`${Math.max(0, Math.round(e.slaHours - hrs))}h left`, 'outline') : '')}</div>
           <div class="kc-title mt8">${esc(eng ? eng.customer : e.engagementId)}</div>
           <div class="kc-meta">${esc(e.summary)}</div>
-          <div class="kc-foot"><span class="muted" style="font-size:11px">${esc(e.adoRef)} · ${esc(e.ownerName)}</span>${e.channel === 'csam' ? badge('Raised by CSAM', 'tint-info') : ''}</div>
+          <div class="kc-foot"><span class="muted" style="font-size:11px">${esc(e.adoRef)} · ${esc(e.ownerName)}</span>${e.channel === 'csam' ? badge('Raised by CSAM', 'tint-info') : ''}${e.channel === 'agentic-support' ? badge('Raised via Agentic Delivery', 'tint-info') : ''}</div>
         </div>`;
       }),
     };
@@ -42,7 +42,7 @@ function openEsc(id) {
   const hrs = hoursSince(e.opened); const breach = e.status !== 'resolved' && hrs > e.slaHours;
 
   const body = `
-    <div class="row wrap mb8" style="gap:8px">${severityPill(e.severity)} ${statusPill(e.status)} ${breach ? badge('SLA breached', 'tint-danger') : badge(`SLA ${e.slaHours}h`, 'outline')} ${e.channel === 'csam' ? badge(`Raised by CSAM · ${e.raisedBy}`, 'tint-info') : ''}</div>
+    <div class="row wrap mb8" style="gap:8px">${severityPill(e.severity)} ${statusPill(e.status)} ${breach ? badge('SLA breached', 'tint-danger') : badge(`SLA ${e.slaHours}h`, 'outline')} ${e.channel === 'csam' ? badge(`Raised by CSAM · ${e.raisedBy}`, 'tint-info') : ''}${e.channel === 'agentic-support' ? badge(`Raised via Agentic Delivery · ${e.raisedBy}`, 'tint-info') : ''}</div>
     <div class="field"><span class="field-key">Customer</span><span class="field-val">${esc(eng ? eng.customer : e.engagementId)}</span></div>
     <div class="field"><span class="field-key">Summary</span><span class="field-val">${esc(e.summary)}</span></div>
     <div class="field"><span class="field-key">Owner (POD Lead)</span><span class="field-val">${esc(e.ownerName)}</span></div>

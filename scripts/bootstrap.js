@@ -10,6 +10,7 @@ import { renderHome } from './views/home.js';
 import { renderSsdIq } from './views/ssdiq.js';
 import { renderCapabilities } from './views/capabilities.js';
 import { renderAgentic } from './views/agentic.js';
+import { renderIpFeedback } from './views/ipfeedback.js';
 import { renderCapacity } from './views/capacity.js';
 import { renderPartners } from './views/partners.js';
 import { renderEnablement } from './views/enablement.js';
@@ -138,6 +139,7 @@ function renderView() {
     case 'ssdiq': renderSsdIq(view, params.get('q') || ''); break;
     case 'capabilities': renderCapabilities(view); break;
     case 'agentic': renderAgentic(view); break;
+    case 'ip-feedback': renderIpFeedback(view); break;
     case 'capacity': renderCapacity(view); break;
     case 'delivery-partners': renderPartners(view); break;
     case 'enablement': renderEnablement(view); break;

@@ -1,6 +1,7 @@
 // In-memory SSD IQ store + derived KPIs and selectors.
 import { dataset, IP_TAGS, CAP_PER_CSA, BASELINE_UTILIZATION } from '../data/generate.js';
 import { MODULES, moduleById } from './nav.js';
+import { runFullPipeline } from './ipFeedbackAgents.js';
 
 export const store = {
   data: dataset,
@@ -87,6 +88,8 @@ export const CANONICAL_ENTITIES = [
   { entity: 'Sentiment', owner: 'Voice of customer', source: 'AI sentiment rollup', key: 'sentiment', count: (d) => d.sentiment.length },
   { entity: 'Shadow Requests', owner: 'Enablement', source: 'Shadowing program', key: 'shadowRequests', count: (d) => d.shadowRequests.length },
   { entity: 'IP Feedback', owner: 'IP Lead · CSAM Innovation', source: 'Agentic Delivery', key: 'ipFeedback', count: (d) => d.ipFeedback.length },
+  { entity: 'IP Content Feedback', owner: 'IP Lead · CSAM Innovation', source: 'IP Feedback (agentic triage)', key: 'ipFeedbackCases', count: (d) => d.ipFeedbackCases.length },
+  { entity: 'Engagement Feedback', owner: 'Delivery agents · Agentic Delivery', source: 'Agentic Delivery', key: 'engagementFeedback', count: (d) => d.engagementFeedback.length },
   { entity: 'Attrition', owner: 'Capacity planning', source: 'HC Consolidation', key: 'attrition', count: (d) => d.attrition.length },
 ];
 
@@ -616,6 +619,83 @@ export function addIpFeedback({ engagementId, rating, tag, comment }) {
   emit('data');
   return id;
 }
+
+// ---- IP Feedback (content issues → IP Leads, triaged by the simulated agent pipeline) ----
+let cfbSeq = store.data.ipFeedbackCases.reduce((max, c) => Math.max(max, Number(c.id.replace(/^CFB/, '')) || 0), 0) + 1;
+export const ipFeedbackMine = (name, d = store.data) => d.ipFeedbackCases.filter((c) => c.submittedByName === name);
+export const ipFeedbackBacklog = (d = store.data) => d.ipFeedbackCases.filter((c) => ['backlog', 'confirmed', 'in-progress', 'postponed'].includes(c.status));
+export function addIpFeedbackCase({ title, description, proposedChange = '', program, track = null, engagementId = null, submittedByName, submittedByRole }) {
+  const t = String(title || '').trim();
+  const desc = String(description || '').trim();
+  if (!t) throw new Error('A short title is required.');
+  if (!desc) throw new Error('Describe the content issue before submitting.');
+  if (!program) throw new Error('Select the Program / IP Kit this feedback relates to.');
+  const id = `CFB${String(cfbSeq++).padStart(3, '0')}`;
+  const now = new Date().toISOString();
+  const c = {
+    id, title: t, description: desc, proposedChange: String(proposedChange || '').trim(),
+    program, track, engagementId,
+    submittedByName, submittedByRole,
+    status: 'submitted', currentStepIndex: 0, agentSteps: [],
+    category: null, priority: null, assignedIpLead: null,
+    guideResolution: null, kitAnalysis: null, draftChange: null, expertReview: null, triage: null, ipLeadDecision: null,
+    createdAt: now, sourceOfTruth: 'IP Feedback (agentic triage)', updatedAt: now,
+    audit: [{ at: now, who: submittedByName, action: 'feedback submitted' }],
+  };
+  runFullPipeline(c);
+  c.audit.push({ at: new Date().toISOString(), who: 'IP Feedback agents', action: `pipeline complete — ${c.status}` });
+  store.data.ipFeedbackCases.unshift(c);
+  emit('data');
+  return id;
+}
+export function decideIpFeedback(id, decision, { by, note = '' } = {}) {
+  const c = byId(store.data.ipFeedbackCases, id);
+  if (!c) throw new Error(`Feedback case ${id} was not found.`);
+  if (!['backlog', 'postponed'].includes(c.status)) throw new Error('This case is not awaiting an IP Lead decision.');
+  if (!['confirmed', 'rejected', 'postponed'].includes(decision)) throw new Error('Decision must be confirmed, rejected or postponed.');
+  const now = new Date().toISOString();
+  const who = by || store.role;
+  c.ipLeadDecision = { decision, by: who, at: now, note: String(note || '').trim() };
+  c.status = decision;
+  c.updatedAt = now;
+  c.audit.push({ at: now, who, action: `IP Lead ${decision} the change${note ? `: "${note}"` : ''}` });
+  emit('data');
+}
+export function progressIpFeedbackWork(id, nextStatus) {
+  const c = byId(store.data.ipFeedbackCases, id);
+  if (!c) throw new Error(`Feedback case ${id} was not found.`);
+  const allowed = { confirmed: ['in-progress'], 'in-progress': ['done'] };
+  if (!(allowed[c.status] || []).includes(nextStatus)) throw new Error(`Cannot move this case from ${c.status} to ${nextStatus}.`);
+  c.status = nextStatus;
+  c.updatedAt = new Date().toISOString();
+  c.audit.push({ at: c.updatedAt, who: store.role, action: `moved to ${nextStatus}` });
+  emit('data');
+}
+
+// ---- Engagement Feedback (in-flight check-ins logged from the Agentic Delivery support panel) ----
+let efSeq = store.data.engagementFeedback.reduce((max, f) => Math.max(max, Number(f.id.replace(/^EF/, '')) || 0), 0) + 1;
+export const engagementFeedbackFor = (engagementId, d = store.data) => d.engagementFeedback.filter((f) => f.engagementId === engagementId);
+function classifyFeedbackSentiment(text) {
+  const positive = /(great|thank|smooth|helpful|appreciate|excellent|on track)/i.test(text);
+  const negative = /(concern|frustrat|slow|delay|unhappy|disappoint|blocker|confus)/i.test(text);
+  return positive && !negative ? 'positive' : negative ? 'negative' : 'neutral';
+}
+export function addEngagementFeedback({ engagementId, phase, message, authorName, authorRole }) {
+  const eng = byId(store.data.engagements, engagementId);
+  if (!eng) throw new Error(`Engagement ${engagementId} was not found.`);
+  const text = String(message || '').trim();
+  if (!text) throw new Error('Add a message before submitting feedback.');
+  const id = `EF${String(efSeq++).padStart(3, '0')}`;
+  const now = new Date().toISOString();
+  store.data.engagementFeedback.unshift({
+    id, engagementId, phase, authorName, authorRole, message: text, sentiment: classifyFeedbackSentiment(text),
+    createdAt: now, sourceOfTruth: 'Agentic Delivery', updatedAt: now,
+    audit: [{ at: now, who: authorName, action: 'engagement feedback submitted' }],
+  });
+  emit('data');
+  return id;
+}
+
 export function addMessage(threadId, engagementId, from, to, body, sentiment) {
   const id = `MSG${msgSeq++}`;
   store.data.messages.push({ id, threadId, engagementId, from, to, body, timestamp: new Date().toISOString(), sentiment: sentiment || 'neutral', sourceOfTruth: 'Teams', updatedAt: new Date().toISOString().slice(0, 10), audit: [{ at: new Date().toISOString(), who: 'you', action: 'message sent' }] });

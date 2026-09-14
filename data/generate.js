@@ -1,5 +1,7 @@
 // Deterministic, seeded mock-data generator for SSD IQ.
 // Same seed => same data (repeatable demos). All names/figures are fictional.
+import { runFullPipeline } from '../scripts/ipFeedbackAgents.js';
+import { phaseForEngagement } from '../scripts/agenticSupportAgents.js';
 
 export const TRACKS = ['Health', 'AI Innovation', 'Cloud Deployment', 'Foundations'];
 // Capacity forecast assumptions — CAP_PER_CSA is calibrated at BASELINE_UTILIZATION; the Trajectory
@@ -560,6 +562,110 @@ function build() {
     };
   }).filter(Boolean);
 
+  // Engagement Feedback — in-flight check-in notes logged from the Agentic Delivery support panel
+  // (distinct from the IP content feedback below, and from the per-Kit rating captured after use).
+  const FEEDBACK_SNIPPETS = {
+    positive: ['Kickoff went smoothly — customer stakeholders were fully engaged.', 'Great cadence this week, the customer is very happy with the pace.', 'Content pack landed well with the sponsor team.', 'Customer thanked the team for the clear milestone plan.'],
+    neutral: ['Customer asked to shift the next sync by a day — otherwise on track.', 'Standard check-in, nothing new to flag.', 'Milestone review completed, awaiting sign-off.', 'Requested a small change to the workshop agenda.'],
+    negative: ['Customer raised concerns about the pace of the discovery phase.', 'Some confusion on scope during the design session — clarifying today.', 'Stakeholder availability has been a recurring blocker this week.', 'Customer is frustrated with a delay in the last milestone.'],
+  };
+  const feedbackCandidates = engagements.filter((e) => e.status === 'in-delivery' || e.status === 'complete');
+  let efSeq = 1;
+  const engagementFeedback = pickN(feedbackCandidates, Math.min(feedbackCandidates.length, 22)).map((eng) => {
+    const sentiment = weighted([['positive', 0.45], ['neutral', 0.35], ['negative', 0.2]]);
+    const csa = csas.find((c) => c.id === eng.assignedTo);
+    const asCsam = chance(0.5) || !csa;
+    const createdAt = daysAgo(int(1, 30));
+    return {
+      id: `EF${String(efSeq++).padStart(3, '0')}`, engagementId: eng.id, phase: phaseForEngagement(eng),
+      authorName: asCsam ? eng.csamName : csa.name, authorRole: asCsam ? 'CSAM' : 'CSA',
+      message: pick(FEEDBACK_SNIPPETS[sentiment]), sentiment,
+      createdAt, sourceOfTruth: 'Agentic Delivery', updatedAt: createdAt,
+      audit: [{ at: createdAt, who: asCsam ? eng.csamName : csa.name, action: 'engagement feedback submitted' }],
+    };
+  });
+
+  // IP Feedback — content issues submitted to the IP Leads about the Delivery Guide / IP Kits,
+  // triaged by a simulated 5-agent pipeline (Guide Sentinel → Kit Cartographer → Draft Weaver →
+  // Content Sage → Triage Marshal). Seeded across every terminal state for a rich initial demo.
+  const CFB_SUBMITTERS = [
+    { name: 'Noa Feldman', role: 'csa' }, { name: 'Marco Rossi', role: 'partner-csa' }, { name: 'Sam Okoro', role: 'pod-lead' },
+    { name: 'Priya Nair', role: 'sdm' }, { name: 'Devin Cole', role: 'csa-manager' }, { name: 'Diego Marín', role: 'adoption-lead' },
+  ];
+  const CFB_CASES = [
+    { title: 'ESA template links to a retired assessment tool', program: 'ESA', track: 'Health',
+      description: 'The Expert Security Assessment Template in the Health IP Kit still links to the old Secure Score tool that was retired last quarter — customers click through to a 404.',
+      proposedChange: 'Swap the Secure Score link for the current Defender for Cloud secure score deep link, and add a footnote so future retirements are easier to catch.' },
+    { title: 'Landing Zone Playbook missing multi-region guidance', program: 'MACC', track: 'Cloud Deployment',
+      description: 'The Landing Zone Playbook has no section covering multi-region landing zones, and two recent customers needed this — the current playbook only covers single-region deployments.' },
+    { title: 'Copilot Readiness Kit outreach cadence contradicts the Delivery Guide', program: 'Adoption', track: 'AI Innovation',
+      description: 'The Copilot Readiness Kit tells CSAs to skip the Day 1 stakeholder sync for this Program, but that seems wrong given the standard outreach cadence.' },
+    { title: 'Migration Runbook rollback steps are outdated', program: 'Cloud Modernization', track: 'Cloud Deployment',
+      description: 'The Migration Runbook rollback section is outdated and no longer matches the current Azure Migrate UI — steps 4 through 6 reference a deprecated blade.',
+      proposedChange: 'Replace steps 4-6 with the current Azure Migrate rollback flow (Resource Health blade), and attach the updated screenshots I captured this week.' },
+    { title: 'D365 crisis management deck has a broken customer-facing link', program: 'Crisis Management - D365 Sim', track: 'Health',
+      description: 'Slide 12 of the D365 Crisis Management deck links to a SharePoint doc that returns access denied for customers — the broken link needs fixing before the next delivery.' },
+    { title: 'GitHub Copilot kit missing regulated-industries guidance', program: 'Github Copilot', track: 'Cloud Deployment',
+      description: 'There is no guidance in the GitHub Copilot Kit for regulated industries such as finance or healthcare — missing a compliance callout that legal has already approved elsewhere.' },
+    { title: 'Secure Copilot deck has no German localization for DACH', program: 'Secure Copilot', track: 'AI Innovation',
+      description: 'The Secure Copilot adoption deck has no German localization even though DACH delivers this Program frequently — checking whether a translated version is required or already planned.' },
+    { title: 'Can the CPE survey go out right after the technical milestone?', program: 'UfP', track: 'Foundations',
+      description: 'Quick check on CPE survey timing — can we send the CPE survey right after the final technical milestone, even before the customer formally confirms delivery is complete?' },
+    { title: 'AIR kit missing a FinOps cost-tracking template', program: 'AIR', track: 'Cloud Deployment',
+      description: 'The AIR (Azure Infrastructure Readiness) kit does not include a FinOps cost-tracking template even though most engagements ask for one.' },
+    { title: 'Agents kit S500 callout looks incorrect', program: 'Agents', track: 'AI Innovation',
+      description: 'The Agents Program kit says any CSA can deliver to S500 customers, which looks incorrect given the S500 eligibility rules.',
+      proposedChange: 'Update the callout to state that only S500-ready CSAs (CPE ≥ 4.4, quality ≥ 4.4, 6+ months tenure) may deliver to S500-flagged customers, per §6.1.' },
+    { title: 'M365 ESA appendix has a typo in the scoring table', program: 'M365', track: 'Health',
+      description: 'Minor typo — the M365 ESA appendix scoring table shows 4.4 twice instead of 4.4 and 3.8 for the two separate thresholds.' },
+    { title: 'Cloud Modernization kit needs a rollback comms template', program: 'Cloud Modernization', track: 'Cloud Deployment',
+      description: 'When a Cloud Modernization migration needs to roll back, there is no customer communication template in the kit — CSAs are drafting these from scratch each time.' },
+  ];
+  let cfbSeq = 1;
+  const ipFeedbackCases = CFB_CASES.map((item, i) => {
+    const submitter = CFB_SUBMITTERS[i % CFB_SUBMITTERS.length];
+    const createdAt = daysAgo(int(5, 60));
+    const c = {
+      id: `CFB${String(cfbSeq++).padStart(3, '0')}`, title: item.title, description: item.description, proposedChange: item.proposedChange || '',
+      program: item.program, track: item.track, engagementId: null,
+      submittedByName: submitter.name, submittedByRole: submitter.role,
+      status: 'submitted', currentStepIndex: 0, agentSteps: [],
+      category: null, priority: null, assignedIpLead: null,
+      guideResolution: null, kitAnalysis: null, draftChange: null, expertReview: null, triage: null, ipLeadDecision: null,
+      createdAt, sourceOfTruth: 'IP Feedback (agentic triage)', updatedAt: createdAt,
+      audit: [{ at: createdAt, who: submitter.name, action: 'feedback submitted' }],
+    };
+    runFullPipeline(c);
+    c.audit.push({ at: daysAgo(int(1, 4)), who: 'IP Feedback agents', action: `pipeline complete — ${c.status}` });
+    return c;
+  });
+  // Layer in IP Lead decisions on the cases that reached the backlog, for a realistic mix of terminal states.
+  const CFB_DECISIONS = {
+    0: [['confirmed', 'Queuing the link fix into this sprint.'], ['in-progress', null]],
+    1: [['confirmed', 'Good catch — scheduling the multi-region section for the next kit refresh.']],
+    2: [['postponed', 'Needs alignment with the Adoption Program owner before we change the cadence guidance.']],
+    3: [['confirmed', 'Rollback steps are customer-facing — prioritizing this.'], ['in-progress', null], ['done', null]],
+    4: [['confirmed', 'Broken customer-facing link — fixing today.'], ['in-progress', null]],
+    9: [['confirmed', 'Correcting the S500 callout to match §6.1.']],
+    10: [['confirmed', 'Small fix — bundling with the link repair above.'], ['in-progress', null]],
+    11: [['rejected', 'Rollback comms are covered in the Escalations playbook, not the delivery IP Kit — redirecting the submitter there.']],
+  };
+  Object.entries(CFB_DECISIONS).forEach(([idx, transitions]) => {
+    const c = ipFeedbackCases[Number(idx)];
+    if (!c || c.status !== 'backlog') return;
+    transitions.forEach(([status, note], step) => {
+      const at = daysAgo(int(0, 3) - step);
+      if (step === 0) {
+        c.ipLeadDecision = { decision: status, by: 'Elif Kaya', at, note: note || '' };
+        c.audit.push({ at, who: 'Elif Kaya', action: `IP Lead ${status} the change${note ? `: "${note}"` : ''}` });
+      } else {
+        c.audit.push({ at, who: 'Elif Kaya', action: `moved to ${status}` });
+      }
+      c.status = status;
+      c.updatedAt = at;
+    });
+  });
+
   // POD IP Kit feedback — each engagement has its own IP Kit (derived from its Program); the delivering
   // POD rates/tags that Kit after use, feeding the IP Lead's refresh backlog. Not a generic component library.
   const kitCandidates = engagements.filter((e) => e.assignedTo && (e.status === 'complete' || e.status === 'in-delivery'));
@@ -675,7 +781,7 @@ function build() {
     { id: 'INI006', type: 'Platform', name: 'SSD IQ reporting semantic model', area: 'Reporting', stage: 'Pilot', ownerName: 'Robin Ellis', targetRelease: 'FY27 Q2', status: 'on-track', impact: 'Reconciles MBR metrics and enables governed drill-through.', nextStep: 'Reconcile Power BI measures.' },
   ].map((initiative) => ({ ...initiative, ...gov('Portfolio Management') }));
 
-  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, sentimentSignals, pips, shadowRequests, ipFeedback, sentiment, deliveries, hiring, attrition, financials, initiatives, capacityTargets, demandHistory };
+  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, sentimentSignals, pips, shadowRequests, ipFeedback, ipFeedbackCases, engagementFeedback, sentiment, deliveries, hiring, attrition, financials, initiatives, capacityTargets, demandHistory };
 }
 
 export const dataset = build();

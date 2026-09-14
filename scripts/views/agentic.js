@@ -1,55 +1,76 @@
-// Agentic Delivery — AI delivery agents, Deliverables Generation, and the IP library.
-import { store, ipFeedbackForEngagement, addIpFeedback } from '../store.js';
-import { pageHeader, kpiCard, aiChip, esc, badge, COLORS, openDrawer, closeDrawer } from '../components.js';
+// Agentic Delivery — tailored, per-engagement support agents across pre-delivery, delivery and
+// post-delivery, plus in-flight feedback and an urgent "ask for support" fast path.
+import {
+  store, addIpFeedback, engagementFeedbackFor, addEngagementFeedback, addEscalation,
+} from '../store.js';
+import { pageHeader, kpiCard, aiChip, esc, badge, sentimentPill, COLORS, openDrawer } from '../components.js';
 import { icon } from '../icons.js';
 import { generateDeliverable } from '../ai.js';
+import { PERSONAS } from '../roles.js';
 import { IP_ASSETS, IP_TAGS } from '../../data/generate.js';
+import { PHASES, COMMON_AGENTS, EXPERT_AGENTS, phaseForEngagement, buildEngagementSupport } from '../agenticSupportAgents.js';
 
 let generated = 0;
 
-function agentStatus(e) {
-  const done = e.milestones.filter((m) => m.done).length;
-  if (e.status === 'complete') return { label: 'Complete', color: COLORS.positive };
-  if (done >= Math.ceil(e.milestones.length / 2)) return { label: 'Drafting deliverable', color: COLORS.info };
-  if (e.status === 'in-delivery') return { label: 'In delivery', color: COLORS.warning };
-  return { label: 'Queued', color: COLORS.neutral };
+function phasePill(phase) {
+  const label = PHASES.find(([k]) => k === phase)?.[1] || phase;
+  const color = phase === 'post-delivery' ? COLORS.positive : phase === 'delivery' ? COLORS.warning : COLORS.info;
+  return `<span class="pill" style="color:${color}">${icon('clock', 14)}<span class="pill-label">${esc(label)}</span></span>`;
+}
+function riskBadge(risk) {
+  if (risk === 'high') return badge('High risk', 'tint-danger');
+  if (risk === 'medium') return badge('Watch', 'tint-warn');
+  return badge('Low risk', 'outline');
+}
+function phaseStepper(currentPhase) {
+  const idx = PHASES.findIndex(([k]) => k === currentPhase);
+  return `<div class="row wrap" style="gap:6px">${PHASES.map(([, label], i) => {
+    const state = i < idx ? 'done' : i === idx ? 'current' : 'upcoming';
+    const color = state === 'done' ? COLORS.positive : state === 'current' ? COLORS.brand : COLORS.neutral;
+    const ic = state === 'done' ? 'check' : state === 'current' ? 'sparkle' : 'clock';
+    return `${i > 0 ? `<span class="muted">${icon('chevronRight', 14)}</span>` : ''}<span class="pill" style="color:${color}">${icon(ic, 14)}<span class="pill-label">${esc(label)}</span></span>`;
+  }).join('')}</div>`;
 }
 
 export function renderAgentic(container) {
   const d = store.data;
   const active = d.engagements.filter((e) => e.assignedTo && (e.status === 'in-delivery' || e.status === 'assigned'));
-  const automation = d.engagements.filter((e) => e.status !== 'new').length;
-  const coverage = d.engagements.length ? Math.round((automation / d.engagements.length) * 100) : 0;
+  const openUrgent = d.escalations.filter((e) => e.channel === 'agentic-support' && e.status !== 'resolved').length;
 
   container.innerHTML = `
-    ${pageHeader({ title: 'Agentic Delivery', description: 'AI delivery agents draft from SSD IQ-backed engagement records and reusable IP, while the human CSA remains accountable for review and publication.', actions: aiChip('Agentic') })}
+    ${pageHeader({ title: 'Agentic Delivery', description: 'Every engagement gets a tailored crew of AI agents — common agents cover insights, outreach, content and surveys across pre-delivery, delivery and post-delivery; a track specialist joins for domain expertise.', actions: aiChip('Agentic') })}
 
     <div class="kpi-grid">
       ${kpiCard({ label: 'Active delivery agents', value: active.length, iconName: 'sparkle', tone: COLORS.brand })}
       ${kpiCard({ label: 'Deliverables generated', value: generated, iconName: 'report', hint: 'this session' })}
+      ${kpiCard({ label: 'Open urgent requests', value: openUrgent, iconName: 'warning', tone: openUrgent ? COLORS.negative : COLORS.positive, hint: 'via Ask for support' })}
+      ${kpiCard({ label: 'Engagement feedback logged', value: d.engagementFeedback.length, iconName: 'chat' })}
       ${kpiCard({ label: 'IP Kit feedback', value: d.ipFeedback.length, iconName: 'star', hint: 'across all engagements' })}
-      ${kpiCard({ label: 'Automation coverage', value: coverage + '%', iconName: 'check', tone: COLORS.positive, hint: 'engagements with an agent' })}
     </div>
 
-    <div class="section-title">Delivery agents</div>
-    <div class="muted mb8" style="font-size:12px">Each engagement has its own IP Kit — the collateral bundle used for that delivery's Program. Rate it after use to feed the IP Lead's refresh backlog.</div>
-    <div class="table-wrap mb16"><table class="grid"><thead><tr><th>Customer</th><th>CSA</th><th>Family</th><th>Program</th><th>Agent status</th><th>IP Kit feedback</th><th></th></tr></thead><tbody>
-      ${active.slice(0, 40).map((e) => {
+    <div class="section-title">Delivery agent roster</div>
+    <div class="muted mb8" style="font-size:12px">Five common agents support every engagement; a track specialist joins for domain-specific guidance.</div>
+    <div class="catalog">
+      ${COMMON_AGENTS.map((a) => `<div class="card tile" style="cursor:default"><span class="tile-ico">${icon(a.icon, 20)}</span><div><strong>${esc(a.name)}</strong><div class="muted" style="font-size:12px">${esc(a.role)}</div><div class="mt8">${badge('Common agent', 'tint-info')}</div></div></div>`).join('')}
+      ${Object.values(EXPERT_AGENTS).map((a) => `<div class="card tile" style="cursor:default"><span class="tile-ico">${icon(a.icon, 20)}</span><div><strong>${esc(a.name)}</strong><div class="muted" style="font-size:12px">${esc(a.role)}</div><div class="mt8">${badge(`${a.track} specialist`, 'outline')}</div></div></div>`).join('')}
+    </div>
+
+    <div class="section-title">Active engagements</div>
+    <div class="muted mb8" style="font-size:12px">Open the support plan to see the full agent read for the current phase, generate deliverables, rate the IP Kit, submit feedback or ask for urgent support.</div>
+    <div class="table-wrap mb16"><table class="grid"><thead><tr><th>Customer</th><th>CSA</th><th>Family</th><th>Program</th><th>Phase</th><th>Risk</th><th></th></tr></thead><tbody>
+      ${active.slice(0, 50).map((e) => {
         const c = d.csas.find((x) => x.id === e.assignedTo);
-        const st = agentStatus(e);
-        const fb = ipFeedbackForEngagement(e.id, d);
-        const avg = fb.length ? Math.round((fb.reduce((s, f) => s + f.rating, 0) / fb.length) * 10) / 10 : null;
+        const phase = phaseForEngagement(e);
+        const openEsc = d.escalations.filter((x) => x.engagementId === e.id && x.status !== 'resolved');
+        const risk = openEsc.length ? 'high' : e.atRisk ? 'medium' : 'low';
         return `<tr>
-        <td><strong>${esc(e.customer)}</strong></td>
+        <td><strong>${esc(e.customer)}</strong>${e.s500Customer ? ` ${badge('S500', 'tint-info')}` : ''}</td>
         <td>${esc(c ? c.name : '—')}</td>
         <td>${esc(e.track)}</td>
         <td>${esc(e.program)}</td>
-        <td><span class="pill" style="color:${st.color}"><span class="pill-label">${esc(st.label)}</span></span></td>
-        <td>${avg != null ? badge(`★ ${avg.toFixed(1)} · ${fb.length}`, 'outline') : badge('No feedback yet', 'outline')}</td>
-        <td class="row" style="gap:6px">
-          <button class="btn sm" data-gen="${e.id}">${icon('sparkle', 14)} Generate deliverable</button>
-          <button class="btn sm subtle" data-ip-feedback="${e.id}">Rate IP Kit</button>
-        </td>
+        <td>${phasePill(phase)}</td>
+        <td>${riskBadge(risk)}</td>
+        <td><button class="btn sm" data-open-support="${e.id}">${icon('sparkle', 14)} Open support plan</button></td>
       </tr>`; }).join('') || '<tr><td colspan="7" class="muted" style="padding:16px">No active engagements.</td></tr>'}
     </tbody></table></div>
 
@@ -62,29 +83,13 @@ export function renderAgentic(container) {
       </div>`).join('')}
     </div>`;
 
-  container.querySelectorAll('[data-gen]').forEach((b) => b.addEventListener('click', () => {
-    const e = d.engagements.find((x) => x.id === b.getAttribute('data-gen'));
-    const r = generateDeliverable(e, d);
-    generated += 1;
-    openDrawer(`Deliverable · ${esc(e.customer)}`, `<div class="row mb8" style="gap:8px">${aiChip()}<span class="muted" style="font-size:12px">Draft — review before sending</span></div><pre style="white-space:pre-wrap;font-family:inherit;font-size:13px;margin:0">${esc(r.text)}</pre>`);
-    // refresh the KPI counter
-    const doc = container.querySelector('.kpi-grid'); if (doc) renderAgentic(container);
-  }));
-
-  container.querySelectorAll('[data-ip-feedback]').forEach((b) => b.addEventListener('click', () => openIpFeedback(b.getAttribute('data-ip-feedback'), container)));
+  container.querySelectorAll('[data-open-support]').forEach((b) => b.addEventListener('click', () => openSupportDrawer(b.getAttribute('data-open-support'), container)));
 }
 
-function openIpFeedback(engagementId, container) {
-  const d = store.data;
-  const e = d.engagements.find((x) => x.id === engagementId);
-  if (!e) return;
-  const c = d.csas.find((x) => x.id === e.assignedTo);
-  const body = `
-    <div class="field"><span class="field-key">IP Kit</span><span class="field-val">${esc(e.program)} IP Kit</span></div>
-    <div class="field"><span class="field-key">Engagement</span><span class="field-val">${esc(e.customer)} · ${esc(e.track)}</span></div>
-    <div class="field"><span class="field-key">Delivered by</span><span class="field-val">${esc(c ? c.name : 'Unassigned')}</span></div>
-    <label class="muted" style="font-size:12px;display:block;margin-top:10px">Rating</label>
-    <select class="select" id="ipf-rating" style="width:100%;margin-bottom:10px">
+function ipKitRatingFormHtml() {
+  return `
+    <label class="muted" style="font-size:12px">Rating</label>
+    <select class="select" id="sp-ipf-rating" style="width:100%;margin-bottom:8px">
       <option value="5">5 — Excellent, used as-is</option>
       <option value="4">4 — Good</option>
       <option value="3" selected>3 — Usable, minor gaps</option>
@@ -92,25 +97,115 @@ function openIpFeedback(engagementId, container) {
       <option value="1">1 — Poor</option>
     </select>
     <label class="muted" style="font-size:12px">Status</label>
-    <select class="select" id="ipf-tag" style="width:100%;margin-bottom:10px">${IP_TAGS.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}</select>
-    <label class="muted" style="font-size:12px">Comment</label>
-    <textarea id="ipf-comment" style="width:100%;min-height:80px;border:1px solid var(--stroke-1);border-radius:4px;padding:8px;font-family:inherit;margin:6px 0 10px" placeholder="What worked, what didn't?"></textarea>
-    <button class="btn primary" id="ipf-submit">Submit feedback</button>
-    <div id="ipf-error"></div>`;
+    <select class="select" id="sp-ipf-tag" style="width:100%;margin-bottom:8px">${IP_TAGS.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}</select>
+    <textarea id="sp-ipf-comment" style="width:100%;min-height:60px;border:1px solid var(--stroke-1);border-radius:4px;padding:8px;font-family:inherit;margin-bottom:8px" placeholder="What worked, what didn't?"></textarea>
+    <button class="btn sm primary" id="sp-ipf-submit">Submit rating</button>
+    <div id="sp-ipf-error"></div>`;
+}
 
-  openDrawer(`Rate IP Kit · ${esc(e.customer)}`, body, (dr) => {
-    dr.querySelector('#ipf-submit').addEventListener('click', () => {
+function openSupportDrawer(engagementId, container) {
+  const d = store.data;
+  const e = d.engagements.find((x) => x.id === engagementId);
+  if (!e) return;
+  const csa = d.csas.find((x) => x.id === e.assignedTo);
+  const support = buildEngagementSupport(e, d);
+  const feedback = [...engagementFeedbackFor(e.id, d)].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  const body = `
+    <div class="row wrap mb8" style="gap:8px">${e.s500Customer ? badge('S500 strategic account', 'tint-info') : ''}${badge(e.track, 'outline')}</div>
+    <div class="field"><span class="field-key">Program</span><span class="field-val">${esc(e.program)}</span></div>
+    <div class="field"><span class="field-key">CSA</span><span class="field-val">${esc(csa ? csa.name : 'Unassigned')}</span></div>
+    <div class="field"><span class="field-key">CSAM</span><span class="field-val">${esc(e.csamName)}</span></div>
+    <div class="field"><span class="field-key">Due date</span><span class="field-val">${esc(e.dueDate)}</span></div>
+
+    <div class="section-title">Delivery phase</div>
+    ${phaseStepper(support.phase)}
+
+    <div class="section-title">Common agents${aiChip()}</div>
+    ${support.common.map((c) => `<div class="card pad mb8" style="background:var(--bg-2)">
+      <div class="row mb8">${icon(c.agent.icon, 16)}<strong>${esc(c.agent.name)}</strong><span class="muted" style="font-size:12px">· ${esc(c.agent.role)}</span></div>
+      <div style="font-size:13px">${esc(c.text)}</div>
+    </div>`).join('')}
+
+    ${support.expert ? `<div class="section-title">${esc(support.expert.agent.track)} specialist</div>
+    <div class="card pad mb16" style="background:var(--bg-2)">
+      <div class="row mb8">${icon(support.expert.agent.icon, 16)}<strong>${esc(support.expert.agent.name)}</strong><span class="muted" style="font-size:12px">· ${esc(support.expert.agent.role)}</span></div>
+      ${support.expert.tips.map((t) => `<div class="check-item"><span class="check-box"></span><span>${esc(t)}</span></div>`).join('')}
+    </div>` : ''}
+
+    <div class="section-title">Agent actions</div>
+    <div class="row wrap mb8" style="gap:6px">
+      <button class="btn sm" id="sp-generate">${icon('sparkle', 14)} Generate deliverable</button>
+      <button class="btn sm subtle" id="sp-rate-kit">${icon('star', 14)} Rate IP Kit</button>
+    </div>
+    <div id="sp-out"></div>
+
+    <div class="section-title" style="color:${COLORS.negative}">${icon('warning', 16)} Ask for support (urgent)</div>
+    <div class="muted mb8" style="font-size:12px">Opens a fast-tracked escalation with the POD Lead and SDM.</div>
+    <textarea id="sp-support-desc" style="width:100%;min-height:70px;border:1px solid var(--stroke-1);border-radius:4px;padding:8px;font-family:inherit;margin-bottom:8px" placeholder="What do you need help with right now?"></textarea>
+    <select class="select" id="sp-support-sev" style="width:100%;margin-bottom:8px">
+      <option value="sev1">Sev 1 — urgent, need help now</option>
+      <option value="sev2">Sev 2 — needed today</option>
+    </select>
+    <button class="btn sm" style="border-color:${COLORS.negative};color:${COLORS.negative}" id="sp-support-submit">${icon('warning', 14)} Request support</button>
+    <div id="sp-support-out"></div>
+
+    <div class="section-title">Submit feedback</div>
+    <textarea id="sp-feedback-msg" style="width:100%;min-height:60px;border:1px solid var(--stroke-1);border-radius:4px;padding:8px;font-family:inherit;margin-bottom:8px" placeholder="Share a quick check-in note on how this delivery is going…"></textarea>
+    <button class="btn sm" id="sp-feedback-submit">${icon('chat', 14)} Submit feedback</button>
+    <div id="sp-feedback-out"></div>
+
+    <div class="section-title">Feedback &amp; check-ins</div>
+    ${feedback.length ? `<div class="timeline">${feedback.map((f) => `<div class="tl-item">
+      <div><strong>${esc(f.authorName)}</strong> <span class="muted">· ${esc(f.authorRole)} · ${esc((PHASES.find(([k]) => k === f.phase) || [, f.phase])[1])}</span> ${sentimentPill(f.sentiment)}</div>
+      <div style="font-size:13px;margin:2px 0">${esc(f.message)}</div>
+      <div class="tl-date">${esc(f.createdAt.slice(0, 10))}</div>
+    </div>`).join('')}</div>` : '<div class="muted">No feedback logged yet for this engagement.</div>'}`;
+
+  openDrawer(`Support plan · ${esc(e.customer)}`, body, (dr) => {
+    dr.querySelector('#sp-generate').addEventListener('click', () => {
+      const r = generateDeliverable(e, d);
+      generated += 1;
+      dr.querySelector('#sp-out').innerHTML = `<div class="card pad mb8" style="background:var(--bg-2)"><div class="row mb8">${aiChip()}<span class="muted" style="font-size:12px">Draft — review before sending</span></div><pre style="white-space:pre-wrap;font-family:inherit;font-size:13px;margin:0">${esc(r.text)}</pre></div>`;
+    });
+    dr.querySelector('#sp-rate-kit').addEventListener('click', () => {
+      dr.querySelector('#sp-out').innerHTML = ipKitRatingFormHtml();
+      dr.querySelector('#sp-ipf-submit').addEventListener('click', () => {
+        try {
+          addIpFeedback({ engagementId: e.id, rating: dr.querySelector('#sp-ipf-rating').value, tag: dr.querySelector('#sp-ipf-tag').value, comment: dr.querySelector('#sp-ipf-comment').value });
+          openSupportDrawer(e.id, container);
+        } catch (err) {
+          dr.querySelector('#sp-ipf-error').innerHTML = `<div class="muted" style="color:${COLORS.negative};font-size:12px;margin-top:6px">${esc(err.message)}</div>`;
+        }
+      });
+    });
+    dr.querySelector('#sp-support-submit').addEventListener('click', () => {
       try {
-        addIpFeedback({
-          engagementId: e.id,
-          rating: dr.querySelector('#ipf-rating').value,
-          tag: dr.querySelector('#ipf-tag').value,
-          comment: dr.querySelector('#ipf-comment').value,
+        const desc = dr.querySelector('#sp-support-desc').value;
+        if (!desc.trim()) throw new Error('Describe what you need help with.');
+        const pod = csa && d.pods.find((p) => p.id === csa.podId);
+        const persona = PERSONAS[store.role];
+        const id = addEscalation({
+          engagementId: e.id, severity: dr.querySelector('#sp-support-sev').value,
+          summary: `[Ask for support] ${desc.trim()}`,
+          ownerName: pod ? pod.leadName : 'Alex Navarro', sdmName: 'Priya Nair',
+          raisedBy: persona.name, channel: 'agentic-support',
         });
-        closeDrawer();
-        renderAgentic(container);
+        openSupportDrawer(e.id, container);
+        const out = document.querySelector('#sp-support-out');
+        if (out) out.innerHTML = `<div class="muted" style="font-size:12px;margin-top:6px">${icon('check', 14)} Support requested — escalation ${esc(id)} opened with the POD Lead and SDM.</div>`;
       } catch (err) {
-        dr.querySelector('#ipf-error').innerHTML = `<div class="muted" style="color:${COLORS.negative};font-size:12px;margin-top:6px">${esc(err.message)}</div>`;
+        dr.querySelector('#sp-support-out').innerHTML = `<div class="muted" style="color:${COLORS.negative};font-size:12px;margin-top:6px">${esc(err.message)}</div>`;
+      }
+    });
+    dr.querySelector('#sp-feedback-submit').addEventListener('click', () => {
+      try {
+        const msg = dr.querySelector('#sp-feedback-msg').value;
+        const persona = PERSONAS[store.role];
+        addEngagementFeedback({ engagementId: e.id, phase: support.phase, message: msg, authorName: persona.name, authorRole: persona.title });
+        openSupportDrawer(e.id, container);
+      } catch (err) {
+        dr.querySelector('#sp-feedback-out').innerHTML = `<div class="muted" style="color:${COLORS.negative};font-size:12px;margin-top:6px">${esc(err.message)}</div>`;
       }
     });
   });

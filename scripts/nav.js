@@ -24,6 +24,8 @@ export const MODULES = [
     description: 'Overdue delivery reports and T-3W proactive engagement tracking.', ai: 'Pending-report aging and proactive (T-3W) compliance insights.' },
   { id: 'agentic', path: '/agentic', label: 'Agentic Delivery', icon: 'sparkle', roles: [...ALL.filter((r) => !['adoption-lead', 'business-manager'].includes(r)), 'admin'], built: true,
     description: 'AI delivery agents, deliverables generation and IP.', ai: 'Delivery agents draft deliverables from SSD IQ.' },
+  { id: 'ip-feedback', path: '/ip-feedback', label: 'IP Feedback', icon: 'docSearch', roles: [...ALL.filter((r) => r !== 'csam'), 'ip-lead', 'admin'], built: true,
+    description: 'Submit content issues on the Delivery Guide/IP Kits to the IP Leads and track the agentic triage.', ai: 'A 5-agent pipeline validates, drafts and triages every submission before it reaches the IP Lead.' },
   { id: 'messages', path: '/messages', label: 'Messaging & Actions', icon: 'chat', roles: [...ALL, 'admin'], built: false,
     description: 'Threaded communication with Partner CSAs.', ai: 'Suggested replies, tone check and thread sentiment.' },
   { id: 'quality', path: '/quality', label: 'Quality & CPE', icon: 'star', roles: [...SSD_LEADERS, ...SSD_MGRS, 'adoption-lead', 'admin'], built: false,
@@ -46,7 +48,7 @@ export const MODULES = [
     description: 'The System of Records and data catalog.', ai: 'Natural-language record search and data-quality flags.' },
   { id: 'capabilities', path: '/capabilities', label: 'Capability Map', icon: 'grid', roles: ['admin'], built: true,
     description: 'The SSD delivery capability map.', ai: 'Coverage of delivery capabilities across Compass.' },
-  { id: 'home', path: '/home', label: 'True North', icon: 'compass', roles: [...ALL, 'admin'], built: true,
+  { id: 'home', path: '/home', label: 'True North', icon: 'compass', roles: [...ALL, 'ip-lead', 'admin'], built: true,
     description: 'Your personalized start page — today\u2019s and this week\u2019s priorities, key KPIs, and what needs attention.', ai: 'Auto-generated daily briefing and anomaly callouts.' },
 ];
 
@@ -54,7 +56,7 @@ export const MODULES = [
 export const NAV_GROUPS = [
   { title: '', ids: ['home'] },
   { title: 'Operations', ids: ['pods', 'lifecycle', 'capacity', 'engagements', 'enablement', 'reports-pending'] },
-  { title: 'Delivery', ids: ['agentic', 'success-stories', 'messages', 'quality', 'escalations', 'reporting', 'sentiment'] },
+  { title: 'Delivery', ids: ['agentic', 'ip-feedback', 'success-stories', 'messages', 'quality', 'escalations', 'reporting', 'sentiment'] },
   { title: 'Platform', ids: ['ssdiq', 'capabilities'] },
   { title: 'People', ids: ['delivery-partners', 'performance', 'admin-access'] },
   { title: 'Customer Success', ids: ['csam-escalation'] },
