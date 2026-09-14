@@ -129,7 +129,7 @@ export function sessionHealthBreakdown(d = store.data) {
 }
 
 // Composite POD performance — blends CPE, quality, utilization, escalations and sentiment into a single
-// 0-100 score (mirrors the per-CSA scorecard on Performance & PIPs, rolled up to POD level).
+// 0-100 score (mirrors the per-CSA scorecard on Readiness Improvement Plans, rolled up to POD level).
 export function computePodPerformance(d = store.data) {
   return d.pods.map((pod) => {
     const csas = d.csas.filter((c) => c.podId === pod.id && c.lifecycle === 'active');
@@ -553,78 +553,78 @@ export function addEscalation({ engagementId, severity, summary, ownerName, sdmN
   emit('data');
   return id;
 }
-let pipSeq = store.data.pips.reduce((max, p) => Math.max(max, Number(p.id.replace(/^PIP/, '')) || 0), 0) + 1;
-const PIP_CATEGORIES = ['technical-skills', 'soft-skills', 'language-proficiency', 'delivery-skills'];
-const PIP_KINDS = ['objective', 'training', 'certification', 'quality-check'];
-function normalizePipObjective(o) {
+let impSeq = store.data.improvementPlans.reduce((max, p) => Math.max(max, Number(p.id.replace(/^IMP/, '')) || 0), 0) + 1;
+const IMPROVEMENT_PLAN_CATEGORIES = ['technical-skills', 'soft-skills', 'language-proficiency', 'delivery-skills'];
+const IMPROVEMENT_PLAN_KINDS = ['objective', 'training', 'certification', 'quality-check'];
+function normalizeImprovementPlanObjective(o) {
   if (typeof o === 'string') return { label: o.trim(), category: 'delivery-skills', kind: 'objective' };
   return {
     label: String((o && o.label) || '').trim(),
-    category: PIP_CATEGORIES.includes(o && o.category) ? o.category : 'delivery-skills',
-    kind: PIP_KINDS.includes(o && o.kind) ? o.kind : 'objective',
+    category: IMPROVEMENT_PLAN_CATEGORIES.includes(o && o.category) ? o.category : 'delivery-skills',
+    kind: IMPROVEMENT_PLAN_KINDS.includes(o && o.kind) ? o.kind : 'objective',
   };
 }
-export function draftPip(csaId, objectiveInputs) {
-  if (store.data.pips.some((p) => p.csaId === csaId && p.status !== 'closed')) throw new Error('An active or draft PIP already exists for this Partner CSA.');
-  const objectives = (objectiveInputs || []).map(normalizePipObjective).filter((o) => o.label);
-  if (!objectives.length) throw new Error('At least one objective is required to draft a PIP.');
-  const id = `PIP${String(pipSeq++).padStart(3, '0')}`;
-  store.data.pips.unshift({
+export function draftImprovementPlan(csaId, objectiveInputs) {
+  if (store.data.improvementPlans.some((p) => p.csaId === csaId && p.status !== 'closed')) throw new Error('An active or draft readiness improvement plan already exists for this Partner CSA.');
+  const objectives = (objectiveInputs || []).map(normalizeImprovementPlanObjective).filter((o) => o.label);
+  if (!objectives.length) throw new Error('At least one objective is required to draft a readiness improvement plan.');
+  const id = `IMP${String(impSeq++).padStart(3, '0')}`;
+  store.data.improvementPlans.unshift({
     id, csaId, status: 'draft', opened: todayISO(),
     objectives: objectives.map((o) => ({ ...o, done: false })),
     checkIns: [], outcome: 'in-progress', sourceOfTruth: 'Confidential/HR', updatedAt: todayISO(),
-    audit: [{ at: new Date().toISOString(), who: store.role, action: 'PIP drafted' }],
+    audit: [{ at: new Date().toISOString(), who: store.role, action: 'Readiness improvement plan drafted' }],
   });
   emit('data');
   return id;
 }
-export function addPipObjective(pipId, objectiveInput) {
-  const pip = byId(store.data.pips, pipId);
-  if (!pip) throw new Error(`PIP ${pipId} was not found.`);
-  if (pip.status === 'closed') throw new Error('Cannot add objectives to a closed PIP.');
-  const objective = normalizePipObjective(objectiveInput);
+export function addImprovementPlanObjective(planId, objectiveInput) {
+  const plan = byId(store.data.improvementPlans, planId);
+  if (!plan) throw new Error(`Readiness improvement plan ${planId} was not found.`);
+  if (plan.status === 'closed') throw new Error('Cannot add objectives to a closed readiness improvement plan.');
+  const objective = normalizeImprovementPlanObjective(objectiveInput);
   if (!objective.label) throw new Error('An objective description is required.');
-  pip.objectives.push({ ...objective, done: false });
-  pip.updatedAt = todayISO();
-  pip.audit.push({ at: new Date().toISOString(), who: store.role, action: `objective added: "${objective.label}"` });
+  plan.objectives.push({ ...objective, done: false });
+  plan.updatedAt = todayISO();
+  plan.audit.push({ at: new Date().toISOString(), who: store.role, action: `objective added: "${objective.label}"` });
   emit('data');
 }
-export function activatePip(pipId) {
-  const pip = byId(store.data.pips, pipId);
-  if (!pip) throw new Error(`PIP ${pipId} was not found.`);
-  if (pip.status !== 'draft') throw new Error('Only a draft PIP can be activated.');
-  pip.status = 'active';
-  pip.updatedAt = todayISO();
-  pip.audit.push({ at: new Date().toISOString(), who: store.role, action: 'PIP activated' });
+export function activateImprovementPlan(planId) {
+  const plan = byId(store.data.improvementPlans, planId);
+  if (!plan) throw new Error(`Readiness improvement plan ${planId} was not found.`);
+  if (plan.status !== 'draft') throw new Error('Only a draft readiness improvement plan can be activated.');
+  plan.status = 'active';
+  plan.updatedAt = todayISO();
+  plan.audit.push({ at: new Date().toISOString(), who: store.role, action: 'Readiness improvement plan activated' });
   emit('data');
 }
-export function togglePipObjective(pipId, index) {
-  const pip = byId(store.data.pips, pipId);
-  const obj = pip && pip.objectives[index];
+export function toggleImprovementPlanObjective(planId, index) {
+  const plan = byId(store.data.improvementPlans, planId);
+  const obj = plan && plan.objectives[index];
   if (!obj) return;
   obj.done = !obj.done;
-  pip.updatedAt = todayISO();
-  pip.audit.push({ at: new Date().toISOString(), who: store.role, action: `objective "${obj.label}" marked ${obj.done ? 'done' : 'open'}` });
+  plan.updatedAt = todayISO();
+  plan.audit.push({ at: new Date().toISOString(), who: store.role, action: `objective "${obj.label}" marked ${obj.done ? 'done' : 'open'}` });
   emit('data');
 }
-export function addPipCheckIn(pipId, note) {
-  const pip = byId(store.data.pips, pipId);
-  if (!pip) throw new Error(`PIP ${pipId} was not found.`);
+export function addImprovementPlanCheckIn(planId, note) {
+  const plan = byId(store.data.improvementPlans, planId);
+  if (!plan) throw new Error(`Readiness improvement plan ${planId} was not found.`);
   const text = String(note || '').trim();
   if (!text) throw new Error('A check-in note is required.');
-  pip.checkIns.unshift({ date: todayISO(), note: text });
-  pip.updatedAt = todayISO();
-  pip.audit.push({ at: new Date().toISOString(), who: store.role, action: 'check-in added' });
+  plan.checkIns.unshift({ date: todayISO(), note: text });
+  plan.updatedAt = todayISO();
+  plan.audit.push({ at: new Date().toISOString(), who: store.role, action: 'check-in added' });
   emit('data');
 }
-export function closePip(pipId, outcome) {
-  const pip = byId(store.data.pips, pipId);
-  if (!pip) throw new Error(`PIP ${pipId} was not found.`);
-  if (!['met', 'not-met'].includes(outcome)) throw new Error('PIP outcome must be "met" or "not-met".');
-  pip.status = 'closed';
-  pip.outcome = outcome;
-  pip.updatedAt = todayISO();
-  pip.audit.push({ at: new Date().toISOString(), who: store.role, action: `PIP closed (outcome: ${outcome})` });
+export function closeImprovementPlan(planId, outcome) {
+  const plan = byId(store.data.improvementPlans, planId);
+  if (!plan) throw new Error(`Readiness improvement plan ${planId} was not found.`);
+  if (!['met', 'not-met'].includes(outcome)) throw new Error('Readiness improvement plan outcome must be "met" or "not-met".');
+  plan.status = 'closed';
+  plan.outcome = outcome;
+  plan.updatedAt = todayISO();
+  plan.audit.push({ at: new Date().toISOString(), who: store.role, action: `Readiness improvement plan closed (outcome: ${outcome})` });
   emit('data');
 }
 let shdSeq = store.data.shadowRequests.reduce((max, s) => Math.max(max, Number(s.id.replace(/^SHD/, '')) || 0), 0) + 1;

@@ -133,7 +133,7 @@ function renderView() {
     case 'messages': renderMessages(view, params.get('thread') || params.get('q') || ''); break;
     case 'quality': renderQuality(view); break;
     case 'escalations': renderEscalations(view); break;
-    case 'performance': can(store.role, 'view:pip') ? renderPerformance(view) : renderPlaceholder(view, mod, true); break;
+    case 'performance': can(store.role, 'view:improvementPlan') ? renderPerformance(view) : renderPlaceholder(view, mod, true); break;
     case 'reporting': renderReporting(view); break;
     case 'sentiment': renderSessionHealth(view, params.get('tab')); break;
     case 'ssdiq': renderSsdIq(view, params.get('q') || ''); break;

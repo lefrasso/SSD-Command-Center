@@ -226,7 +226,7 @@ function renderTerritory(tc) {
   tc.querySelector('#t-reset').addEventListener('click', () => { fTz = 'All'; fTrack = 'All'; fPartner = 'All'; fStatus = 'All'; rerender(); });
 }
 
-// ---- POD Performance (composite scorecard rolled up from Performance & PIPs' CSA scoring) ----
+// ---- POD Performance (composite scorecard rolled up from Readiness Improvement Plans' CSA scoring) ----
 function renderPodPerformance(tc) {
   clearCharts();
   const d = store.data;

@@ -60,7 +60,7 @@ const CAPS = [
     { name: 'DP Management', status: 'live', to: '/delivery-partners', note: 'Delivery Partner scorecards.' },
   ] },
   { group: 'Programs & governance', items: [
-    { name: 'Performance & PIPs', status: 'live', to: '/performance', note: 'Confidential scorecards & improvement plans.' },
+    { name: 'Readiness Improvement Plans', status: 'live', to: '/performance', note: 'Confidential scorecards & improvement plans.' },
     { name: 'S500 Eligibility', status: 'live', to: '/enablement', note: 'S500 eligibility by CPE / quality / tenure.' },
     { name: 'SDM Onboarding', status: 'live', to: '/enablement', note: 'Service Delivery Manager onboarding.' },
   ] },

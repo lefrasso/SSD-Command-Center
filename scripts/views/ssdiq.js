@@ -31,7 +31,7 @@ const CFG = [
     columns: [['id', 'ID'], ['engagementId', 'Customer', (r) => engCustomer(r.engagementId)], ['score', 'Score'], ['class', 'Class'], ['track', 'Track'], ['sentiment', 'Sentiment', (r) => sentimentPill(r.sentiment)]] },
   { key: 'messages', name: 'Message', description: 'Threaded partner communications.', source: 'Teams', icon: 'chat', label: (r) => `${r.from} → ${r.to}`,
     columns: [['id', 'ID'], ['threadId', 'Thread'], ['from', 'From'], ['to', 'To'], ['sentiment', 'Sentiment', (r) => sentimentPill(r.sentiment)]] },
-  { key: 'pips', name: 'PIP', description: 'Performance Improvement Plans (confidential).', source: 'Confidential/HR', icon: 'lock', label: (r) => r.id,
+  { key: 'improvementPlans', name: 'Readiness Improvement Plan', description: 'Structured readiness improvement plans (confidential).', source: 'Confidential/HR', icon: 'lock', label: (r) => r.id,
     columns: [['id', 'ID'], ['csaId', 'CSA', (r) => csaName(r.csaId)], ['status', 'Status', (r) => statusPill(r.status)], ['outcome', 'Outcome']] },
   { key: 'sentiment', name: 'Sentiment Rollup', description: 'AI sentiment aggregates.', source: 'AI Services', icon: 'emoji', label: (r) => `${r.scope} · ${r.period}`,
     columns: [['id', 'ID'], ['scope', 'Scope'], ['period', 'Period'], ['net', 'Net']] },
@@ -64,7 +64,7 @@ export function renderSsdIq(container, initialQuery) {
   renderContent();
 }
 
-function entities() { return CFG.filter((c) => c.key !== 'pips' || can(store.role, 'view:pip')); }
+function entities() { return CFG.filter((c) => c.key !== 'improvementPlans' || can(store.role, 'view:improvementPlan')); }
 
 function renderContent() {
   const d = store.data;
@@ -284,7 +284,7 @@ function relationshipsFor(key, r) {
         { label: 'Partner', items: r.partnerId ? [{ key: 'partners', id: r.partnerId, label: lk(d.partners, r.partnerId, (partner) => partner.name) }] : [] },
         { label: 'Follow-up actions', items: d.actions.filter((action) => action.sessionHealthSignalId === r.id).map((action) => ({ key: 'actions', id: action.id, label: action.title })) },
       ];
-    case 'pips':
+    case 'improvementPlans':
       return [{ label: 'CSA', items: [{ key: 'csas', id: r.csaId, label: csaName(r.csaId) }] }];
     case 'shadowRequests':
       return [

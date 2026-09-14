@@ -233,7 +233,7 @@ export function performanceSummary(csa, d = store.data) {
   const escs = d.escalations.filter((e) => mine.some((m) => m.id === e.engagementId)).length;
   return { text: `Advisory summary for ${csa.name} (${csa.vendor}). Delivery: ${complete} completed of ${mine.length} assigned. CPE ${csa.cpe.toFixed(1)}, quality ${csa.quality.toFixed(1)}, utilization ${csa.utilization}%, ${escs} linked escalation(s). Sentiment ${csa.sentiment}. This is an advisory input for the POD Lead — not an automated decision.`, sources: mine.slice(0, 4).map((e) => ({ id: e.id, label: e.customer })), generatedAt: now() };
 }
-export function suggestPipObjectives(csa, d = store.data) {
+export function suggestImprovementPlanObjectives(csa, d = store.data) {
   const mine = d.engagements.filter((e) => e.assignedTo === csa.id);
   const escs = d.escalations.filter((e) => mine.some((m) => m.id === e.engagementId));
   const pod = d.pods.find((p) => p.id === csa.podId);

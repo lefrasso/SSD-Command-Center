@@ -1,9 +1,9 @@
-// Performance & PIPs — confidential, role-gated (POD Lead + HR-equivalent).
-import { store, draftPip, activatePip, togglePipObjective, addPipObjective, addPipCheckIn, closePip } from '../store.js';
+// Readiness Improvement Plans — confidential, role-gated (POD Lead + HR-equivalent).
+import { store, draftImprovementPlan, activateImprovementPlan, toggleImprovementPlanObjective, addImprovementPlanObjective, addImprovementPlanCheckIn, closeImprovementPlan } from '../store.js';
 import { pageHeader, badge, aiChip, esc, meter, scoreColor, COLORS, sentimentPill, statusPill, openDrawer, closeDrawer } from '../components.js';
 import { icon } from '../icons.js';
 import { can } from '../roles.js';
-import { performanceSummary, suggestPipObjectives } from '../ai.js';
+import { performanceSummary, suggestImprovementPlanObjectives } from '../ai.js';
 import { QC_CRITERIA, PROGRAMS, MS_CERTIFICATIONS, TRACKS } from '../../data/generate.js';
 
 let selCsa = null;
@@ -17,12 +17,12 @@ export function renderPerformance(container) {
   const csas = d.csas.filter((c) => c.lifecycle === 'active' || c.lifecycle === 'offboarding');
   if (!selCsa || !csas.find((c) => c.id === selCsa)) selCsa = csas[0] && csas[0].id;
   const c = d.csas.find((x) => x.id === selCsa);
-  const canEdit = can(store.role, 'edit:pip');
+  const canEdit = can(store.role, 'edit:improvementPlan');
 
   const mine = d.engagements.filter((e) => e.assignedTo === (c && c.id));
   const complete = mine.filter((e) => e.status === 'complete').length;
   const escs = d.escalations.filter((e) => mine.some((m) => m.id === e.engagementId));
-  const pip = d.pips.find((p) => p.csaId === (c && c.id) && p.status !== 'closed') || d.pips.find((p) => p.csaId === (c && c.id));
+  const plan = d.improvementPlans.find((p) => p.csaId === (c && c.id) && p.status !== 'closed') || d.improvementPlans.find((p) => p.csaId === (c && c.id));
   const summary = c ? performanceSummary(c, d) : null;
 
   const csaOpts = csas.map((x) => `<option value="${x.id}" ${x.id === selCsa ? 'selected' : ''}>${esc(x.name)} · ${esc(x.vendor)}</option>`).join('');
@@ -30,7 +30,7 @@ export function renderPerformance(container) {
   const scoreItem = (label, val, color, sub) => `<div class="score-item"><div class="muted" style="font-size:12px">${label}</div><div class="score-val" style="color:${color || 'inherit'}">${val}</div>${sub ? `<div class="muted" style="font-size:12px">${sub}</div>` : ''}</div>`;
 
   container.innerHTML = `
-    ${pageHeader({ title: 'Performance & PIPs', description: 'Composite performance view and structured improvement plans.', actions: badge('Confidential', 'tint-danger') })}
+    ${pageHeader({ title: 'Readiness Improvement Plans', description: 'Composite performance view and structured readiness improvement plans.', actions: badge('Confidential', 'tint-danger') })}
 
     <div class="confidential-note mb16">${icon('lock', 16)} Confidential — restricted to POD Lead and HR-equivalent roles. AI outputs are <strong>advisory inputs</strong> to a manager’s judgement, never automated decisions about a person.</div>
 
@@ -50,15 +50,15 @@ export function renderPerformance(container) {
 
     <div class="two-col">
       <div class="card pad">
-        <div class="row mb8" style="justify-content:space-between"><strong>Improvement plan (PIP)</strong>${pip ? statusPill(pip.status) : badge('None', 'outline')}</div>
-        ${pipCardBody(pip, canEdit, c)}
+        <div class="row mb8" style="justify-content:space-between"><strong>Readiness improvement plan</strong>${plan ? statusPill(plan.status) : badge('None', 'outline')}</div>
+        ${improvementPlanCardBody(plan, canEdit, c)}
       </div>
       <div class="card pad">
         <div class="row mb8">${icon('sparkle', 16)}<strong>AI performance summary</strong>${aiChip()}</div>
         <div style="font-size:13px;line-height:1.6">${esc(summary.text)}</div>
         <div class="muted mt8" style="font-size:12px">Evidence: ${summary.sources.map((s) => esc(s.label)).join(', ') || '—'}</div>
         <div class="section-title">Coaching log</div>
-        ${(pip ? pip.checkIns : [{ date: '2026-07-10', note: 'Reviewed CPE trend; agreed focus on outreach cadence.' }, { date: '2026-06-20', note: 'Positive delivery feedback from CSAM.' }]).map((ci) => `<div class="tl-item"><div class="tl-date">${esc(ci.date)}</div><div>${esc(ci.note)}</div></div>`).join('')}
+        ${(plan ? plan.checkIns : [{ date: '2026-07-10', note: 'Reviewed CPE trend; agreed focus on outreach cadence.' }, { date: '2026-06-20', note: 'Positive delivery feedback from CSAM.' }]).map((ci) => `<div class="tl-item"><div class="tl-date">${esc(ci.date)}</div><div>${esc(ci.note)}</div></div>`).join('')}
       </div>
     </div>` : '<div class="muted">No Partner CSA selected.</div>'}`;
 
@@ -66,40 +66,40 @@ export function renderPerformance(container) {
   if (sel) sel.addEventListener('change', (e) => { selCsa = e.target.value; renderPerformance(container); });
   if (!c) return;
 
-  const draftBtn = container.querySelector('#pip-draft');
-  if (draftBtn) draftBtn.addEventListener('click', () => openDraftPip(c, container));
+  const draftBtn = container.querySelector('#imp-draft');
+  if (draftBtn) draftBtn.addEventListener('click', () => openDraftImprovementPlan(c, container));
 
-  const activateBtn = container.querySelector('#pip-activate');
-  if (activateBtn) activateBtn.addEventListener('click', () => { activatePip(pip.id); renderPerformance(container); });
+  const activateBtn = container.querySelector('#imp-activate');
+  if (activateBtn) activateBtn.addEventListener('click', () => { activateImprovementPlan(plan.id); renderPerformance(container); });
 
-  container.querySelectorAll('[data-obj-idx]').forEach((el) => el.addEventListener('click', () => { togglePipObjective(pip.id, Number(el.getAttribute('data-obj-idx'))); renderPerformance(container); }));
+  container.querySelectorAll('[data-obj-idx]').forEach((el) => el.addEventListener('click', () => { toggleImprovementPlanObjective(plan.id, Number(el.getAttribute('data-obj-idx'))); renderPerformance(container); }));
 
-  if (pip && pip.status === 'active' && canEdit) {
-    wirePipObjectiveForm(container, 'pip-add', c, (objective) => {
-      try { addPipObjective(pip.id, objective); renderPerformance(container); }
-      catch (err) { showPipError(container, err.message); }
+  if (plan && plan.status === 'active' && canEdit) {
+    wireImprovementPlanObjectiveForm(container, 'imp-add', c, (objective) => {
+      try { addImprovementPlanObjective(plan.id, objective); renderPerformance(container); }
+      catch (err) { showImprovementPlanError(container, err.message); }
     });
   }
 
-  const checkinBtn = container.querySelector('#pip-checkin-add');
+  const checkinBtn = container.querySelector('#imp-checkin-add');
   if (checkinBtn) checkinBtn.addEventListener('click', () => {
-    const ta = container.querySelector('#pip-checkin-note');
-    try { addPipCheckIn(pip.id, ta.value); renderPerformance(container); }
-    catch (err) { showPipError(container, err.message); }
+    const ta = container.querySelector('#imp-checkin-note');
+    try { addImprovementPlanCheckIn(plan.id, ta.value); renderPerformance(container); }
+    catch (err) { showImprovementPlanError(container, err.message); }
   });
 
-  container.querySelectorAll('[data-pip-close]').forEach((el) => el.addEventListener('click', () => { closePip(pip.id, el.getAttribute('data-pip-close')); renderPerformance(container); }));
+  container.querySelectorAll('[data-imp-close]').forEach((el) => el.addEventListener('click', () => { closeImprovementPlan(plan.id, el.getAttribute('data-imp-close')); renderPerformance(container); }));
 }
 
-function pipCardBody(pip, canEdit, csa) {
-  if (!pip) {
-    return `<div class="muted">No active PIP. Performance is within expectations. A PIP can be opened with structured objectives, milestones and check-ins if needed.</div>
-      ${canEdit ? '<button class="btn mt8" id="pip-draft">Draft PIP</button>' : ''}
-      <div id="pip-error"></div>`;
+function improvementPlanCardBody(plan, canEdit, csa) {
+  if (!plan) {
+    return `<div class="muted">No active readiness improvement plan. Performance is within expectations. A plan can be opened with structured objectives, milestones and check-ins if needed.</div>
+      ${canEdit ? '<button class="btn mt8" id="imp-draft">Draft plan</button>' : ''}
+      <div id="imp-error"></div>`;
   }
-  const objectivesHtml = pip.objectives.map((o, i) => {
+  const objectivesHtml = plan.objectives.map((o, i) => {
     const kindBadge = KIND_BADGE[o.kind];
-    return `<button class="check-item" data-obj-idx="${i}" ${canEdit && pip.status === 'active' ? '' : 'disabled'} style="background:none;border:0;border-bottom:1px solid var(--stroke-2);width:100%;text-align:left;font:inherit;color:inherit;cursor:${canEdit && pip.status === 'active' ? 'pointer' : 'default'}">
+    return `<button class="check-item" data-obj-idx="${i}" ${canEdit && plan.status === 'active' ? '' : 'disabled'} style="background:none;border:0;border-bottom:1px solid var(--stroke-2);width:100%;text-align:left;font:inherit;color:inherit;cursor:${canEdit && plan.status === 'active' ? 'pointer' : 'default'}">
       <span class="check-box ${o.done ? 'done' : ''}">${o.done ? icon('check', 12) : ''}</span>
       <span class="flex1">${esc(o.label)} <span class="muted" style="font-size:11px">· ${esc(CATEGORY_LABELS[o.category] || o.category)}</span></span>
       ${kindBadge ? badge(kindBadge[0], kindBadge[1]) : ''}
@@ -107,33 +107,33 @@ function pipCardBody(pip, canEdit, csa) {
   }).join('');
 
   return `
-    <div class="field"><span class="field-key">Opened</span><span class="field-val">${esc(pip.opened)}</span></div>
-    <div class="field"><span class="field-key">Outcome</span><span class="field-val">${esc(pip.outcome)}</span></div>
+    <div class="field"><span class="field-key">Opened</span><span class="field-val">${esc(plan.opened)}</span></div>
+    <div class="field"><span class="field-key">Outcome</span><span class="field-val">${esc(plan.outcome)}</span></div>
     <div class="section-title">Objectives</div>
     ${objectivesHtml}
-    ${pip.status === 'draft' && canEdit ? '<button class="btn sm mt8" id="pip-activate">Activate PIP</button>' : ''}
-    ${pip.status === 'active' && canEdit ? pipObjectiveFormHtml('pip-add', csa, 'Add objective, training or certification') : ''}
+    ${plan.status === 'draft' && canEdit ? '<button class="btn sm mt8" id="imp-activate">Activate plan</button>' : ''}
+    ${plan.status === 'active' && canEdit ? improvementPlanObjectiveFormHtml('imp-add', csa, 'Add objective, training or certification') : ''}
     <div class="section-title">Check-ins</div>
-    ${pip.checkIns.map((ci) => `<div class="tl-item"><div class="tl-date">${esc(ci.date)}</div><div>${esc(ci.note)}</div></div>`).join('') || '<div class="muted" style="font-size:12px">No check-ins yet.</div>'}
-    ${pip.status === 'active' && canEdit ? `
-      <textarea id="pip-checkin-note" style="width:100%;min-height:60px;border:1px solid var(--stroke-1);border-radius:4px;padding:8px;font-family:inherit;margin:8px 0" placeholder="Log a coaching conversation or check-in…"></textarea>
-      <div class="row" style="gap:6px"><button class="btn sm" id="pip-checkin-add">Add check-in</button></div>
-      <div class="section-title">Close PIP</div>
+    ${plan.checkIns.map((ci) => `<div class="tl-item"><div class="tl-date">${esc(ci.date)}</div><div>${esc(ci.note)}</div></div>`).join('') || '<div class="muted" style="font-size:12px">No check-ins yet.</div>'}
+    ${plan.status === 'active' && canEdit ? `
+      <textarea id="imp-checkin-note" style="width:100%;min-height:60px;border:1px solid var(--stroke-1);border-radius:4px;padding:8px;font-family:inherit;margin:8px 0" placeholder="Log a coaching conversation or check-in…"></textarea>
+      <div class="row" style="gap:6px"><button class="btn sm" id="imp-checkin-add">Add check-in</button></div>
+      <div class="section-title">Close plan</div>
       <div class="row" style="gap:6px">
-        <button class="btn sm" data-pip-close="met">Close · objectives met</button>
-        <button class="btn sm subtle" data-pip-close="not-met">Close · not met</button>
+        <button class="btn sm" data-imp-close="met">Close · objectives met</button>
+        <button class="btn sm subtle" data-imp-close="not-met">Close · not met</button>
       </div>` : ''}
-    ${pip.status === 'closed' && canEdit ? '<button class="btn sm mt8" id="pip-draft">Draft new PIP</button>' : ''}
-    <div id="pip-error"></div>`;
+    ${plan.status === 'closed' && canEdit ? '<button class="btn sm mt8" id="imp-draft">Draft new plan</button>' : ''}
+    <div id="imp-error"></div>`;
 }
 
-function showPipError(container, message) {
-  const out = container.querySelector('#pip-error');
+function showImprovementPlanError(container, message) {
+  const out = container.querySelector('#imp-error');
   if (out) out.innerHTML = `<div class="muted" style="color:${COLORS.negative};font-size:12px;margin-top:6px">${esc(message)}</div>`;
 }
 
 // Compact form to describe one improvement objective — a custom goal, a training, a certification or a quality-check focus area.
-function pipObjectiveFormHtml(idPrefix, csa, title) {
+function improvementPlanObjectiveFormHtml(idPrefix, csa, title) {
   return `
     <div class="section-title">${esc(title)}</div>
     <select class="select" id="${idPrefix}-kind" style="width:100%;margin-bottom:8px">
@@ -163,11 +163,11 @@ function pipObjectiveFormHtml(idPrefix, csa, title) {
     <button class="btn sm" id="${idPrefix}-add">Add</button>`;
 }
 
-const PIP_OBJECTIVE_KINDS = ['objective', 'quality-check', 'training', 'certification'];
-function wirePipObjectiveForm(root, idPrefix, csa, onAdd) {
+const IMPROVEMENT_PLAN_OBJECTIVE_KINDS = ['objective', 'quality-check', 'training', 'certification'];
+function wireImprovementPlanObjectiveForm(root, idPrefix, csa, onAdd) {
   const kindSel = root.querySelector(`#${idPrefix}-kind`);
   if (!kindSel) return;
-  const show = (k) => PIP_OBJECTIVE_KINDS.forEach((f) => { const el = root.querySelector(`#${idPrefix}-field-${f}`); if (el) el.style.display = f === k ? 'block' : 'none'; });
+  const show = (k) => IMPROVEMENT_PLAN_OBJECTIVE_KINDS.forEach((f) => { const el = root.querySelector(`#${idPrefix}-field-${f}`); if (el) el.style.display = f === k ? 'block' : 'none'; });
   show(kindSel.value);
   kindSel.addEventListener('change', () => show(kindSel.value));
   root.querySelector(`#${idPrefix}-add`).addEventListener('click', () => {
@@ -188,8 +188,8 @@ function wirePipObjectiveForm(root, idPrefix, csa, onAdd) {
   });
 }
 
-function openDraftPip(csa, container) {
-  const suggestion = suggestPipObjectives(csa, store.data);
+function openDraftImprovementPlan(csa, container) {
+  const suggestion = suggestImprovementPlanObjectives(csa, store.data);
   const staged = [];
 
   const stagedHtml = () => staged.map((o, i) => {
@@ -204,20 +204,20 @@ function openDraftPip(csa, container) {
       const kindBadge = KIND_BADGE[o.kind];
       return `<label class="check-item" style="display:flex;align-items:flex-start;gap:8px"><input type="checkbox" id="sugg-${i}" checked style="margin-top:4px"><span class="flex1">${esc(o.label)} <span class="muted" style="font-size:11px">· ${esc(CATEGORY_LABELS[o.category] || o.category)}</span></span>${kindBadge ? badge(kindBadge[0], kindBadge[1]) : ''}</label>`;
     }).join('')}
-    ${pipObjectiveFormHtml('pip-stage', csa, 'Add a quality check, training, certification or custom objective')}
+    ${improvementPlanObjectiveFormHtml('imp-stage', csa, 'Add a quality check, training, certification or custom objective')}
     <div class="section-title">Added to this plan</div>
-    <div id="pip-staged-list">${stagedHtml()}</div>
-    <button class="btn primary mt8" id="pip-create">Draft PIP</button>
-    <div id="pip-drawer-error"></div>`;
+    <div id="imp-staged-list">${stagedHtml()}</div>
+    <button class="btn primary mt8" id="imp-create">Draft plan</button>
+    <div id="imp-drawer-error"></div>`;
 
-  openDrawer(`Draft PIP · ${esc(csa.name)}`, body, (dr) => {
-    const wireRemove = () => dr.querySelectorAll('[data-staged-remove]').forEach((b) => b.addEventListener('click', () => { staged.splice(Number(b.getAttribute('data-staged-remove')), 1); dr.querySelector('#pip-staged-list').innerHTML = stagedHtml(); wireRemove(); }));
+  openDrawer(`Draft readiness improvement plan · ${esc(csa.name)}`, body, (dr) => {
+    const wireRemove = () => dr.querySelectorAll('[data-staged-remove]').forEach((b) => b.addEventListener('click', () => { staged.splice(Number(b.getAttribute('data-staged-remove')), 1); dr.querySelector('#imp-staged-list').innerHTML = stagedHtml(); wireRemove(); }));
     wireRemove();
-    wirePipObjectiveForm(dr, 'pip-stage', csa, (objective) => { staged.push(objective); dr.querySelector('#pip-staged-list').innerHTML = stagedHtml(); wireRemove(); });
-    dr.querySelector('#pip-create').addEventListener('click', () => {
+    wireImprovementPlanObjectiveForm(dr, 'imp-stage', csa, (objective) => { staged.push(objective); dr.querySelector('#imp-staged-list').innerHTML = stagedHtml(); wireRemove(); });
+    dr.querySelector('#imp-create').addEventListener('click', () => {
       const checked = suggestion.objectives.filter((_, i) => dr.querySelector(`#sugg-${i}`).checked);
-      try { draftPip(csa.id, [...checked, ...staged]); closeDrawer(); renderPerformance(container); }
-      catch (err) { dr.querySelector('#pip-drawer-error').innerHTML = `<div class="muted" style="color:${COLORS.negative};font-size:12px;margin-top:6px">${esc(err.message)}</div>`; }
+      try { draftImprovementPlan(csa.id, [...checked, ...staged]); closeDrawer(); renderPerformance(container); }
+      catch (err) { dr.querySelector('#imp-drawer-error').innerHTML = `<div class="muted" style="color:${COLORS.negative};font-size:12px;margin-top:6px">${esc(err.message)}</div>`; }
     });
   });
 }

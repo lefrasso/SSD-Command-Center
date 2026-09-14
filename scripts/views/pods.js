@@ -104,7 +104,7 @@ export function renderPods(container) {
 
     <div class="section-title">POD performance leaderboard</div>
     <div class="card pad mb16">
-      <div class="muted mb8" style="font-size:12px">Composite score (0–100) blends CPE, quality, utilization, open escalations and sentiment — a POD-level read of the CSA scorecard used on Performance &amp; PIPs.</div>
+      <div class="muted mb8" style="font-size:12px">Composite score (0–100) blends CPE, quality, utilization, open escalations and sentiment — a POD-level read of the CSA scorecard used on Readiness Improvement Plans.</div>
       <div class="table-wrap">
         <table class="grid">
           <thead><tr><th>POD</th><th>Lead</th><th>TZ</th><th>CSAs</th><th>Utilization</th><th>CPE</th><th>Quality</th><th>On-time</th><th>Open esc</th><th>Attrition (12mo)</th><th>Sentiment</th><th>Score</th><th>Tier</th></tr></thead>

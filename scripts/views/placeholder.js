@@ -17,7 +17,7 @@ export function renderPlaceholder(container, module, locked) {
         </div>
         <div class="muted">
           ${locked
-            ? 'Switch to the POD Lead persona to preview Performance &amp; PIPs. Performance and sentiment signals are advisory inputs to a manager’s judgement, never automated decisions.'
+            ? 'Switch to the POD Lead persona to preview Readiness Improvement Plans. Performance and session health signals are advisory inputs to a manager’s judgement, never automated decisions.'
             : 'The shell, System of Records, role switching and Copilot are live now. This view will read and write the same SSD IQ data as the rest of Compass.'}
         </div>
         <div class="cp-ctx" style="max-width:640px; display:flex; gap:8px; align-items:center">

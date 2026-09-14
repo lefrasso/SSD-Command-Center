@@ -71,7 +71,7 @@ const TZ_MANAGERS = {
   ASIA: ['Amir Khan', 'Lena Vogt'],
 };
 export const SKILLS = ['Azure Migrate','Landing Zones','FinOps','Security Copilot','Sentinel','Fabric','Power BI','Copilot Studio','AKS','App Modernization','Data Governance','ESA Assessment','Well-Architected','Networking','Identity','Backup & ASR','Cost Optimization','AI Foundry','RAG Patterns','Prompt Engineering'];
-// Non-technical growth areas used by Performance & PIPs to categorize improvement objectives.
+// Non-technical growth areas used by Readiness Improvement Plans to categorize improvement objectives.
 export const SOFT_SKILLS = ['Stakeholder communication', 'Executive presence', 'Active listening', 'Conflict resolution', 'Negotiation', 'Time management', 'Cross-team collaboration'];
 export const QC_CRITERIA = ['Scope & success criteria documented', 'Day 0–3 outreach completed on time', 'Stakeholders identified & engaged', 'Milestone plan baselined & tracked', 'Technical guidance accurate & actionable', 'Artifacts captured & shared', 'Risks & blockers escalated appropriately', 'CPE survey requested at close'];
 export const MS_CERTIFICATIONS = ['Microsoft Certified: Azure Fundamentals', 'Microsoft Certified: Azure Administrator Associate', 'Microsoft Certified: Azure Solutions Architect Expert', 'Microsoft Certified: Security, Compliance, and Identity Fundamentals', 'Microsoft Certified: Power BI Data Analyst Associate', 'Microsoft Certified: Azure AI Engineer Associate', 'Microsoft 365 Certified: Fundamentals', 'Microsoft Certified: DevOps Engineer Expert'];
@@ -137,7 +137,7 @@ const ACTION_TITLES = ['Schedule stakeholder sync','Escalate access request to I
 const THEMES = ['responsiveness','technical depth','scheduling','communication','onboarding pace','tooling access','proactivity','documentation','stakeholder alignment'];
 const MSG_POD = ['Please confirm Day 1 outreach is complete for this account.','Can you share the latest milestone status?','Customer flagged a scheduling concern — can you follow up today?','Great work on the health check. Let’s prep the CPE survey.','Reminder: artifacts due before the review on Friday.'];
 const MSG_CSA = ['Day 1 outreach done — customer is engaged and responsive.','Milestone 2 is on track; migration sprint starts Monday.','Following up with the stakeholder now, will update by EOD.','Artifacts uploaded to the workspace, ready for review.','Hit a permissions blocker; raising an escalation.'];
-const PIP_NOTES = ['Check-in held; outreach cadence improving.','Two engagements recovered to on-track.','CPE trend flat; agreed coaching focus.','Completed enablement module; applying on live account.'];
+const IMPROVEMENT_PLAN_NOTES = ['Check-in held; outreach cadence improving.','Two engagements recovered to on-track.','CPE trend flat; agreed coaching focus.','Completed enablement module; applying on live account.'];
 const STORY_IMPACTS = [
   'Reduced the delivery timeline by three weeks while keeping the agreed scope intact.',
   'Established a repeatable operating model and transferred ownership to the customer team.',
@@ -521,8 +521,8 @@ function build() {
   });
 
 
-  const pipCandidates = [...activeCsas].sort((a, b) => a.quality - b.quality).slice(0, 4);
-  const randomPipObjective = (csa) => {
+  const improvementPlanCandidates = [...activeCsas].sort((a, b) => a.quality - b.quality).slice(0, 4);
+  const randomImprovementPlanObjective = (csa) => {
     const pod = pods.find((p) => p.id === csa.podId);
     const kind = weighted([['quality', 0.35], ['technical', 0.25], ['soft', 0.2], ['language', 0.1], ['certification', 0.1]]);
     if (kind === 'quality') return { label: `Quality check focus: ${pick(QC_CRITERIA)}`, category: 'delivery-skills', kind: 'quality-check' };
@@ -536,14 +536,14 @@ function build() {
     const gap = pick(SKILLS.filter((s) => !csa.skills.includes(s))) || pick(SKILLS);
     return { label: `Strengthen technical skill: ${gap}`, category: 'technical-skills', kind: 'objective' };
   };
-  const pips = pipCandidates.map((csa, i) => {
+  const improvementPlans = improvementPlanCandidates.map((csa, i) => {
     const status = weighted([['active', 0.6], ['draft', 0.2], ['closed', 0.2]]);
     const outcome = status === 'closed' ? (chance(0.6) ? 'met' : 'not-met') : 'in-progress';
-    const objectives = Array.from({ length: int(2, 3) }, () => randomPipObjective(csa)).map((o) => ({ ...o, done: status === 'draft' ? false : (outcome === 'met' ? chance(0.85) : chance(0.4)) }));
+    const objectives = Array.from({ length: int(2, 3) }, () => randomImprovementPlanObjective(csa)).map((o) => ({ ...o, done: status === 'draft' ? false : (outcome === 'met' ? chance(0.85) : chance(0.4)) }));
     return {
-      id: `PIP${String(i + 1).padStart(3, '0')}`, csaId: csa.id, status, opened: daysAgo(int(20, 120)),
+      id: `IMP${String(i + 1).padStart(3, '0')}`, csaId: csa.id, status, opened: daysAgo(int(20, 120)),
       objectives,
-      checkIns: Array.from({ length: int(1, 3) }, () => ({ date: daysAgo(int(3, 90)), note: pick(PIP_NOTES) })),
+      checkIns: Array.from({ length: int(1, 3) }, () => ({ date: daysAgo(int(3, 90)), note: pick(IMPROVEMENT_PLAN_NOTES) })),
       outcome, ...gov('Confidential/HR'),
     };
   });
@@ -802,7 +802,7 @@ function build() {
     { id: 'INI006', type: 'Platform', name: 'SSD IQ reporting semantic model', area: 'Reporting', stage: 'Pilot', ownerName: 'Robin Ellis', targetRelease: 'FY27 Q2', status: 'on-track', impact: 'Reconciles MBR metrics and enables governed drill-through.', nextStep: 'Reconcile Power BI measures.' },
   ].map((initiative) => ({ ...initiative, ...gov('Portfolio Management') }));
 
-  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, sessionHealthSignals, pips, shadowRequests, kyplSessions, readinessPlans: [], ipFeedback, ipFeedbackCases, engagementFeedback, sentiment, deliveries, hiring, attrition, financials, initiatives, capacityTargets, demandHistory };
+  return { partners, pods, csas, engagements, successStories, escalations, actions, cpe, messages, sessionHealthSignals, improvementPlans, shadowRequests, kyplSessions, readinessPlans: [], ipFeedback, ipFeedbackCases, engagementFeedback, sentiment, deliveries, hiring, attrition, financials, initiatives, capacityTargets, demandHistory };
 }
 
 export const dataset = build();

@@ -107,7 +107,7 @@ function renderPermissionMatrix(tc, container) {
   const overrideCount = ROLE_ORDER.reduce((s, r) => s + EDITABLE_PERMISSIONS.filter((p) => isPermissionOverridden(r, p)).length, 0);
   tc.innerHTML = `
     <div class="row wrap mb8" style="justify-content:space-between">
-      <div class="muted" style="font-size:12px;max-width:640px">Fine-grained capabilities used across Compass (e.g. approving success stories, editing PIPs). Changes apply the next time an affected view renders.</div>
+      <div class="muted" style="font-size:12px;max-width:640px">Fine-grained capabilities used across Compass (e.g. approving success stories, editing readiness improvement plans). Changes apply the next time an affected view renders.</div>
       ${overrideCount ? `<button class="btn sm" id="reset-all-perms">${icon('wrench', 14)} Reset all overrides (${overrideCount})</button>` : ''}
     </div>
     <div class="table-wrap">
