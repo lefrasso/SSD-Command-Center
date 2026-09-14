@@ -3,6 +3,7 @@ import { store, computePodPerformance } from '../store.js';
 import { pageHeader, kpiCard, badge, statusPill, aiChip, esc, meter, utilColor, scoreColor, COLORS } from '../components.js';
 import { icon } from '../icons.js';
 import { TZ_MAP, LEADERSHIP } from '../../data/generate.js';
+import { PERSONAS } from '../roles.js';
 
 const TIER_BADGE = { Leading: 'tint-info', 'On track': 'outline', 'Needs attention': 'tint-danger' };
 
@@ -11,9 +12,12 @@ let podFilter = 'All';
 
 export function renderPods(container) {
   const d = store.data;
-  // POD Lead is scoped to their own POD only — a stable stand-in since the persona isn't
-  // individually linked to a generated POD lead name.
-  const myPod = store.role === 'pod-lead' ? d.pods[0] : null;
+  // POD Lead personas are scoped to their own POD only — matched by lead name where the persona
+  // lines up with a generated POD lead, else the first POD in the persona's own time zone.
+  const persona = PERSONAS[store.role];
+  const myPod = store.role.startsWith('pod-lead')
+    ? (d.pods.find((p) => p.leadName === persona.name) || d.pods.find((p) => p.tz === persona.tz) || d.pods[0])
+    : null;
   const active = (myPod ? d.csas.filter((c) => c.podId === myPod.id) : d.csas).filter((c) => c.lifecycle === 'active');
   const ftcs = active.filter((c) => c.resourceType === 'FTC');
   const podLeadsByTz = Object.fromEntries(Object.keys(TZ_MAP).map((timeZone) => [timeZone, new Set(d.pods.filter((pod) => pod.tz === timeZone).map((pod) => pod.leadName)).size]));

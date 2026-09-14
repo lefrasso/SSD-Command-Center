@@ -1,7 +1,7 @@
 // Module registry — shared by the nav rail and router.
 const SSD_LEADERS = ['ww-lead', 'tz-lead', 'business-manager'];
-const SSD_MGRS = ['csa-manager', 'pod-lead'];
-const ALL = ['ww-lead', 'tz-lead', 'csa-manager', 'pod-lead', 'business-manager', 'csa', 'adoption-lead', 'partner-csa', 'sdm', 'csam'];
+const SSD_MGRS = ['csa-manager', 'pod-lead', 'pod-lead-atz', 'pod-lead-asia'];
+const ALL = ['ww-lead', 'tz-lead', 'csa-manager', 'pod-lead', 'pod-lead-atz', 'pod-lead-asia', 'business-manager', 'csa', 'adoption-lead', 'partner-csa', 'sdm', 'csam'];
 // Partner CSA and the internal (Nebula/GSCD) CSA share one restricted delivery profile: their own
 // dispatch, enablement and escalations — no reporting/analytics, resource lifecycle, quality
 // tooling, sentiment, or the SSD IQ/Capability Map platform views. SDM extends this profile.
@@ -34,7 +34,7 @@ export const MODULES = [
     description: 'Accreditations, S500, SDM onboarding, User Voice, shadowing.', ai: 'Eligibility and enablement insights.' },
   { id: 'escalations', path: '/escalations', label: 'Escalations', icon: 'warning', roles: [...SSD_LEADERS, ...SSD_MGRS, 'sdm', 'adoption-lead', ...CSA_DELIVERY, 'admin'], built: false,
     description: 'Escalation management with SDMs.', ai: 'Auto-severity, similar-case retrieval, action extraction.' },
-  { id: 'performance', path: '/performance', label: 'Readiness Improvement Plans', icon: 'trending', roles: ['csa-manager', 'pod-lead', 'ww-lead', 'tz-lead', 'admin'], requires: 'view:improvementPlan', built: false,
+  { id: 'performance', path: '/performance', label: 'Readiness Improvement Plans', icon: 'trending', roles: ['csa-manager', 'pod-lead', 'pod-lead-atz', 'pod-lead-asia', 'ww-lead', 'tz-lead', 'admin'], requires: 'view:improvementPlan', built: false,
     description: 'Performance management and structured readiness improvement plans (confidential).', ai: 'Evidence-linked performance summaries (advisory only).' },
   { id: 'admin-access', path: '/admin-access', label: 'Roles & Permissions', icon: 'lock', roles: ['admin'], requires: 'manage:accessControl', built: true,
     description: 'Platform Admin only — manage which personas can access each module and which capability permissions they hold.', ai: 'Access-change summary for audit.' },
