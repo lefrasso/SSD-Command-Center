@@ -1,7 +1,7 @@
 // Reports Pending — overdue delivery reports + T-3W proactive engagement tracking.
 // The proactive dispatch process (Day 0-3 outreach owned by the Partner CSA) should
 // prevent reports from becoming pending; this module tracks both the problem and the prevention.
-import { store, sendOutreachStep, sendAllRemainingSteps, myCsa } from '../store.js';
+import { store, sendAllRemainingSteps, myCsa } from '../store.js';
 import { pageHeader, kpiCard, aiChip, esc, COLORS, clearCharts, bar, donut } from '../components.js';
 import { icon } from '../icons.js';
 import { TRACKS, TZ_MAP } from '../../data/generate.js';
@@ -88,7 +88,7 @@ export function renderReportsPending(container) {
         <td>${idx >= 0 ? `${esc(T3W_STEPS[idx].stage)}${due ? '' : ' <span class="muted" style="font-size:11px">(waiting)</span>'}` : '<span class="muted">Complete</span>'}</td>
         <td><div class="row" style="gap:4px">
           <button class="btn sm subtle" data-rp-open="${e.id}" title="Open engagement">${icon('chevronRight', 12)}</button>
-          ${canAct && idx >= 0 ? `<button class="btn sm" data-rp-exec="${e.id}" title="Send ${esc(T3W_STEPS[idx].stage)} email">${icon('sparkle', 12)}</button>` : ''}
+          ${canAct && idx >= 0 ? `<button class="btn sm" data-rp-exec="${e.id}" title="Draft & send ${esc(T3W_STEPS[idx].stage)} email">${icon('sparkle', 12)}</button>` : ''}
           ${canAct && remaining.length > 1 ? `<button class="btn sm subtle" data-rp-auto="${e.id}" title="Send all remaining steps">${icon('send', 12)}</button>` : ''}
         </div></td>
       </tr>`; }).join('') || '<tr><td colspan="11" class="muted" style="padding:16px">No engagements in the T-3W window.</td></tr>'}
@@ -98,13 +98,7 @@ export function renderReportsPending(container) {
   donut(container.querySelector('#rp-pro'), { labels: ['On track', 'In progress', 'Not started', 'Overdue'], values: proDist, colors: [COLORS.positive, COLORS.warning, COLORS.negative, COLORS.sev1] });
 
   container.querySelectorAll('[data-rp-open]').forEach((b) => b.addEventListener('click', () => openEngagement(b.getAttribute('data-rp-open'))));
-  container.querySelectorAll('[data-rp-exec]').forEach((b) => b.addEventListener('click', () => {
-    const eng = d.engagements.find((x) => x.id === b.getAttribute('data-rp-exec'));
-    const idx = eng && nextStepIndex(eng);
-    if (!eng || idx == null || idx < 0) return;
-    const csaName = (csaOf(eng) || {}).name;
-    sendOutreachStep(eng.id, t3wDraft(T3W_STEPS[idx], eng, d, csaName), 'Outreach Concierge');
-  }));
+  container.querySelectorAll('[data-rp-exec]').forEach((b) => b.addEventListener('click', () => openEngagement(b.getAttribute('data-rp-exec'), { autoDraft: true })));
   container.querySelectorAll('[data-rp-auto]').forEach((b) => b.addEventListener('click', () => {
     const eng = d.engagements.find((x) => x.id === b.getAttribute('data-rp-auto'));
     if (!eng) return;

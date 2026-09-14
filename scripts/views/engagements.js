@@ -45,7 +45,7 @@ export function renderEngagements(container) {
   container.querySelectorAll('.kan-card').forEach((el) => el.addEventListener('click', () => openEngagement(el.getAttribute('data-id'))));
 }
 
-export function openEngagement(id) {
+export function openEngagement(id, { autoDraft = false } = {}) {
   const d = store.data;
   const e = d.engagements.find((x) => x.id === id);
   if (!e) return;
@@ -131,7 +131,7 @@ export function openEngagement(id) {
     }));
     const t3wOut = dr.querySelector('#t3w-out');
     const previewBtn = dr.querySelector('#t3w-preview');
-    if (previewBtn) previewBtn.addEventListener('click', () => {
+    const showPreview = () => {
       const idx = nextStepIndex(e);
       if (idx < 0) return;
       const step = T3W_STEPS[idx];
@@ -149,7 +149,9 @@ export function openEngagement(id) {
         sendOutreachStep(e.id, { to: draft.to, cc: draft.cc, subject: draft.subject, body: bodyText }, PERSONAS[store.role].name);
         closeDrawer(); openEngagement(e.id);
       });
-    });
+    };
+    if (previewBtn) previewBtn.addEventListener('click', showPreview);
+    if (autoDraft && previewBtn) showPreview();
     const autoBtn = dr.querySelector('#t3w-auto');
     if (autoBtn) autoBtn.addEventListener('click', () => {
       const drafts = {};
