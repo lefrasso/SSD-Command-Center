@@ -1,20 +1,14 @@
 // Engagements & Dispatch — dispatch board + engagement detail with AI dispatch.
-import { store, assignEngagement, respondShadowRequest, myCsa, toggleOutreachDay, executeNextOutreachStep, automateRemainingOutreach } from '../store.js';
+import { store, assignEngagement, respondShadowRequest, myCsa, toggleOutreachDay, sendOutreachStep, sendAllRemainingSteps } from '../store.js';
 import { pageHeader, badge, statusPill, aiChip, esc, kanban, openDrawer, closeDrawer, COLORS } from '../components.js';
 import { icon } from '../icons.js';
 import { recommendCSA, draftOutreach } from '../ai.js';
 import { navigate } from '../router.js';
 import { can, PERSONAS } from '../roles.js';
+import { T3W_STEPS, t3wContacts, t3wDraft, nextStepIndex, isStepDue } from '../t3w.js';
 
 const COLS = [['new', 'New'], ['assigned', 'Assigned'], ['in-delivery', 'In delivery'], ['complete', 'Complete']];
-export const OUTREACH_DAYS = ['day0', 'day1', 'day2', 'day3'];
-// Short simulated note for what the Outreach Concierge "does" when a step is executed/automated.
-export const OUTREACH_NOTE = {
-  day0: (e) => `Kickoff introduction sent to ${e.csamName} — proposing a Day 1 alignment sync.`,
-  day1: (e) => `Day 1 stakeholder sync scheduled with ${e.csamName}; scope & success criteria on the agenda.`,
-  day2: (e) => `Milestone plan and success criteria confirmed with the customer.`,
-  day3: (e) => `Cadence check-in logged — engagement moved to fully engaged status.`,
-};
+export const OUTREACH_DAYS = T3W_STEPS.map((s) => s.key);
 function relativeTime(iso) {
   const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
   if (mins < 1) return 'just now';
@@ -62,19 +56,37 @@ export function openEngagement(id) {
   // The assigned CSA runs their own cadence; POD Lead/CSA Manager can act on any engagement.
   const canManageOutreach = (my && my.id === e.assignedTo) || can(store.role, 'edit:dispatch');
   const remaining = OUTREACH_DAYS.filter((k) => !e.outreach[k]);
-  const outreach = OUTREACH_DAYS.map((k, i) => canManageOutreach
-    ? `<button class="badge ${e.outreach[k] ? 'tint-info' : 'outline'}" data-outreach-day="${k}" style="cursor:pointer;border:none">Day ${i} ${e.outreach[k] ? '✓' : '—'}</button>`
-    : `<span class="badge ${e.outreach[k] ? 'tint-info' : 'outline'}">Day ${i} ${e.outreach[k] ? '✓' : '—'}</span>`).join(' ');
-  const automation = !canManageOutreach ? '' : remaining.length === 0
+  const nextIdx = nextStepIndex(e);
+  const due = nextIdx >= 0 && isStepDue(e);
+  const contacts = t3wContacts(e, d, csa ? csa.name : null);
+  const roleName = { csam: contacts.csam, podLead: contacts.podLead, csamM1: contacts.csamM1, resourceManager: contacts.resourceManager };
+  const steps = T3W_STEPS.map((s, i) => {
+    const done = e.outreach[s.key];
+    const isNext = i === nextIdx;
+    const status = done ? 'Sent' : isNext ? (due ? 'Ready to send' : 'Waiting on response') : 'Not started';
+    const tone = done ? 'tint-info' : isNext && due ? 'tint-warn' : 'outline';
+    const cc = s.ccRoles.map((r) => roleName[r]).join(', ');
+    const border = done ? COLORS.positive : isNext ? COLORS.warning : 'var(--border-2, #d8d8d8)';
+    return `<div class="card pad mb8" style="border-left:3px solid ${border}">
+      <div class="row wrap" style="justify-content:space-between;gap:6px">
+        <strong>${esc(s.stage)} · ${esc(s.name)}</strong>
+        ${canManageOutreach ? `<button class="badge ${tone}" data-outreach-day="${s.key}" style="cursor:pointer;border:none">${esc(status)}</button>` : `<span class="badge ${tone}">${esc(status)}</span>`}
+      </div>
+      <div class="muted mt4" style="font-size:12px">${esc(s.action)}</div>
+      <div class="muted mt4" style="font-size:11px">To: ${esc(roleName[s.toRole])} · Cc: ${esc(cc)} · Advance when: ${esc(s.advanceWhen)}</div>
+    </div>`;
+  }).join('');
+  const automation = !canManageOutreach ? '' : nextIdx < 0
     ? `<div class="muted mt8" style="font-size:12px">${icon('check', 12)} Full Day 0–3 cadence complete — engagement is fully engaged.</div>`
     : `<div class="row wrap mt8" style="gap:6px">
-        <button class="btn sm" id="exec-next">${icon('sparkle', 14)} Execute next outreach step</button>
-        ${remaining.length > 1 ? `<button class="btn sm subtle" id="exec-auto">${icon('send', 14)} Automate remaining cadence (${remaining.length})</button>` : ''}
-      </div>`;
+        <button class="btn sm" id="t3w-preview">${icon('sparkle', 14)} Draft ${esc(T3W_STEPS[nextIdx].stage)} email</button>
+        ${remaining.length > 1 ? `<button class="btn sm subtle" id="t3w-auto">${icon('send', 14)} Send all remaining steps</button>` : ''}
+      </div><div id="t3w-out"></div>`;
   const log = (e.outreachLog || []).slice(0, 6).map((l) => {
-    const dayLabel = `Day ${OUTREACH_DAYS.indexOf(l.day)}`;
-    const modeLabel = l.mode === 'automated' ? 'Automated' : l.mode === 'manual-complete' ? 'Marked done' : 'Reopened';
-    return `<div class="muted" style="font-size:12px">${icon(l.mode === 'automated' ? 'sparkle' : 'check', 11)} ${dayLabel} — ${modeLabel} by ${esc(l.by)} · ${relativeTime(l.at)}${l.note ? `<br><span style="padding-left:16px">“${esc(l.note)}”</span>` : ''}</div>`;
+    const step = T3W_STEPS.find((s) => s.key === l.day);
+    const label = step ? `${step.stage} · ${step.name}` : l.day;
+    const modeLabel = l.mode === 'automated' ? 'Sent' : l.mode === 'manual-complete' ? 'Marked done' : 'Reopened';
+    return `<div class="muted" style="font-size:12px">${icon(l.mode === 'automated' ? 'send' : 'check', 11)} ${esc(label)} — ${modeLabel} by ${esc(l.by)} · ${relativeTime(l.at)}${l.subject ? `<br><span style="padding-left:16px">To: ${esc(l.to || '')}${l.cc && l.cc.length ? ' · Cc: ' + esc(l.cc.join(', ')) : ''}<br>“${esc(l.subject)}”</span>` : ''}</div>`;
   }).join('');
   const milestones = e.milestones.map((m) => `<div class="check-item"><span class="check-box ${m.done ? 'done' : ''}">${m.done ? icon('check', 12) : ''}</span><span>${esc(m.label)} <span class="muted">· ${m.done ? 'done' : 'due ' + m.due}</span></span></div>`).join('');
 
@@ -85,11 +97,11 @@ export function openEngagement(id) {
     <div class="field"><span class="field-key">Family / Program</span><span class="field-val">${esc(e.track)} · ${esc(e.program)}</span></div>
     <div class="field"><span class="field-key">Assigned CSA</span><span class="field-val">${csa ? esc(csa.name) + ' (' + esc(csa.vendor) + ')' : 'Unassigned'}</span></div>
     <div class="field"><span class="field-key">Due</span><span class="field-val">${esc(e.dueDate)}</span></div>
-    <div class="section-title">Day 0–3 outreach</div>
-    <div class="muted" style="font-size:12px">${canManageOutreach ? 'Click a day to mark it done, or let the Outreach Concierge execute the cadence for you.' : 'The assigned Partner CSA owns this cadence.'}</div>
-    <div class="row wrap mt8" style="gap:6px">${outreach}</div>
+    <div class="section-title">T-3W Proactive Dispatch</div>
+    <div class="muted" style="font-size:12px">${canManageOutreach ? 'CSA-owned escalation cadence to confirm the kickoff meeting — draft and send each step, or mark it done directly.' : 'The assigned Partner CSA owns this cadence.'}</div>
+    <div class="mt8">${steps}</div>
     ${automation}
-    ${log ? `<div class="col-stack mt8" style="gap:4px">${log}</div>` : ''}
+    ${log ? `<div class="section-title">Outreach activity</div><div class="col-stack" style="gap:4px">${log}</div>` : ''}
     <div class="section-title">Milestones</div>${milestones}
     <div class="section-title">Success stories</div>
     ${stories.length ? `<div class="col-stack" style="gap:6px">${stories.map((story) => `<button class="btn" data-story-link="${story.id}" style="justify-content:space-between">${esc(story.title)} ${statusPill(story.status)}</button>`).join('')}</div>` : '<div class="muted">No success story is linked to this engagement.</div>'}
@@ -117,17 +129,32 @@ export function openEngagement(id) {
       toggleOutreachDay(e.id, b.getAttribute('data-outreach-day'), PERSONAS[store.role].name);
       closeDrawer(); openEngagement(e.id);
     }));
-    const execBtn = dr.querySelector('#exec-next');
-    if (execBtn) execBtn.addEventListener('click', () => {
-      const next = OUTREACH_DAYS.find((k) => !e.outreach[k]);
-      if (!next) return;
-      executeNextOutreachStep(e.id, OUTREACH_NOTE[next](e), 'Outreach Concierge');
-      closeDrawer(); openEngagement(e.id);
+    const t3wOut = dr.querySelector('#t3w-out');
+    const previewBtn = dr.querySelector('#t3w-preview');
+    if (previewBtn) previewBtn.addEventListener('click', () => {
+      const idx = nextStepIndex(e);
+      if (idx < 0) return;
+      const step = T3W_STEPS[idx];
+      const draft = t3wDraft(step, e, d, csa ? csa.name : null);
+      t3wOut.innerHTML = `<div class="card pad mt8" style="background:var(--bg-2)">
+        <div class="row mb8">${aiChip()}<span class="muted" style="font-size:12px">Editable — ${esc(step.stage)}: ${esc(step.name)}</span></div>
+        <div class="field"><span class="field-key">To</span><span class="field-val">${esc(draft.to)}</span></div>
+        <div class="field"><span class="field-key">Cc</span><span class="field-val">${esc(draft.cc.join(', '))}</span></div>
+        <div class="field"><span class="field-key">Subject</span><span class="field-val">${esc(draft.subject)}</span></div>
+        <textarea id="t3w-body" class="input" style="width:100%;min-height:110px;font-family:inherit;font-size:13px;margin-top:6px">${esc(draft.body)}</textarea>
+        <div class="row mt8" style="gap:6px"><button class="btn sm" id="t3w-send">${icon('send', 14)} Send &amp; mark done</button></div>
+      </div>`;
+      t3wOut.querySelector('#t3w-send').addEventListener('click', () => {
+        const bodyText = t3wOut.querySelector('#t3w-body').value;
+        sendOutreachStep(e.id, { to: draft.to, cc: draft.cc, subject: draft.subject, body: bodyText }, PERSONAS[store.role].name);
+        closeDrawer(); openEngagement(e.id);
+      });
     });
-    const autoBtn = dr.querySelector('#exec-auto');
+    const autoBtn = dr.querySelector('#t3w-auto');
     if (autoBtn) autoBtn.addEventListener('click', () => {
-      const notes = {}; OUTREACH_DAYS.forEach((k) => { notes[k] = OUTREACH_NOTE[k](e); });
-      automateRemainingOutreach(e.id, notes, 'Outreach Concierge');
+      const drafts = {};
+      T3W_STEPS.forEach((s) => { if (!e.outreach[s.key]) drafts[s.key] = t3wDraft(s, e, d, csa ? csa.name : null); });
+      sendAllRemainingSteps(e.id, drafts, PERSONAS[store.role].name);
       closeDrawer(); openEngagement(e.id);
     });
     dr.querySelector('#rec').addEventListener('click', () => {

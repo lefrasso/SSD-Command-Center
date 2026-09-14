@@ -349,9 +349,9 @@ function stageForOutreach(e) {
   const doneCount = OUTREACH_DAYS.filter((k) => e.outreach[k]).length;
   return doneCount >= 4 ? 'engaged' : `Day ${doneCount}`;
 }
-function logOutreach(e, day, mode, by, note) {
+function logOutreach(e, day, mode, by, draft) {
   if (!e.outreachLog) e.outreachLog = [];
-  e.outreachLog.unshift({ day, at: new Date().toISOString(), by: by || 'you', mode, note: note || null });
+  e.outreachLog.unshift({ day, at: new Date().toISOString(), by: by || 'you', mode, to: draft?.to || null, cc: draft?.cc || null, subject: draft?.subject || null, note: draft?.body || null });
 }
 // Manual check/uncheck of a single Day 0-3 touch — the CSA (or POD Lead) confirming it happened.
 export function toggleOutreachDay(engId, day, by) {
@@ -362,27 +362,27 @@ export function toggleOutreachDay(engId, day, by) {
   if (e.dispatchStage !== 'engaged' || !e.outreach[day]) e.dispatchStage = stageForOutreach(e);
   emit('data');
 }
-// One-click execution: complete the next outstanding touch and log the (AI-drafted) note used.
-export function executeNextOutreachStep(engId, note, by) {
+// One-click send: complete the next outstanding step and log the drafted email (to/cc/subject/body) used.
+export function sendOutreachStep(engId, draft, by) {
   const e = byId(store.data.engagements, engId);
   if (!e) return null;
   const day = OUTREACH_DAYS.find((k) => !e.outreach[k]);
   if (!day) return null;
   e.outreach[day] = true;
-  logOutreach(e, day, 'automated', by || 'Outreach Concierge', note);
+  logOutreach(e, day, 'automated', by || 'you', draft);
   e.dispatchStage = stageForOutreach(e);
   emit('data');
   return day;
 }
-// Automate the whole remaining cadence for this one engagement in one go.
-export function automateRemainingOutreach(engId, notesByDay, by) {
+// Automate the whole remaining cadence for this one engagement in one go — draftsByDay: { day0: {to,cc,subject,body}, ... }
+export function sendAllRemainingSteps(engId, draftsByDay, by) {
   const e = byId(store.data.engagements, engId);
   if (!e) return [];
   const done = [];
   OUTREACH_DAYS.forEach((day) => {
-    if (!e.outreach[day]) {
+    if (!e.outreach[day] && draftsByDay[day]) {
       e.outreach[day] = true;
-      logOutreach(e, day, 'automated', by || 'Outreach Concierge', notesByDay ? notesByDay[day] : null);
+      logOutreach(e, day, 'automated', by || 'you', draftsByDay[day]);
       done.push(day);
     }
   });
