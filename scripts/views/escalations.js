@@ -30,11 +30,11 @@ export function renderEscalations(container) {
     ${pageHeader({ title: 'Escalations & Actions', description: 'Escalations are logged against the engagement record in SSD IQ, then triaged with action tracking and SLA ownership.', actions: `<button class="btn primary" id="new-esc">${icon('warning', 16)} New escalation</button>` })}
     ${kanban(columns)}`;
 
-  container.querySelectorAll('.kan-card').forEach((el) => el.addEventListener('click', () => openEsc(el.getAttribute('data-id'))));
+  container.querySelectorAll('.kan-card').forEach((el) => el.addEventListener('click', () => openEscalation(el.getAttribute('data-id'))));
   container.querySelector('#new-esc').addEventListener('click', openIntake);
 }
 
-function openEsc(id) {
+export function openEscalation(id) {
   const d = store.data;
   const e = d.escalations.find((x) => x.id === id); if (!e) return;
   const eng = d.engagements.find((x) => x.id === e.engagementId);
@@ -65,8 +65,8 @@ function openEsc(id) {
     <div id="ai-out"></div>`;
 
   openDrawer(`Escalation · ${esc(e.id)}`, body, (dr) => {
-    dr.querySelectorAll('[data-status]').forEach((b) => b.addEventListener('click', () => { setEscalationStatus(e.id, b.getAttribute('data-status')); openEsc(e.id); }));
-    dr.querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', () => { const done = b.getAttribute('data-done') === 'true'; setActionStatus(b.getAttribute('data-act'), done ? 'open' : 'done'); openEsc(e.id); }));
+    dr.querySelectorAll('[data-status]').forEach((b) => b.addEventListener('click', () => { setEscalationStatus(e.id, b.getAttribute('data-status')); openEscalation(e.id); }));
+    dr.querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', () => { const done = b.getAttribute('data-done') === 'true'; setActionStatus(b.getAttribute('data-act'), done ? 'open' : 'done'); openEscalation(e.id); }));
     const out = dr.querySelector('#ai-out');
     const show = (r, extra = '') => { out.innerHTML = `<div class="card pad" style="background:var(--bg-2)"><div class="row mb8">${aiChip()}</div><div>${esc(r.text)}</div>${extra}</div>`; };
     dr.querySelector('#similar').addEventListener('click', () => show(similarCases(e.id, d)));

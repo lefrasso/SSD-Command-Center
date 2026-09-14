@@ -5,6 +5,8 @@ import { dailyBriefing } from '../ai.js';
 import { navigate } from '../router.js';
 import { TRACKS, LEADERSHIP } from '../../data/generate.js';
 import { daysUntilDue } from '../t3w.js';
+import { openEngagement } from './engagements.js';
+import { openEscalation } from './escalations.js';
 import {
   pageHeader, kpiCard, aiChip, badge, severityPill, statusPill, esc,
   scoreColor, utilColor, COLORS, CHART_PALETTE, clearCharts, donut, bar,
@@ -37,9 +39,9 @@ export function renderHome(container) {
   // Needs attention
   const breaches = d.escalations
     .filter((e) => e.status !== 'resolved' && hoursSince(e.opened) > e.slaHours)
-    .map((e) => { const eng = d.engagements.find((x) => x.id === e.engagementId); return { priority: 1, severity: e.severity, title: `${e.severity.toUpperCase()} escalation — ${eng ? eng.customer : e.engagementId}`, meta: `${e.summary} · SLA ${e.slaHours}h breached · owner ${e.ownerName}`, q: eng ? eng.customer : e.id, track: eng && eng.track, partner: partnerOf(eng && eng.assignedTo) }; });
-  const risky = filteredEngs.filter((e) => e.atRisk).map((e) => ({ priority: 2, title: `At-risk — ${e.customer} (${e.program})`, meta: `${e.track} · due ${e.dueDate} · outreach ${Object.values(e.outreach).filter(Boolean).length}/4`, q: e.customer, track: e.track, partner: partnerOf(e.assignedTo) }));
-  const demand = filteredEngs.filter((e) => e.status === 'new').map((e) => ({ priority: 3, title: `New demand — ${e.customer}`, meta: `${e.track} · ${e.program} · awaiting dispatch`, q: e.customer, track: e.track, partner: '' }));
+    .map((e) => { const eng = d.engagements.find((x) => x.id === e.engagementId); return { priority: 1, severity: e.severity, title: `${e.severity.toUpperCase()} escalation — ${eng ? eng.customer : e.engagementId}`, meta: `${e.summary} · SLA ${e.slaHours}h breached · owner ${e.ownerName}`, kind: 'escalation', id: e.id, track: eng && eng.track, partner: partnerOf(eng && eng.assignedTo) }; });
+  const risky = filteredEngs.filter((e) => e.atRisk).map((e) => ({ priority: 2, title: `At-risk — ${e.customer} (${e.program})`, meta: `${e.track} · due ${e.dueDate} · outreach ${Object.values(e.outreach).filter(Boolean).length}/4`, kind: 'engagement', id: e.id, track: e.track, partner: partnerOf(e.assignedTo) }));
+  const demand = filteredEngs.filter((e) => e.status === 'new').map((e) => ({ priority: 3, title: `New demand — ${e.customer}`, meta: `${e.track} · ${e.program} · awaiting dispatch`, kind: 'engagement', id: e.id, track: e.track, partner: '' }));
   const attention = [...breaches, ...risky, ...demand]
     .filter((a) => (track === 'All' || a.track === track) && (partner === 'All' || a.partner === partner || a.priority === 3))
     .sort((a, b) => a.priority - b.priority).slice(0, 9);
@@ -174,7 +176,7 @@ export function renderHome(container) {
                 <div class="attn-title">${esc(a.title)}</div>
                 <div class="attn-meta">${esc(a.meta)}</div>
               </div>
-              <button class="btn subtle sm" data-q="${esc(a.q)}">View ${icon('chevronRight', 14)}</button>
+              <button class="btn subtle sm" data-kind="${a.kind}" data-id="${esc(a.id)}">View ${icon('chevronRight', 14)}</button>
             </div>`).join('') : '<div class="muted">Nothing needs attention for this filter.</div>'}
         </div>
       </div>
@@ -269,8 +271,11 @@ export function renderHome(container) {
     if (card) navigate(card.getAttribute('data-nav'));
   });
   container.querySelector('#attn-list').addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-q]');
-    if (btn) navigate(`/ssdiq?q=${encodeURIComponent(btn.getAttribute('data-q'))}`);
+    const btn = e.target.closest('[data-id]');
+    if (!btn) return;
+    const id = btn.getAttribute('data-id');
+    if (btn.getAttribute('data-kind') === 'escalation') openEscalation(id);
+    else openEngagement(id);
   });
 
   // Action items
