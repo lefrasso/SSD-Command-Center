@@ -11,13 +11,9 @@ import { PERSONAS } from '../roles.js';
 import { IP_ASSETS, IP_TAGS } from '../../data/generate.js';
 import { PHASES, COMMON_AGENTS, EXPERT_AGENTS, SCHEDULES, phaseForEngagement, agentsForEngagement } from '../agenticSupportAgents.js';
 import { computeT3W, T3W_WINDOW_DAYS } from '../t3w.js';
-import { TASK_INVENTORY, OPS_AGENTS, OPS_PHASE_LABEL, runOpsAgentById } from '../opsAutomation.js';
+import { TASK_INVENTORY, OPS_AGENTS, OPS_PHASE_LABEL } from '../opsAutomation.js';
 
 let generated = 0;
-// Ops agents are cross-engagement (not tied to one delivery), so their run state lives here rather
-// than in store.js's per-engagement schedule — same simulated, advisory-only contract as the rest
-// of Agentic Delivery.
-const opsAgentState = {};
 
 const T3W_RISK = { 'not-started': 'medium', 'in-progress': 'low', 'on-track': 'low' };
 const RISK_RANK = { low: 0, medium: 1, high: 2 };
@@ -45,17 +41,6 @@ function agentNameById(agentId) {
   if (expert) return expert.name;
   const ops = OPS_AGENTS.find((a) => a.id === agentId);
   return ops ? ops.name : null;
-}
-function opsAgentCardHtml(agentMeta) {
-  const state = opsAgentState[agentMeta.id] || { output: null, lastRunAt: null };
-  return `<div class="card pad mb8" style="background:var(--bg-2)">
-    <div class="row wrap" style="justify-content:space-between;gap:8px">
-      <div class="row">${icon(agentMeta.icon, 16)}<strong>${esc(agentMeta.name)}</strong><span class="muted" style="font-size:12px">· ${esc(agentMeta.role)}</span></div>
-      ${state.lastRunAt ? badge(`Ran ${relativeTime(state.lastRunAt)}`, 'outline') : badge('Not run yet', 'outline')}
-    </div>
-    <div class="mt8">${agentOutputHtml(state.output)}</div>
-    <div class="row wrap mt8" style="gap:6px"><button class="btn sm" data-run-ops-agent="${agentMeta.id}">${icon('sparkle', 14)} Run now</button></div>
-  </div>`;
 }
 function phaseStepper(currentPhase) {
   const idx = PHASES.findIndex(([k]) => k === currentPhase);
@@ -134,10 +119,11 @@ export function renderAgentic(container) {
     </div>
 
     <div class="section-title">Delivery agent roster</div>
-    <div class="muted mb8" style="font-size:12px">Five common agents support every engagement; a track specialist joins for domain-specific guidance.</div>
+    <div class="muted mb8" style="font-size:12px">Every engagement gets the same crew, run and controlled independently per engagement: five common agents, a track specialist, and seven back-office ops agents covering the non-customer-facing side of delivery.</div>
     <div class="catalog">
       ${COMMON_AGENTS.map((a) => `<div class="card tile" style="cursor:default"><span class="tile-ico">${icon(a.icon, 20)}</span><div><strong>${esc(a.name)}</strong><div class="muted" style="font-size:12px">${esc(a.role)}</div><div class="mt8">${badge('Common agent', 'tint-info')}</div></div></div>`).join('')}
       ${Object.values(EXPERT_AGENTS).map((a) => `<div class="card tile" style="cursor:default"><span class="tile-ico">${icon(a.icon, 20)}</span><div><strong>${esc(a.name)}</strong><div class="muted" style="font-size:12px">${esc(a.role)}</div><div class="mt8">${badge(`${a.track} specialist`, 'outline')}</div></div></div>`).join('')}
+      ${OPS_AGENTS.map((a) => `<div class="card tile" style="cursor:default"><span class="tile-ico">${icon(a.icon, 20)}</span><div><strong>${esc(a.name)}</strong><div class="muted" style="font-size:12px">${esc(a.role)}</div><div class="mt8">${badge('Back-office agent', 'outline')}</div></div></div>`).join('')}
     </div>
 
     <div class="section-title">Active engagements</div>
@@ -165,7 +151,7 @@ export function renderAgentic(container) {
     </tbody></table></div>
 
     <div class="section-title">Non-customer-facing automation \u2014 Events Task Inventory</div>
-    <div class="muted mb8" style="font-size:12px">Every recurring activity across an engagement's lifecycle, read from the Events Task Inventory and classified customer-facing vs. back office. Back-office activities are where an agent can run furthest ahead of a human; customer-facing ones keep a human in the loop by design \u2014 agents there only draft and prep.</div>
+    <div class="muted mb8" style="font-size:12px">Every recurring activity across an engagement's lifecycle, read from the Events Task Inventory and classified customer-facing vs. back office. Back-office activities are where an agent can run furthest ahead of a human, and — like every agent here — each engagement runs and controls its own copy of that agent independently (see "Open support plan" below). Customer-facing activities keep a human in the loop by design; agents there only draft and prep.</div>
     <div class="kpi-grid">
       ${kpiCard({ label: 'Activities inventoried', value: TASK_INVENTORY.length, iconName: 'grid' })}
       ${kpiCard({ label: 'Non-customer-facing', value: nonCustomerFacing.length, iconName: 'database', hint: 'the automation opportunity' })}
@@ -182,10 +168,6 @@ export function renderAgentic(container) {
       </tr>`; }).join('')}
     </tbody></table></div>
 
-    <div class="section-title">Back-office ops agents</div>
-    <div class="muted mb8" style="font-size:12px">New simulated agents purpose-built for the non-customer-facing side of delivery \u2014 they read across the whole portfolio rather than one engagement at a time. Advisory only: every recommendation still needs a human approval.</div>
-    ${OPS_AGENTS.map((a) => opsAgentCardHtml(a)).join('')}
-
     <div class="section-title">IP library</div>
     <div class="muted mb8" style="font-size:12px">Reference templates behind each engagement's Kit — informational only; feedback is captured per engagement above.</div>
     <div class="catalog">
@@ -196,11 +178,6 @@ export function renderAgentic(container) {
     </div>`;
 
   container.querySelectorAll('[data-open-support]').forEach((b) => b.addEventListener('click', () => openSupportDrawer(b.getAttribute('data-open-support'), container)));
-  container.querySelectorAll('[data-run-ops-agent]').forEach((b) => b.addEventListener('click', () => {
-    const id = b.getAttribute('data-run-ops-agent');
-    opsAgentState[id] = { output: runOpsAgentById(id, d), lastRunAt: new Date().toISOString() };
-    renderAgentic(container);
-  }));
 }
 
 function ipKitRatingFormHtml() {
@@ -245,7 +222,7 @@ function openSupportDrawer(engagementId, container) {
       <div class="section-title" style="margin:0">Delivery agents${aiChip()}</div>
       <button class="btn sm subtle" id="sp-run-all">${icon('sparkle', 14)} Run all agents now</button>
     </div>
-    <div class="muted mb8" style="font-size:12px">Each agent runs on its own schedule (by default, whenever the phase changes) — run one on demand, or change its schedule.</div>
+    <div class="muted mb8" style="font-size:12px">Common, track-specialist and back-office ops agents \u2014 each one scoped, scheduled and controlled for this engagement only. Runs on its own schedule (by default, whenever the phase changes) \u2014 run one on demand, or change its schedule.</div>
     ${roster.map((a) => agentCardHtml(a, e.id)).join('')}
 
     <div class="section-title">Other actions</div>

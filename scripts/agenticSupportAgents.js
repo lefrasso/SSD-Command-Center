@@ -2,6 +2,7 @@
 // approach as ai.js / ipFeedbackAgents.js) — no network calls, no store import (kept pure so both
 // the view and the seed-data generator can use it without a circular import).
 import { computeT3W } from './t3w.js';
+import { OPS_AGENTS, runOpsAgentById } from './opsAutomation.js';
 
 export const PHASES = [
   ['pre-delivery', 'Pre-delivery'],
@@ -177,10 +178,13 @@ function escalationSentinel(engagement, d, phase) {
   return { text: phase === 'post-delivery' ? 'No risk signals were recorded across this delivery.' : 'No risk signals detected right now.', risk: 'low' };
 }
 
-// The full agent roster (common + track specialist) that applies to a given engagement.
+// The full agent roster (common + track specialist + back-office ops) that applies to a given
+// engagement. Every agent — including the ops crew — runs, schedules and is controlled per
+// engagement, independently of every other engagement.
 export function agentsForEngagement(engagement) {
   const expertDef = EXPERT_AGENTS[engagement.track];
-  return expertDef ? [...COMMON_AGENTS, expertDef] : COMMON_AGENTS;
+  const roster = expertDef ? [...COMMON_AGENTS, expertDef] : [...COMMON_AGENTS];
+  return [...roster, ...OPS_AGENTS];
 }
 
 // Executes a single agent by id against the current engagement/dataset — the "run" behind both the
@@ -195,8 +199,9 @@ export function runAgentById(agentId, engagement, d, phase) {
     case 'escalation-sentinel': return escalationSentinel(engagement, d, phase).text;
     default: {
       const expertDef = Object.values(EXPERT_AGENTS).find((a) => a.id === agentId);
-      if (!expertDef) return null;
-      return (expertDef.tips[phase] || []).filter((t) => !t.rx || t.rx.test(engagement.program)).map((t) => t.text);
+      if (expertDef) return (expertDef.tips[phase] || []).filter((t) => !t.rx || t.rx.test(engagement.program)).map((t) => t.text);
+      if (OPS_AGENTS.some((a) => a.id === agentId)) return runOpsAgentById(agentId, engagement, d);
+      return null;
     }
   }
 }
