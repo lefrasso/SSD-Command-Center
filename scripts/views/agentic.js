@@ -1,7 +1,8 @@
-// Agentic Delivery — tailored, per-engagement support agents across pre-delivery, delivery and
-// post-delivery, plus in-flight feedback and an urgent "ask for support" fast path.
+// Agentic Delivery — the assigned CSA/Partner CSA executes their own engagements (start/run/schedule
+// agents); POD Leads and above monitor execution across their scope, read-only. Stages mirror the
+// Engagement Backlog status (new/assigned/in-delivery/complete) exactly.
 import {
-  store, addIpFeedback, engagementFeedbackFor, addEngagementFeedback, addEscalation,
+  store, myCsa, getAgentRunState, addIpFeedback, engagementFeedbackFor, addEngagementFeedback, addEscalation,
   syncAgentSchedule, runAgentNow, runAllAgentsNow, setAgentSchedule,
 } from '../store.js';
 import { pageHeader, kpiCard, aiChip, esc, badge, sentimentPill, COLORS, openDrawer } from '../components.js';
@@ -9,7 +10,7 @@ import { icon } from '../icons.js';
 import { generateDeliverable } from '../ai.js';
 import { PERSONAS } from '../roles.js';
 import { IP_ASSETS, IP_TAGS } from '../../data/generate.js';
-import { PHASES, COMMON_AGENTS, EXPERT_AGENTS, SCHEDULES, phaseForEngagement, agentsForEngagement } from '../agenticSupportAgents.js';
+import { STAGES, COMMON_AGENTS, EXPERT_AGENTS, SCHEDULES, stageForEngagement, agentsForEngagement } from '../agenticSupportAgents.js';
 import { computeT3W, T3W_WINDOW_DAYS } from '../t3w.js';
 import { TASK_INVENTORY, OPS_AGENTS, OPS_PHASE_LABEL } from '../opsAutomation.js';
 
@@ -18,9 +19,24 @@ let generated = 0;
 const T3W_RISK = { 'not-started': 'medium', 'in-progress': 'low', 'on-track': 'low' };
 const RISK_RANK = { low: 0, medium: 1, high: 2 };
 
-function phasePill(phase) {
-  const label = PHASES.find(([k]) => k === phase)?.[1] || phase;
-  const color = phase === 'post-delivery' ? COLORS.positive : phase === 'delivery' ? COLORS.warning : COLORS.info;
+// Only the assigned CSA/Partner CSA controls execution on their own engagement; admin can too
+// (platform oversight). Every other role (POD Lead, CSA Manager, TZ/WW Lead, SDM, CSAM) monitors.
+function canExecuteRole(role) { return role === 'csa' || role === 'partner-csa' || role === 'admin'; }
+
+function executionProgress(e) {
+  const roster = agentsForEngagement(e);
+  const started = roster.filter((a) => getAgentRunState(e.id, a.id).lastRunAt).length;
+  return { started, total: roster.length };
+}
+function executionBadge(e) {
+  const { started, total } = executionProgress(e);
+  if (!started) return badge('Not started', 'outline');
+  return badge(`${started}/${total} agents run`, started === total ? 'tint-info' : 'outline');
+}
+
+function stagePill(stage) {
+  const label = STAGES.find(([k]) => k === stage)?.[1] || stage;
+  const color = stage === 'complete' ? COLORS.positive : stage === 'in-delivery' ? COLORS.warning : stage === 'assigned' ? COLORS.info : COLORS.neutral;
   return `<span class="pill" style="color:${color}">${icon('clock', 14)}<span class="pill-label">${esc(label)}</span></span>`;
 }
 function riskBadge(risk) {
@@ -42,9 +58,9 @@ function agentNameById(agentId) {
   const ops = OPS_AGENTS.find((a) => a.id === agentId);
   return ops ? ops.name : null;
 }
-function phaseStepper(currentPhase) {
-  const idx = PHASES.findIndex(([k]) => k === currentPhase);
-  return `<div class="row wrap" style="gap:6px">${PHASES.map(([, label], i) => {
+function stageStepper(currentStage) {
+  const idx = STAGES.findIndex(([k]) => k === currentStage);
+  return `<div class="row wrap" style="gap:6px">${STAGES.map(([, label], i) => {
     const state = i < idx ? 'done' : i === idx ? 'current' : 'upcoming';
     const color = state === 'done' ? COLORS.positive : state === 'current' ? COLORS.brand : COLORS.neutral;
     const ic = state === 'done' ? 'check' : state === 'current' ? 'sparkle' : 'clock';
@@ -69,7 +85,7 @@ function agentOutputHtml(output) {
   if (Array.isArray(output)) return output.map((t) => `<div class="check-item"><span class="check-box"></span><span>${esc(t)}</span></div>`).join('');
   return `<div style="font-size:13px">${esc(output)}</div>`;
 }
-function agentCardHtml(agentMeta, engagementId) {
+function agentCardHtml(agentMeta, engagementId, readOnly = false) {
   const state = syncAgentSchedule(engagementId, agentMeta.id);
   return `<div class="card pad mb8" style="background:var(--bg-2)">
     <div class="row wrap" style="justify-content:space-between;gap:8px">
@@ -77,11 +93,11 @@ function agentCardHtml(agentMeta, engagementId) {
       ${agentStatusPill(state)}
     </div>
     <div class="mt8">${agentOutputHtml(state.lastOutput)}</div>
-    <div class="row wrap mt8" style="gap:6px">
+    ${readOnly ? '' : `<div class="row wrap mt8" style="gap:6px">
       <button class="btn sm" data-run-agent="${agentMeta.id}">${icon('sparkle', 14)} Run now</button>
       <select class="select" data-schedule-agent="${agentMeta.id}" style="height:26px;font-size:12px">${SCHEDULES.map(([k, label]) => `<option value="${k}" ${state.schedule === k ? 'selected' : ''}>${esc(label)}</option>`).join('')}</select>
       ${state.runCount ? `<span class="muted" style="font-size:11px">${state.runCount} run(s)</span>` : ''}
-    </div>
+    </div>`}
   </div>`;
 }
 
@@ -101,21 +117,50 @@ function t3wCardHtml(engagement) {
 
 export function renderAgentic(container) {
   const d = store.data;
-  const active = d.engagements.filter((e) => e.assignedTo && (e.status === 'in-delivery' || e.status === 'assigned'));
-  const openUrgent = d.escalations.filter((e) => e.channel === 'agentic-support' && e.status !== 'resolved').length;
+  const persona = PERSONAS[store.role];
+  const my = myCsa(store.role, d);
+  // POD Leads/regional CSA Managers monitor their own scope, mirroring pods.js's myPod/myTz pattern;
+  // the assigned CSA/Partner CSA (or admin) is the only one who can execute.
+  const myPod = store.role.startsWith('pod-lead')
+    ? (d.pods.find((p) => p.leadName === persona.name) || d.pods.find((p) => p.tz === persona.tz) || d.pods[0])
+    : null;
+  const myTz = !myPod && store.role.startsWith('csa-manager') && persona.tz ? persona.tz : null;
+  const canExecute = canExecuteRole(store.role);
+  const podOf = (csaId) => { const c = d.csas.find((x) => x.id === csaId); return c && d.pods.find((p) => p.id === c.podId); };
+  const inScope = (e) => {
+    if (my) return e.assignedTo === my.id;
+    if (myPod) { const pod = podOf(e.assignedTo); return pod && pod.id === myPod.id; }
+    if (myTz) { const pod = podOf(e.assignedTo); return pod && pod.tz === myTz; }
+    return true;
+  };
+  const scopeLabel = my ? 'My engagements' : myPod ? `${myPod.name} monitor` : myTz ? `${myTz} monitor` : 'Portfolio monitor';
+  const scopeDesc = my
+    ? 'Start agentic execution on your own engagements \u2014 a crew of agents runs the non-customer-facing work while you focus on delivery.'
+    : myPod
+      ? `Monitor agentic execution across ${esc(myPod.name)} \u2014 the assigned CSA or Partner CSA controls execution; you see it happen here.`
+      : myTz
+        ? `Monitor agentic execution across ${esc(myTz)} \u2014 the assigned CSA or Partner CSA controls execution; you see it happen here.`
+        : 'Monitor agentic execution across the portfolio \u2014 every engagement is run and controlled by its own assigned CSA or Partner CSA.';
+
+  const active = d.engagements.filter((e) => e.assignedTo && (my ? true : (e.status === 'in-delivery' || e.status === 'assigned')) && inScope(e));
+  const engIdsInScope = new Set(active.map((e) => e.id));
+  const openUrgent = d.escalations.filter((e) => e.channel === 'agentic-support' && e.status !== 'resolved' && (my ? engIdsInScope.has(e.engagementId) || d.engagements.find((x) => x.id === e.engagementId)?.assignedTo === my.id : (myPod || myTz ? inScope(d.engagements.find((x) => x.id === e.engagementId) || {}) : true))).length;
+  const feedbackInScope = d.engagementFeedback.filter((f) => inScope(d.engagements.find((x) => x.id === f.engagementId) || {}));
+  const ipFeedbackInScope = d.ipFeedback.filter((f) => inScope(d.engagements.find((x) => x.id === f.engagementId) || {}));
+  const startedCount = active.filter((e) => executionProgress(e).started > 0).length;
   const nonCustomerFacing = TASK_INVENTORY.filter((t) => !t.customerFacing);
   const highPotential = nonCustomerFacing.filter((t) => t.potential === 'high');
   const agentCovered = nonCustomerFacing.filter((t) => t.agentId);
 
   container.innerHTML = `
-    ${pageHeader({ title: 'Agentic Delivery', description: 'Every engagement gets a tailored crew of AI agents — common agents cover insights, outreach, content and surveys across pre-delivery, delivery and post-delivery; a track specialist joins for domain expertise.', actions: aiChip('Agentic') })}
+    ${pageHeader({ title: `Agentic Delivery \u2014 ${esc(scopeLabel)}`, description: scopeDesc, actions: aiChip('Agentic') })}
 
     <div class="kpi-grid">
-      ${kpiCard({ label: 'Active delivery agents', value: active.length, iconName: 'sparkle', tone: COLORS.brand })}
-      ${kpiCard({ label: 'Deliverables generated', value: generated, iconName: 'report', hint: 'this session' })}
+      ${kpiCard({ label: my ? 'My engagements' : 'Engagements in scope', value: active.length, iconName: 'sparkle', tone: COLORS.brand })}
+      ${kpiCard({ label: 'Execution started', value: startedCount, iconName: 'check', tone: startedCount ? COLORS.positive : COLORS.neutral, hint: `of ${active.length} in scope` })}
       ${kpiCard({ label: 'Open urgent requests', value: openUrgent, iconName: 'warning', tone: openUrgent ? COLORS.negative : COLORS.positive, hint: 'via Ask for support' })}
-      ${kpiCard({ label: 'Engagement feedback logged', value: d.engagementFeedback.length, iconName: 'chat' })}
-      ${kpiCard({ label: 'IP Kit feedback', value: d.ipFeedback.length, iconName: 'star', hint: 'across all engagements' })}
+      ${kpiCard({ label: 'Engagement feedback logged', value: feedbackInScope.length, iconName: 'chat' })}
+      ${kpiCard({ label: 'IP Kit feedback', value: ipFeedbackInScope.length, iconName: 'star', hint: 'in scope' })}
     </div>
 
     <div class="section-title">Delivery agent roster</div>
@@ -126,28 +171,33 @@ export function renderAgentic(container) {
       ${OPS_AGENTS.map((a) => `<div class="card tile" style="cursor:default"><span class="tile-ico">${icon(a.icon, 20)}</span><div><strong>${esc(a.name)}</strong><div class="muted" style="font-size:12px">${esc(a.role)}</div><div class="mt8">${badge('Back-office agent', 'outline')}</div></div></div>`).join('')}
     </div>
 
-    <div class="section-title">Active engagements</div>
-    <div class="muted mb8" style="font-size:12px">Open the support plan to see the full agent read for the current phase, generate deliverables, rate the IP Kit, submit feedback or ask for urgent support.</div>
-    <div class="table-wrap mb16"><table class="grid"><thead><tr><th>Customer</th><th>CSA</th><th>Family</th><th>Program</th><th>Phase</th><th>Risk</th><th></th></tr></thead><tbody>
+    <div class="section-title">${esc(scopeLabel)}</div>
+    <div class="muted mb8" style="font-size:12px">${canExecute ? 'Start agentic execution on an engagement, or open its support plan to run individual agents, generate deliverables or ask for support.' : 'Read-only \u2014 open an engagement to see its stage, risk and full agent read. Only the assigned CSA or Partner CSA controls execution.'}</div>
+    <div class="table-wrap mb16"><table class="grid"><thead><tr><th>Customer</th><th>CSA</th><th>Family</th><th>Program</th><th>Stage</th><th>Risk</th><th>Execution</th><th></th></tr></thead><tbody>
       ${active.slice(0, 50).map((e) => {
         const c = d.csas.find((x) => x.id === e.assignedTo);
-        const phase = phaseForEngagement(e);
+        const stage = stageForEngagement(e);
         const openEsc = d.escalations.filter((x) => x.engagementId === e.id && x.status !== 'resolved');
         let risk = openEsc.length ? 'high' : e.atRisk ? 'medium' : 'low';
-        if (phase === 'pre-delivery') {
+        if (stage === 'new' || stage === 'assigned') {
           const t3w = computeT3W(e);
           const t3wRisk = t3w.status === 'overdue' ? 'high' : t3w.inWindow ? T3W_RISK[t3w.status] : 'low';
           if (RISK_RANK[t3wRisk] > RISK_RANK[risk]) risk = t3wRisk;
         }
+        const { started } = executionProgress(e);
+        const action = canExecute
+          ? (started ? `<button class="btn sm" data-open-support="${e.id}">${icon('sparkle', 14)} Open support plan</button>` : `<button class="btn sm primary" data-start-exec="${e.id}">${icon('sparkle', 14)} Start agentic execution</button>`)
+          : `<button class="btn sm subtle" data-open-support="${e.id}">${icon('search', 14)} View</button>`;
         return `<tr>
         <td><strong>${esc(e.customer)}</strong>${e.s500Customer ? ` ${badge('S500', 'tint-info')}` : ''}</td>
         <td>${esc(c ? c.name : '—')}</td>
         <td>${esc(e.track)}</td>
         <td>${esc(e.program)}</td>
-        <td>${phasePill(phase)}</td>
+        <td>${stagePill(stage)}</td>
         <td>${riskBadge(risk)}</td>
-        <td><button class="btn sm" data-open-support="${e.id}">${icon('sparkle', 14)} Open support plan</button></td>
-      </tr>`; }).join('') || '<tr><td colspan="7" class="muted" style="padding:16px">No active engagements.</td></tr>'}
+        <td>${executionBadge(e)}</td>
+        <td>${action}</td>
+      </tr>`; }).join('') || '<tr><td colspan="8" class="muted" style="padding:16px">No engagements in scope.</td></tr>'}
     </tbody></table></div>
 
     <div class="section-title">Non-customer-facing automation \u2014 Events Task Inventory</div>
@@ -158,7 +208,7 @@ export function renderAgentic(container) {
       ${kpiCard({ label: 'High automation potential', value: highPotential.length, iconName: 'trending', tone: COLORS.positive, hint: 'back office only' })}
       ${kpiCard({ label: 'Covered by an agent today', value: agentCovered.length, iconName: 'sparkle', hint: `of ${nonCustomerFacing.length} back-office activities` })}
     </div>
-    <div class="table-wrap mb16"><table class="grid"><thead><tr><th>Activity</th><th>Phase</th><th>Customer-facing</th><th>Automation potential</th><th>Agent</th></tr></thead><tbody>
+    <div class="table-wrap mb16"><table class="grid"><thead><tr><th>Activity</th><th>Stage</th><th>Customer-facing</th><th>Automation potential</th><th>Agent</th></tr></thead><tbody>
       ${TASK_INVENTORY.map((t) => { const agentName = agentNameById(t.agentId); return `<tr>
         <td><strong>${esc(t.activity)}</strong><div class="muted" style="font-size:11px">${esc(t.note)}</div></td>
         <td>${esc(OPS_PHASE_LABEL[t.phase] || t.phase)}</td>
@@ -177,7 +227,12 @@ export function renderAgentic(container) {
       </div>`).join('')}
     </div>`;
 
-  container.querySelectorAll('[data-open-support]').forEach((b) => b.addEventListener('click', () => openSupportDrawer(b.getAttribute('data-open-support'), container)));
+  container.querySelectorAll('[data-open-support]').forEach((b) => b.addEventListener('click', () => openSupportDrawer(b.getAttribute('data-open-support'), container, canExecute)));
+  container.querySelectorAll('[data-start-exec]').forEach((b) => b.addEventListener('click', () => {
+    const id = b.getAttribute('data-start-exec');
+    runAllAgentsNow(id);
+    openSupportDrawer(id, container, canExecute);
+  }));
 }
 
 function ipKitRatingFormHtml() {
@@ -197,34 +252,36 @@ function ipKitRatingFormHtml() {
     <div id="sp-ipf-error"></div>`;
 }
 
-function openSupportDrawer(engagementId, container) {
+function openSupportDrawer(engagementId, container, canExecute = true) {
   const d = store.data;
   const e = d.engagements.find((x) => x.id === engagementId);
   if (!e) return;
   const csa = d.csas.find((x) => x.id === e.assignedTo);
-  const phase = phaseForEngagement(e);
+  const stage = stageForEngagement(e);
   const roster = agentsForEngagement(e);
   const feedback = [...engagementFeedbackFor(e.id, d)].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   const body = `
+    ${!canExecute ? `<div class="row wrap mb8" style="gap:6px">${badge('Monitoring only \u2014 controlled by the assigned CSA', 'outline')}</div>` : ''}
     <div class="row wrap mb8" style="gap:8px">${e.s500Customer ? badge('S500 strategic account', 'tint-info') : ''}${badge(e.track, 'outline')}</div>
     <div class="field"><span class="field-key">Program</span><span class="field-val">${esc(e.program)}</span></div>
     <div class="field"><span class="field-key">CSA</span><span class="field-val">${esc(csa ? csa.name : 'Unassigned')}</span></div>
     <div class="field"><span class="field-key">CSAM</span><span class="field-val">${esc(e.csamName)}</span></div>
     <div class="field"><span class="field-key">Due date</span><span class="field-val">${esc(e.dueDate)}</span></div>
 
-    <div class="section-title">Delivery phase</div>
-    ${phaseStepper(phase)}
+    <div class="section-title">Delivery stage</div>
+    ${stageStepper(stage)}
 
-    ${phase === 'pre-delivery' ? t3wCardHtml(e) : ''}
+    ${(stage === 'new' || stage === 'assigned') ? t3wCardHtml(e) : ''}
 
     <div class="row mb8" style="justify-content:space-between">
       <div class="section-title" style="margin:0">Delivery agents${aiChip()}</div>
-      <button class="btn sm subtle" id="sp-run-all">${icon('sparkle', 14)} Run all agents now</button>
+      ${canExecute ? `<button class="btn sm subtle" id="sp-run-all">${icon('sparkle', 14)} Run all agents now</button>` : ''}
     </div>
-    <div class="muted mb8" style="font-size:12px">Common, track-specialist and back-office ops agents \u2014 each one scoped, scheduled and controlled for this engagement only. Runs on its own schedule (by default, whenever the phase changes) \u2014 run one on demand, or change its schedule.</div>
-    ${roster.map((a) => agentCardHtml(a, e.id)).join('')}
+    <div class="muted mb8" style="font-size:12px">${canExecute ? 'Common, track-specialist and back-office ops agents \u2014 each one scoped, scheduled and controlled for this engagement only. Runs on its own schedule (by default, whenever the stage changes) \u2014 run one on demand, or change its schedule.' : 'Read-only \u2014 the assigned CSA or Partner CSA runs and schedules these agents; you see the latest output here.'}</div>
+    ${roster.map((a) => agentCardHtml(a, e.id, !canExecute)).join('')}
 
+    ${canExecute ? `
     <div class="section-title">Other actions</div>
     <div class="row wrap mb8" style="gap:6px">
       <button class="btn sm" id="sp-generate">${icon('sparkle', 14)} Generate deliverable</button>
@@ -245,27 +302,28 @@ function openSupportDrawer(engagementId, container) {
     <div class="section-title">Submit feedback</div>
     <textarea id="sp-feedback-msg" style="width:100%;min-height:60px;border:1px solid var(--stroke-1);border-radius:4px;padding:8px;font-family:inherit;margin-bottom:8px" placeholder="Share a quick check-in note on how this delivery is going…"></textarea>
     <button class="btn sm" id="sp-feedback-submit">${icon('chat', 14)} Submit feedback</button>
-    <div id="sp-feedback-out"></div>
+    <div id="sp-feedback-out"></div>` : ''}
 
     <div class="section-title">Feedback &amp; check-ins</div>
     ${feedback.length ? `<div class="timeline">${feedback.map((f) => `<div class="tl-item">
-      <div><strong>${esc(f.authorName)}</strong> <span class="muted">· ${esc(f.authorRole)} · ${esc((PHASES.find(([k]) => k === f.phase) || [, f.phase])[1])}</span> ${sentimentPill(f.sentiment)}</div>
+      <div><strong>${esc(f.authorName)}</strong> <span class="muted">· ${esc(f.authorRole)} · ${esc((STAGES.find(([k]) => k === f.phase) || [, f.phase])[1])}</span> ${sentimentPill(f.sentiment)}</div>
       <div style="font-size:13px;margin:2px 0">${esc(f.message)}</div>
       <div class="tl-date">${esc(f.createdAt.slice(0, 10))}</div>
     </div>`).join('')}</div>` : '<div class="muted">No feedback logged yet for this engagement.</div>'}`;
 
-  openDrawer(`Support plan · ${esc(e.customer)}`, body, (dr) => {
+  openDrawer(`${canExecute ? 'Support plan' : 'Monitor'} · ${esc(e.customer)}`, body, (dr) => {
+    if (!canExecute) return;
     dr.querySelector('#sp-run-all').addEventListener('click', () => {
       runAllAgentsNow(e.id);
-      openSupportDrawer(e.id, container);
+      openSupportDrawer(e.id, container, canExecute);
     });
     dr.querySelectorAll('[data-run-agent]').forEach((b) => b.addEventListener('click', () => {
       runAgentNow(e.id, b.getAttribute('data-run-agent'));
-      openSupportDrawer(e.id, container);
+      openSupportDrawer(e.id, container, canExecute);
     }));
     dr.querySelectorAll('[data-schedule-agent]').forEach((s) => s.addEventListener('change', () => {
       setAgentSchedule(e.id, s.getAttribute('data-schedule-agent'), s.value);
-      openSupportDrawer(e.id, container);
+      openSupportDrawer(e.id, container, canExecute);
     }));
     dr.querySelector('#sp-generate').addEventListener('click', () => {
       const r = generateDeliverable(e, d);
@@ -277,7 +335,7 @@ function openSupportDrawer(engagementId, container) {
       dr.querySelector('#sp-ipf-submit').addEventListener('click', () => {
         try {
           addIpFeedback({ engagementId: e.id, rating: dr.querySelector('#sp-ipf-rating').value, tag: dr.querySelector('#sp-ipf-tag').value, comment: dr.querySelector('#sp-ipf-comment').value });
-          openSupportDrawer(e.id, container);
+          openSupportDrawer(e.id, container, canExecute);
         } catch (err) {
           dr.querySelector('#sp-ipf-error').innerHTML = `<div class="muted" style="color:${COLORS.negative};font-size:12px;margin-top:6px">${esc(err.message)}</div>`;
         }
@@ -295,7 +353,7 @@ function openSupportDrawer(engagementId, container) {
           ownerName: pod ? pod.leadName : 'Alex Navarro', sdmName: 'Priya Nair',
           raisedBy: persona.name, channel: 'agentic-support',
         });
-        openSupportDrawer(e.id, container);
+        openSupportDrawer(e.id, container, canExecute);
         const out = document.querySelector('#sp-support-out');
         if (out) out.innerHTML = `<div class="muted" style="font-size:12px;margin-top:6px">${icon('check', 14)} Support requested — escalation ${esc(id)} opened with the POD Lead and SDM.</div>`;
       } catch (err) {
@@ -306,8 +364,8 @@ function openSupportDrawer(engagementId, container) {
       try {
         const msg = dr.querySelector('#sp-feedback-msg').value;
         const persona = PERSONAS[store.role];
-        addEngagementFeedback({ engagementId: e.id, phase, message: msg, authorName: persona.name, authorRole: persona.title });
-        openSupportDrawer(e.id, container);
+        addEngagementFeedback({ engagementId: e.id, phase: stage, message: msg, authorName: persona.name, authorRole: persona.title });
+        openSupportDrawer(e.id, container, canExecute);
       } catch (err) {
         dr.querySelector('#sp-feedback-out').innerHTML = `<div class="muted" style="color:${COLORS.negative};font-size:12px;margin-top:6px">${esc(err.message)}</div>`;
       }

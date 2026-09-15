@@ -2,7 +2,7 @@
 import { dataset, IP_TAGS, CAP_PER_CSA, BASELINE_UTILIZATION } from '../data/generate.js';
 import { MODULES, moduleById } from './nav.js';
 import { runFullPipeline } from './ipFeedbackAgents.js';
-import { runAgentById, phaseForEngagement, agentsForEngagement, SCHEDULE_INTERVAL_MS } from './agenticSupportAgents.js';
+import { runAgentById, stageForEngagement, agentsForEngagement, SCHEDULE_INTERVAL_MS } from './agenticSupportAgents.js';
 
 export const store = {
   data: dataset,
@@ -915,7 +915,7 @@ export function getAgentRunState(engagementId, agentId) {
 function executeAgent(engagementId, agentId, trigger) {
   const eng = byId(store.data.engagements, engagementId);
   if (!eng) return null;
-  const phase = phaseForEngagement(eng);
+  const phase = stageForEngagement(eng);
   const output = runAgentById(agentId, eng, store.data, phase);
   const state = getAgentRunState(engagementId, agentId);
   const now = new Date().toISOString();
@@ -937,7 +937,7 @@ export function syncAgentSchedule(engagementId, agentId) {
   const state = getAgentRunState(engagementId, agentId);
   if (state.schedule === 'manual') return state;
   if (state.schedule === 'on-phase-change') {
-    if (state.lastPhase !== phaseForEngagement(eng)) executeAgent(engagementId, agentId, 'scheduled');
+    if (state.lastPhase !== stageForEngagement(eng)) executeAgent(engagementId, agentId, 'scheduled');
     return state;
   }
   const interval = SCHEDULE_INTERVAL_MS[state.schedule];

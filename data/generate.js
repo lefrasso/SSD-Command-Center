@@ -1,7 +1,7 @@
 // Deterministic, seeded mock-data generator for SSD IQ.
 // Same seed => same data (repeatable demos). All names/figures are fictional.
 import { runFullPipeline } from '../scripts/ipFeedbackAgents.js';
-import { phaseForEngagement } from '../scripts/agenticSupportAgents.js';
+import { stageForEngagement } from '../scripts/agenticSupportAgents.js';
 
 export const TRACKS = ['Health', 'AI Innovation', 'Cloud Deployment', 'Foundations'];
 // Capacity forecast assumptions — CAP_PER_CSA is calibrated at BASELINE_UTILIZATION; the Trajectory
@@ -608,7 +608,7 @@ function build() {
     const asCsam = chance(0.5) || !csa;
     const createdAt = daysAgo(int(1, 30));
     return {
-      id: `EF${String(efSeq++).padStart(3, '0')}`, engagementId: eng.id, phase: phaseForEngagement(eng),
+      id: `EF${String(efSeq++).padStart(3, '0')}`, engagementId: eng.id, phase: stageForEngagement(eng),
       authorName: asCsam ? eng.csamName : csa.name, authorRole: asCsam ? 'CSAM' : 'CSA',
       message: pick(FEEDBACK_SNIPPETS[sentiment]), sentiment,
       createdAt, sourceOfTruth: 'Agentic Delivery', updatedAt: createdAt,

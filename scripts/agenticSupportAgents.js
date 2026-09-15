@@ -4,25 +4,35 @@
 import { computeT3W } from './t3w.js';
 import { OPS_AGENTS, runOpsAgentById } from './opsAutomation.js';
 
-export const PHASES = [
-  ['pre-delivery', 'Pre-delivery'],
-  ['delivery', 'Delivery'],
-  ['post-delivery', 'Post-delivery'],
+// Agentic Delivery stages are the Engagement Backlog statuses themselves — every engagement's
+// agent execution moves through the exact same 4 stages as its dispatch status, so "where is this
+// in agentic delivery" always matches "where is this in the backlog".
+export const STAGES = [
+  ['new', 'New'],
+  ['assigned', 'Assigned'],
+  ['in-delivery', 'In delivery'],
+  ['complete', 'Complete'],
 ];
 
-// Every agent runs under one of these schedules — "on-phase-change" (the default) re-runs an agent
-// whenever the engagement moves to a new phase; "manual" never runs itself, only on explicit request.
+// Every agent runs under one of these schedules — "on-stage-change" (the default) re-runs an agent
+// whenever the engagement moves to a new stage; "manual" never runs itself, only on explicit request.
 export const SCHEDULES = [
-  ['on-phase-change', 'On phase change'],
+  ['on-phase-change', 'On stage change'],
   ['daily', 'Daily'],
   ['weekly', 'Weekly'],
   ['manual', 'Manual only'],
 ];
 export const SCHEDULE_INTERVAL_MS = { daily: 24 * 60 * 60 * 1000, weekly: 7 * 24 * 60 * 60 * 1000 };
 
-export function phaseForEngagement(e) {
-  if (e.status === 'complete') return 'post-delivery';
-  if (e.status === 'in-delivery') return 'delivery';
+// The stage shown everywhere in Agentic Delivery is simply the engagement's backlog status.
+export function stageForEngagement(e) { return e.status; }
+
+// Domain content (expert tips + common-agent copy below) was authored around 3 delivery moments;
+// 'new' and 'assigned' share the pre-delivery read since a CSA isn't dispatched yet at 'new'. This
+// maps the 4 visible stages down to that content, without duplicating every tip four ways.
+function contentStage(stage) {
+  if (stage === 'complete') return 'post-delivery';
+  if (stage === 'in-delivery') return 'delivery';
   return 'pre-delivery';
 }
 
@@ -189,17 +199,19 @@ export function agentsForEngagement(engagement) {
 
 // Executes a single agent by id against the current engagement/dataset — the "run" behind both the
 // manual Run Now action and a due scheduled run. Common agents return a string; the track specialist
-// returns an array of tip bullets.
-export function runAgentById(agentId, engagement, d, phase) {
+// returns an array of tip bullets. `stage` is the real backlog status (STAGES); it's mapped to the
+// 3-bucket content stage before reaching any of the functions below.
+export function runAgentById(agentId, engagement, d, stage) {
+  const cs = contentStage(stage);
   switch (agentId) {
-    case 'signal-scout': return signalScout(engagement, d, phase).text;
-    case 'outreach-concierge': return outreachConcierge(engagement, d, phase).text;
-    case 'chronicle-keeper': return chronicleKeeper(engagement, d, phase).text;
-    case 'survey-herald': return surveyHerald(engagement, d, phase).text;
-    case 'escalation-sentinel': return escalationSentinel(engagement, d, phase).text;
+    case 'signal-scout': return signalScout(engagement, d, cs).text;
+    case 'outreach-concierge': return outreachConcierge(engagement, d, cs).text;
+    case 'chronicle-keeper': return chronicleKeeper(engagement, d, cs).text;
+    case 'survey-herald': return surveyHerald(engagement, d, cs).text;
+    case 'escalation-sentinel': return escalationSentinel(engagement, d, cs).text;
     default: {
       const expertDef = Object.values(EXPERT_AGENTS).find((a) => a.id === agentId);
-      if (expertDef) return (expertDef.tips[phase] || []).filter((t) => !t.rx || t.rx.test(engagement.program)).map((t) => t.text);
+      if (expertDef) return (expertDef.tips[cs] || []).filter((t) => !t.rx || t.rx.test(engagement.program)).map((t) => t.text);
       if (OPS_AGENTS.some((a) => a.id === agentId)) return runOpsAgentById(agentId, engagement, d);
       return null;
     }
